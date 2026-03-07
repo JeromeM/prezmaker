@@ -1,0 +1,167 @@
+use crate::error::PrezError;
+use serde::Deserialize;
+use std::path::PathBuf;
+use tracing::debug;
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct Config {
+    #[serde(default)]
+    pub tmdb: TmdbConfig,
+    #[serde(default)]
+    pub igdb: IgdbConfig,
+    #[serde(default)]
+    pub preferences: Preferences,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct TmdbConfig {
+    pub api_key: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct IgdbConfig {
+    pub client_id: Option<String>,
+    pub client_secret: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Preferences {
+    #[serde(default = "default_language")]
+    pub language: String,
+    #[serde(default = "default_title_color")]
+    pub title_color: String,
+    #[serde(default)]
+    pub auto_clipboard: bool,
+}
+
+impl Default for Preferences {
+    fn default() -> Self {
+        Self {
+            language: default_language(),
+            title_color: default_title_color(),
+            auto_clipboard: false,
+        }
+    }
+}
+
+fn default_language() -> String {
+    "fr-FR".to_string()
+}
+
+fn default_title_color() -> String {
+    "c0392b".to_string()
+}
+
+impl Config {
+    pub fn load(config_path: Option<&str>) -> Result<Self, PrezError> {
+        let path = if let Some(p) = config_path {
+            PathBuf::from(p)
+        } else {
+            Self::default_path()
+        };
+
+        let mut config = if path.exists() {
+            debug!("Loading config from: {}", path.display());
+            let content =
+                std::fs::read_to_string(&path).map_err(|e| PrezError::Config(e.to_string()))?;
+            toml::from_str::<Config>(&content)
+                .map_err(|e| PrezError::Config(format!("Invalid config: {}", e)))?
+        } else {
+            debug!("No config file found, using defaults");
+            Config::default()
+        };
+
+        // Override with env vars
+        config.apply_env_overrides();
+
+        Ok(config)
+    }
+
+    fn default_path() -> PathBuf {
+        dirs::config_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("prezmaker")
+            .join("config.toml")
+    }
+
+    fn apply_env_overrides(&mut self) {
+        if let Ok(key) = std::env::var("PREZMAKER_TMDB_API_KEY") {
+            self.tmdb.api_key = Some(key);
+        }
+        if let Ok(id) = std::env::var("PREZMAKER_IGDB_CLIENT_ID") {
+            self.igdb.client_id = Some(id);
+        }
+        if let Ok(secret) = std::env::var("PREZMAKER_IGDB_CLIENT_SECRET") {
+            self.igdb.client_secret = Some(secret);
+        }
+    }
+
+    pub fn tmdb_api_key(&self) -> Result<&str, PrezError> {
+        self.tmdb
+            .api_key
+            .as_deref()
+            .ok_or_else(|| {
+                PrezError::MissingApiKey(
+                    "TMDB API key not found. Set it in config.toml or PREZMAKER_TMDB_API_KEY env var".to_string(),
+                )
+            })
+    }
+
+    pub fn igdb_credentials(&self) -> Result<(&str, &str), PrezError> {
+        let id = self.igdb.client_id.as_deref().ok_or_else(|| {
+            PrezError::MissingApiKey(
+                "IGDB client_id not found. Set it in config.toml or PREZMAKER_IGDB_CLIENT_ID env var".to_string(),
+            )
+        })?;
+        let secret = self.igdb.client_secret.as_deref().ok_or_else(|| {
+            PrezError::MissingApiKey(
+                "IGDB client_secret not found. Set it in config.toml or PREZMAKER_IGDB_CLIENT_SECRET env var".to_string(),
+            )
+        })?;
+        Ok((id, secret))
+    }
+
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_config() {
+        let config = Config::default();
+        assert_eq!(config.preferences.language, "fr-FR");
+        assert_eq!(config.preferences.title_color, "c0392b");
+        assert!(!config.preferences.auto_clipboard);
+        assert!(config.tmdb.api_key.is_none());
+    }
+
+    #[test]
+    fn test_parse_toml() {
+        let toml_str = r#"
+[tmdb]
+api_key = "test_key"
+
+[preferences]
+language = "en-US"
+title_color = "aa0000"
+"#;
+        let config: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.tmdb.api_key.unwrap(), "test_key");
+        assert_eq!(config.preferences.language, "en-US");
+        assert_eq!(config.preferences.title_color, "aa0000");
+    }
+
+    #[test]
+    fn test_tmdb_api_key_missing() {
+        let config = Config::default();
+        assert!(config.tmdb_api_key().is_err());
+    }
+
+    #[test]
+    fn test_tmdb_api_key_present() {
+        let mut config = Config::default();
+        config.tmdb.api_key = Some("my_key".to_string());
+        assert_eq!(config.tmdb_api_key().unwrap(), "my_key");
+    }
+}

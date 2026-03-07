@@ -1,0 +1,53 @@
+use super::common::{Genre, Rating};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TechInfo {
+    pub platform: String,
+    pub languages: String,
+    pub size: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Game {
+    pub title: String,
+    pub release_date: Option<String>,
+    pub year: Option<u16>,
+    pub synopsis: Option<String>,
+    pub cover_url: Option<String>,
+    pub screenshots: Vec<String>,
+    pub genres: Vec<Genre>,
+    pub platforms: Vec<String>,
+    pub developers: Vec<String>,
+    pub publishers: Vec<String>,
+    pub ratings: Vec<Rating>,
+    pub igdb_id: Option<u64>,
+    pub tech_info: Option<TechInfo>,
+    pub installation: Option<String>,
+}
+
+impl Game {
+    pub fn genres_display(&self) -> String {
+        self.genres
+            .iter()
+            .map(|g| g.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
+    pub fn platforms_display(&self) -> String {
+        self.platforms.join(", ")
+    }
+
+    pub fn developers_display(&self) -> String {
+        self.developers.join(", ")
+    }
+
+    pub fn publishers_display(&self) -> String {
+        self.publishers.join(", ")
+    }
+
+    pub fn rating_by_source(&self, source: &str) -> Option<&Rating> {
+        self.ratings.iter().find(|r| r.source == source)
+    }
+}

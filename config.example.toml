@@ -1,0 +1,13 @@
+[tmdb]
+api_key = "votre_cle_tmdb"
+
+[igdb]
+client_id = "votre_twitch_client_id"
+client_secret = "votre_twitch_client_secret"
+
+[preferences]
+language = "fr-FR"
+title_color = "c0392b"
+auto_clipboard = false
+# Description jeux generee via "claude" CLI (Claude Code)
+# Aucune configuration necessaire si claude est installe

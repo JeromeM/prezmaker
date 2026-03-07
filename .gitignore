@@ -1,0 +1,12 @@
+/target
+.env
+*.swp
+*.swo
+*~
+
+# Frontend
+ui/node_modules
+ui/dist
+
+# Tauri generated
+src-tauri/gen/schemas

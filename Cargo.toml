@@ -1,0 +1,3 @@
+[workspace]
+members = ["prezmaker-lib", "prezmaker-cli", "src-tauri"]
+resolver = "2"
