@@ -25,6 +25,9 @@ jobs:
         with:
           workspaces: src-tauri
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2"
+
       - name: Install frontend dependencies
         run: |
           cd ui
