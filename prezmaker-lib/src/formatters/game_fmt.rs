@@ -1,8 +1,7 @@
 use crate::formatters::bbcode::*;
 use crate::models::{Game, Tracker};
 
-pub fn format_game(game: &Game, _title_color: &str, tracker: Tracker) -> String {
-    let title_color = "9c88b8"; // Soft lavender to match banner theme
+pub fn format_game(game: &Game, title_color: &str, tracker: Tracker) -> String {
     let mut out = String::new();
 
     // Header

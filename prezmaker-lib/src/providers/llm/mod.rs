@@ -109,14 +109,16 @@ impl LlmClient {
     fn build_prompt(title: &str, english_summary: Option<&str>) -> String {
         let context = match english_summary {
             Some(en) => format!(
-                "\n\nVoici un resume en anglais pour t'aider :\n{}",
+                "\n\nVoici le resume original en anglais a traduire et reecrire :\n{}",
                 en
             ),
             None => String::new(),
         };
 
         format!(
-            "Ecris une description en francais pour le jeu video \"{}\". \
+            "Tu es un redacteur specialise en jeux video. \
+            Ecris une description ENTIEREMENT EN FRANCAIS pour le jeu video \"{}\". \
+            IMPORTANT : Ta reponse doit etre integralement en langue francaise, jamais en anglais. \
             La description doit etre engageante, informative et faire environ 2-3 paragraphes. \
             Retourne uniquement la description, sans titre, sans commentaire ni explication.{}",
             title, context

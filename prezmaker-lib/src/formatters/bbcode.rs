@@ -145,21 +145,6 @@ pub fn field_for(tracker: Tracker, label: &str, value: &str) -> String {
     }
 }
 
-const ASSETS_BASE_URL: &str = "https://www.arobase62.fr/files";
-
-/// Map section title to asset image filename (for C411)
-fn section_image(title: &str) -> Option<&'static str> {
-    match title {
-        "Informations" => Some("Informations.png"),
-        "Description" | "Synopsis" => Some("Description.png"),
-        "Notes" => Some("Notes.png"),
-        "Screenshots" => Some("Screenshots.png"),
-        "Informations techniques" => Some("InfosTech.png"),
-        "Installation" => Some("Installation.png"),
-        _ => None,
-    }
-}
-
 /// Main title heading (h1 on C411, [b][color][size=6] on TorrXyz)
 pub fn heading_title_for(tracker: Tracker, text: &str, color_hex: &str) -> String {
     match tracker {
@@ -168,16 +153,10 @@ pub fn heading_title_for(tracker: Tracker, text: &str, color_hex: &str) -> Strin
     }
 }
 
-/// Major section heading: C411 uses image if available, TorrXyz uses [b][color][size=6]
+/// Major section heading: text-based for both trackers
 pub fn section_heading_for(tracker: Tracker, title: &str, color_hex: &str) -> String {
     match tracker {
-        Tracker::C411 => {
-            if let Some(filename) = section_image(title) {
-                center(&img(&format!("{}/{}", ASSETS_BASE_URL, filename)))
-            } else {
-                center(&h2(&color(color_hex, title)))
-            }
-        }
+        Tracker::C411 => center(&h2(&color(color_hex, title))),
         Tracker::TorrXyz => center(&bold(&color(color_hex, &size(6, title)))),
     }
 }
