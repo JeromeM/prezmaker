@@ -3,7 +3,7 @@ mod commands;
 
 use commands::AppState;
 use prezmaker_lib::config::Config;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -15,7 +15,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(AppState {
-            config: Arc::new(config),
+            config: Arc::new(Mutex::new(config)),
         })
         .invoke_handler(tauri::generate_handler![
             commands::search,
@@ -25,6 +25,8 @@ pub fn run() {
             commands::generate_jeu,
             commands::generate_app,
             commands::convert_bbcode,
+            commands::get_settings,
+            commands::save_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

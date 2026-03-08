@@ -45,6 +45,15 @@ export interface AppPayload {
   logo_url: string | null;
 }
 
+export interface SettingsPayload {
+  tmdb_api_key: string | null;
+  igdb_client_id: string | null;
+  igdb_client_secret: string | null;
+  language: string;
+  title_color: string;
+  auto_clipboard: boolean;
+}
+
 export type AppState =
   | { step: "idle" }
   | { step: "searching" }

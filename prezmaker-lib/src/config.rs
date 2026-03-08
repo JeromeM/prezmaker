@@ -1,9 +1,9 @@
 use crate::error::PrezError;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tracing::debug;
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub tmdb: TmdbConfig,
@@ -13,18 +13,18 @@ pub struct Config {
     pub preferences: Preferences,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct TmdbConfig {
     pub api_key: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct IgdbConfig {
     pub client_id: Option<String>,
     pub client_secret: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Preferences {
     #[serde(default = "default_language")]
     pub language: String,
@@ -77,11 +77,25 @@ impl Config {
         Ok(config)
     }
 
-    fn default_path() -> PathBuf {
+    pub fn default_path() -> PathBuf {
         dirs::config_dir()
             .unwrap_or_else(|| PathBuf::from("."))
             .join("prezmaker")
             .join("config.toml")
+    }
+
+    pub fn save(&self) -> Result<(), PrezError> {
+        let path = Self::default_path();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| PrezError::Config(format!("Cannot create config dir: {}", e)))?;
+        }
+        let content = toml::to_string_pretty(self)
+            .map_err(|e| PrezError::Config(format!("Cannot serialize config: {}", e)))?;
+        std::fs::write(&path, content)
+            .map_err(|e| PrezError::Config(format!("Cannot write config: {}", e)))?;
+        debug!("Config saved to: {}", path.display());
+        Ok(())
     }
 
     fn apply_env_overrides(&mut self) {

@@ -2,11 +2,11 @@ use crate::bbcode_to_html;
 use prezmaker_lib::config::Config;
 use prezmaker_lib::models::{Application, Game, TechInfo, Tracker};
 use prezmaker_lib::orchestrator_api::{GameDetailsResponse, OrchestratorApi, SearchResult};
-use serde::Deserialize;
-use std::sync::Arc;
+use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 
 pub struct AppState {
-    pub config: Arc<Config>,
+    pub config: Arc<Mutex<Config>>,
 }
 
 fn parse_tracker(tracker: &str) -> Tracker {
@@ -35,7 +35,8 @@ pub async fn search(
     tracker: String,
     title_color: Option<String>,
 ) -> Result<Vec<SearchResult>, String> {
-    let api = make_api(&state.config, &tracker, title_color.as_deref());
+    let config = state.config.lock().unwrap().clone();
+    let api = make_api(&config, &tracker, title_color.as_deref());
 
     match content_type.as_str() {
         "film" => api.search_film(&query).await.map_err(|e| e.to_string()),
@@ -52,7 +53,8 @@ pub async fn generate_film(
     tracker: String,
     title_color: Option<String>,
 ) -> Result<String, String> {
-    let api = make_api(&state.config, &tracker, title_color.as_deref());
+    let config = state.config.lock().unwrap().clone();
+    let api = make_api(&config, &tracker, title_color.as_deref());
     api.generate_film(tmdb_id, false)
         .await
         .map_err(|e| e.to_string())
@@ -65,7 +67,8 @@ pub async fn generate_serie(
     tracker: String,
     title_color: Option<String>,
 ) -> Result<String, String> {
-    let api = make_api(&state.config, &tracker, title_color.as_deref());
+    let config = state.config.lock().unwrap().clone();
+    let api = make_api(&config, &tracker, title_color.as_deref());
     api.generate_serie(tmdb_id, false)
         .await
         .map_err(|e| e.to_string())
@@ -78,7 +81,8 @@ pub async fn fetch_game_details(
     tracker: String,
     title_color: Option<String>,
 ) -> Result<GameDetailsResponse, String> {
-    let api = make_api(&state.config, &tracker, title_color.as_deref());
+    let config = state.config.lock().unwrap().clone();
+    let api = make_api(&config, &tracker, title_color.as_deref());
     api.fetch_game_details(igdb_id)
         .await
         .map_err(|e| e.to_string())
@@ -99,7 +103,8 @@ pub async fn generate_jeu(
     tracker: String,
     title_color: Option<String>,
 ) -> Result<String, String> {
-    let api = make_api(&state.config, &tracker, title_color.as_deref());
+    let config = state.config.lock().unwrap().clone();
+    let api = make_api(&config, &tracker, title_color.as_deref());
     api.generate_jeu(
         payload.game,
         payload.description,
@@ -128,7 +133,8 @@ pub async fn generate_app(
     tracker: String,
     title_color: Option<String>,
 ) -> Result<String, String> {
-    let api = make_api(&state.config, &tracker, title_color.as_deref());
+    let config = state.config.lock().unwrap().clone();
+    let api = make_api(&config, &tracker, title_color.as_deref());
     let app = Application {
         name: payload.name,
         version: payload.version,
@@ -145,4 +151,44 @@ pub async fn generate_app(
 #[tauri::command]
 pub fn convert_bbcode(bbcode: String) -> String {
     bbcode_to_html::convert_bbcode_to_html(&bbcode)
+}
+
+// --- Settings ---
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SettingsPayload {
+    pub tmdb_api_key: Option<String>,
+    pub igdb_client_id: Option<String>,
+    pub igdb_client_secret: Option<String>,
+    pub language: String,
+    pub title_color: String,
+    pub auto_clipboard: bool,
+}
+
+#[tauri::command]
+pub fn get_settings(state: tauri::State<'_, AppState>) -> SettingsPayload {
+    let config = state.config.lock().unwrap();
+    SettingsPayload {
+        tmdb_api_key: config.tmdb.api_key.clone(),
+        igdb_client_id: config.igdb.client_id.clone(),
+        igdb_client_secret: config.igdb.client_secret.clone(),
+        language: config.preferences.language.clone(),
+        title_color: config.preferences.title_color.clone(),
+        auto_clipboard: config.preferences.auto_clipboard,
+    }
+}
+
+#[tauri::command]
+pub fn save_settings(
+    state: tauri::State<'_, AppState>,
+    settings: SettingsPayload,
+) -> Result<(), String> {
+    let mut config = state.config.lock().unwrap();
+    config.tmdb.api_key = settings.tmdb_api_key;
+    config.igdb.client_id = settings.igdb_client_id;
+    config.igdb.client_secret = settings.igdb_client_secret;
+    config.preferences.language = settings.language;
+    config.preferences.title_color = settings.title_color;
+    config.preferences.auto_clipboard = settings.auto_clipboard;
+    config.save().map_err(|e| e.to_string())
 }

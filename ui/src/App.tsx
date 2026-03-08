@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { usePrezMaker } from "./hooks/usePrezMaker";
 import TopBar from "./components/TopBar";
 import ResultSelector from "./components/ResultSelector";
 import GameExtrasForm from "./components/GameExtrasForm";
 import AppForm from "./components/AppForm";
 import SplitPreview from "./components/SplitPreview";
+import SettingsModal from "./components/SettingsModal";
 
 function App() {
+  const [showSettings, setShowSettings] = useState(false);
   const {
     state,
     tracker,
@@ -32,6 +35,7 @@ function App() {
         onSearch={search}
         loading={isLoading}
         onReset={reset}
+        onOpenSettings={() => setShowSettings(true)}
       />
 
       <main className="flex-1 flex flex-col min-h-0">
@@ -138,6 +142,9 @@ function App() {
           </div>
         )}
       </main>
+      {showSettings && (
+        <SettingsModal onClose={() => setShowSettings(false)} />
+      )}
     </div>
   );
 }
