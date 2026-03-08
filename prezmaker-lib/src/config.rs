@@ -11,6 +11,14 @@ pub struct Config {
     pub igdb: IgdbConfig,
     #[serde(default)]
     pub preferences: Preferences,
+    #[serde(default)]
+    pub llm: LlmConfig,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct LlmConfig {
+    pub provider: Option<String>,
+    pub api_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]

@@ -5,7 +5,9 @@ use crate::models::{Application, Game, Movie, Series, TechInfo, Tracker};
 use crate::providers::allocine::AllocineClient;
 use crate::providers::igdb::IgdbClient;
 use crate::providers::tmdb::TmdbClient;
+use crate::providers::llm::LlmClient;
 use crate::providers::translator::ClaudeClient;
+use crate::providers::wikipedia::WikipediaClient;
 use crate::providers::{GameProvider, MovieProvider, SeriesProvider};
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
@@ -195,7 +197,9 @@ impl OrchestratorApi {
             .await
             .map_err(|e| PrezError::Other(format!("Erreur details IGDB : {}", e)))?;
 
-        let claude_description = Self::try_claude_description(&game.title, game.synopsis.as_deref());
+        let claude_description = self
+            .resolve_description(&game.title, game.synopsis.as_deref())
+            .await;
 
         Ok(GameDetailsResponse {
             game,
@@ -263,7 +267,27 @@ impl OrchestratorApi {
         Ok(())
     }
 
-    fn try_claude_description(game_title: &str, english: Option<&str>) -> Option<String> {
+    async fn resolve_description(&self, game_title: &str, english: Option<&str>) -> Option<String> {
+        // 1. LLM API (si configuré)
+        if let (Some(provider), Some(api_key)) = (
+            self.config.llm.provider.as_deref(),
+            self.config.llm.api_key.as_deref(),
+        ) {
+            if !provider.is_empty() && !api_key.is_empty() {
+                info!("Generation description via LLM ({})...", provider);
+                let client = LlmClient::new(provider, api_key);
+                match client.generate_game_description(game_title, english).await {
+                    Ok(desc) if !desc.is_empty() => {
+                        info!("Description LLM generee !");
+                        return Some(desc);
+                    }
+                    Ok(_) => warn!("LLM a retourne une description vide"),
+                    Err(e) => warn!("Erreur LLM : {}", e),
+                }
+            }
+        }
+
+        // 2. Claude CLI (si disponible)
         let claude = ClaudeClient::new();
         if claude.is_available() {
             info!("Generation description via claude CLI...");
@@ -275,6 +299,20 @@ impl OrchestratorApi {
                 Err(e) => warn!("Erreur claude CLI : {}", e),
             }
         }
+
+        // 3. Wikipedia FR
+        info!("Recherche description sur Wikipedia FR...");
+        let wiki = WikipediaClient::new();
+        match wiki.search_game_description(game_title).await {
+            Ok(Some(desc)) => {
+                info!("Description Wikipedia trouvee !");
+                return Some(desc);
+            }
+            Ok(None) => warn!("Aucune description Wikipedia pour {}", game_title),
+            Err(e) => warn!("Erreur Wikipedia : {}", e),
+        }
+
+        // 4. Fallback → None (synopsis EN sera utilisé)
         None
     }
 }

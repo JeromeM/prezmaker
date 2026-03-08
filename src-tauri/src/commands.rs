@@ -163,6 +163,8 @@ pub struct SettingsPayload {
     pub language: String,
     pub title_color: String,
     pub auto_clipboard: bool,
+    pub llm_provider: Option<String>,
+    pub llm_api_key: Option<String>,
 }
 
 #[tauri::command]
@@ -175,6 +177,8 @@ pub fn get_settings(state: tauri::State<'_, AppState>) -> SettingsPayload {
         language: config.preferences.language.clone(),
         title_color: config.preferences.title_color.clone(),
         auto_clipboard: config.preferences.auto_clipboard,
+        llm_provider: config.llm.provider.clone(),
+        llm_api_key: config.llm.api_key.clone(),
     }
 }
 
@@ -190,5 +194,7 @@ pub fn save_settings(
     config.preferences.language = settings.language;
     config.preferences.title_color = settings.title_color;
     config.preferences.auto_clipboard = settings.auto_clipboard;
+    config.llm.provider = settings.llm_provider;
+    config.llm.api_key = settings.llm_api_key;
     config.save().map_err(|e| e.to_string())
 }

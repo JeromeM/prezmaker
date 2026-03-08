@@ -1,7 +1,9 @@
 pub mod allocine;
 pub mod igdb;
+pub mod llm;
 pub mod tmdb;
 pub mod translator;
+pub mod wikipedia;
 
 use crate::models::{Game, Movie, Series};
 use async_trait::async_trait;

@@ -14,6 +14,8 @@ export default function SettingsModal({ onClose }: Props) {
     language: "fr-FR",
     title_color: "c0392b",
     auto_clipboard: false,
+    llm_provider: null,
+    llm_api_key: null,
   });
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
@@ -98,6 +100,49 @@ export default function SettingsModal({ onClose }: Props) {
                 "IGDB Client Secret",
                 "igdb_client_secret",
                 "igdb_secret"
+              )}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-medium text-gray-300 mb-3">
+              LLM (descriptions jeux)
+            </h3>
+            <div className="space-y-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-400">Provider</label>
+                <select
+                  value={settings.llm_provider ?? ""}
+                  onChange={(e) =>
+                    setSettings((s) => ({
+                      ...s,
+                      llm_provider: e.target.value || null,
+                      ...(e.target.value ? {} : { llm_api_key: null }),
+                    }))
+                  }
+                  className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+                >
+                  <option value="">(Aucun)</option>
+                  <option value="groq">Groq</option>
+                  <option value="mistral">Mistral</option>
+                  <option value="gemini">Gemini</option>
+                </select>
+              </div>
+              {settings.llm_provider && (
+                <>
+                  {secretInput("Clé API LLM", "llm_api_key", "llm")}
+                  <p className="text-xs text-gray-500">
+                    {settings.llm_provider === "groq" && (
+                      <>Clé gratuite sur <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">console.groq.com</a></>
+                    )}
+                    {settings.llm_provider === "mistral" && (
+                      <>Clé gratuite sur <a href="https://console.mistral.ai/api-keys" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">console.mistral.ai</a></>
+                    )}
+                    {settings.llm_provider === "gemini" && (
+                      <>Clé gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">aistudio.google.com</a></>
+                    )}
+                  </p>
+                </>
               )}
             </div>
           </section>

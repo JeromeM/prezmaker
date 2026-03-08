@@ -5,8 +5,10 @@ use prezmaker_lib::formatters::{app_fmt, game_fmt, movie_fmt, series_fmt};
 use prezmaker_lib::models::Application;
 use prezmaker_lib::providers::allocine::AllocineClient;
 use prezmaker_lib::providers::igdb::IgdbClient;
+use prezmaker_lib::providers::llm::LlmClient;
 use prezmaker_lib::providers::tmdb::TmdbClient;
 use prezmaker_lib::providers::translator::ClaudeClient;
+use prezmaker_lib::providers::wikipedia::WikipediaClient;
 use prezmaker_lib::models::Tracker;
 use prezmaker_lib::providers::{GameProvider, MovieProvider, SeriesProvider};
 use prezmaker_lib::models::TechInfo;
@@ -162,8 +164,8 @@ impl Orchestrator {
             PrezError::Other(format!("Erreur details IGDB : {}", e))
         })?;
 
-        // Description en francais : Claude CLI > saisie manuelle
-        game.synopsis = self.resolve_french_description(&game.title, game.synopsis.as_deref())?;
+        // Description en francais : LLM > Claude CLI > Wikipedia FR > saisie manuelle
+        game.synopsis = self.resolve_french_description(&game.title, game.synopsis.as_deref()).await?;
 
         // Saisie des etapes d'installation
         game.installation = self.prompt_installation()?;
@@ -234,12 +236,33 @@ impl Orchestrator {
         Ok(())
     }
 
-    fn resolve_french_description(
+    async fn resolve_french_description(
         &self,
         game_title: &str,
         english: Option<&str>,
     ) -> Result<Option<String>, PrezError> {
-        // 1. Generation via claude CLI
+        // 1. LLM API (si configuré)
+        if let (Some(provider), Some(api_key)) = (
+            self.config.llm.provider.as_deref(),
+            self.config.llm.api_key.as_deref(),
+        ) {
+            if !provider.is_empty() && !api_key.is_empty() {
+                info!("Generation description via LLM ({})...", provider);
+                let client = LlmClient::new(provider, api_key);
+                match client.generate_game_description(game_title, english).await {
+                    Ok(desc) if !desc.is_empty() => {
+                        info!("Description LLM generee !");
+                        eprintln!("\n--- Description (generee par {}) ---", provider);
+                        eprintln!("{}", desc);
+                        return Ok(Some(desc));
+                    }
+                    Ok(_) => warn!("LLM a retourne une description vide"),
+                    Err(e) => warn!("Erreur LLM : {}", e),
+                }
+            }
+        }
+
+        // 2. Claude CLI (si disponible)
         let claude = ClaudeClient::new();
         if claude.is_available() {
             info!("Generation description via claude CLI...");
@@ -254,7 +277,21 @@ impl Orchestrator {
             }
         }
 
-        // 2. Saisie manuelle
+        // 3. Wikipedia FR
+        info!("Recherche description sur Wikipedia FR...");
+        let wiki = WikipediaClient::new();
+        match wiki.search_game_description(game_title).await {
+            Ok(Some(desc)) => {
+                info!("Description Wikipedia trouvee !");
+                eprintln!("\n--- Description (Wikipedia FR) ---");
+                eprintln!("{}", desc);
+                return Ok(Some(desc));
+            }
+            Ok(None) => warn!("Aucune description Wikipedia pour {}", game_title),
+            Err(e) => warn!("Erreur Wikipedia : {}", e),
+        }
+
+        // 4. Saisie manuelle
         if let Some(en) = english {
             eprintln!("\n--- Description (EN) ---");
             eprintln!("{}", en);

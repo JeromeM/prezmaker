@@ -52,6 +52,8 @@ export interface SettingsPayload {
   language: string;
   title_color: string;
   auto_clipboard: boolean;
+  llm_provider: string | null;
+  llm_api_key: string | null;
 }
 
 export type AppState =
