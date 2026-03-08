@@ -2,6 +2,11 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 
+const SYSTEM_PROMPT: &str = "Tu es un redacteur specialise en jeux video. \
+Tu reponds UNIQUEMENT en francais. Toute ta production doit etre integralement en langue francaise. \
+Tu ne dois jamais repondre en anglais, meme si le contenu fourni est en anglais. \
+Tu retournes uniquement la description demandee, sans titre, sans commentaire, sans explication.";
+
 pub struct LlmClient {
     provider: String,
     api_key: String,
@@ -39,7 +44,9 @@ struct ChatMessageResponse {
 
 // Gemini request/response
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct GeminiRequest {
+    system_instruction: GeminiContent,
     contents: Vec<GeminiContent>,
 }
 
@@ -87,40 +94,37 @@ impl LlmClient {
         title: &str,
         english_summary: Option<&str>,
     ) -> anyhow::Result<String> {
-        let prompt = Self::build_prompt(title, english_summary);
+        let user_prompt = Self::build_user_prompt(title, english_summary);
         debug!("LLM ({}) generation pour : {}", self.provider, title);
 
         match self.provider.as_str() {
             "groq" => self.call_openai_compatible(
                 "https://api.groq.com/openai/v1/chat/completions",
                 "llama-3.3-70b-versatile",
-                &prompt,
+                &user_prompt,
             ).await,
             "mistral" => self.call_openai_compatible(
                 "https://api.mistral.ai/v1/chat/completions",
                 "mistral-small-latest",
-                &prompt,
+                &user_prompt,
             ).await,
-            "gemini" => self.call_gemini(&prompt).await,
+            "gemini" => self.call_gemini(&user_prompt).await,
             other => anyhow::bail!("Provider LLM inconnu : {}", other),
         }
     }
 
-    fn build_prompt(title: &str, english_summary: Option<&str>) -> String {
+    fn build_user_prompt(title: &str, english_summary: Option<&str>) -> String {
         let context = match english_summary {
             Some(en) => format!(
-                "\n\nVoici le resume original en anglais a traduire et reecrire :\n{}",
+                "\n\nVoici le resume original en anglais a traduire et reecrire en francais :\n{}",
                 en
             ),
             None => String::new(),
         };
 
         format!(
-            "Tu es un redacteur specialise en jeux video. \
-            Ecris une description ENTIEREMENT EN FRANCAIS pour le jeu video \"{}\". \
-            IMPORTANT : Ta reponse doit etre integralement en langue francaise, jamais en anglais. \
-            La description doit etre engageante, informative et faire environ 2-3 paragraphes. \
-            Retourne uniquement la description, sans titre, sans commentaire ni explication.{}",
+            "Ecris une description engageante et informative en francais (2-3 paragraphes) \
+            pour le jeu video \"{}\".{}",
             title, context
         )
     }
@@ -129,14 +133,20 @@ impl LlmClient {
         &self,
         url: &str,
         model: &str,
-        prompt: &str,
+        user_prompt: &str,
     ) -> anyhow::Result<String> {
         let body = ChatRequest {
             model: model.to_string(),
-            messages: vec![ChatMessage {
-                role: "user".to_string(),
-                content: prompt.to_string(),
-            }],
+            messages: vec![
+                ChatMessage {
+                    role: "system".to_string(),
+                    content: SYSTEM_PROMPT.to_string(),
+                },
+                ChatMessage {
+                    role: "user".to_string(),
+                    content: user_prompt.to_string(),
+                },
+            ],
             temperature: 0.7,
         };
 
@@ -165,16 +175,21 @@ impl LlmClient {
         Ok(text)
     }
 
-    async fn call_gemini(&self, prompt: &str) -> anyhow::Result<String> {
+    async fn call_gemini(&self, user_prompt: &str) -> anyhow::Result<String> {
         let url = format!(
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={}",
             self.api_key
         );
 
         let body = GeminiRequest {
+            system_instruction: GeminiContent {
+                parts: vec![GeminiPart {
+                    text: SYSTEM_PROMPT.to_string(),
+                }],
+            },
             contents: vec![GeminiContent {
                 parts: vec![GeminiPart {
-                    text: prompt.to_string(),
+                    text: user_prompt.to_string(),
                 }],
             }],
         };
