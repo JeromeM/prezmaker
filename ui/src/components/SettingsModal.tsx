@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { SettingsPayload } from "../types/api";
+import { resetOnboarding } from "./Onboarding";
 
 interface Props {
   onClose: () => void;
@@ -197,6 +198,17 @@ export default function SettingsModal({ onClose }: Props) {
                   Copier automatiquement dans le presse-papier
                 </span>
               </label>
+
+              <button
+                type="button"
+                onClick={() => {
+                  resetOnboarding();
+                  window.location.reload();
+                }}
+                className="text-xs text-gray-500 hover:text-gray-300 underline transition-colors"
+              >
+                Relancer le tutoriel de premiere utilisation
+              </button>
             </div>
           </section>
 

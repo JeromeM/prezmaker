@@ -8,10 +8,12 @@ import SplitPreview from "./components/SplitPreview";
 import SettingsModal from "./components/SettingsModal";
 import TemplateEditor from "./components/TemplateEditor";
 import TorrentContentTypePicker from "./components/TorrentContentTypePicker";
+import Onboarding, { isOnboardingDone } from "./components/Onboarding";
 
 function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
+  const [onboardingDone, setOnboardingDone] = useState(isOnboardingDone);
   const {
     state,
     search,
@@ -26,6 +28,10 @@ function App() {
   } = usePrezMaker();
 
   const isLoading = state.step === "searching" || state.step === "generating";
+
+  if (!onboardingDone) {
+    return <Onboarding onComplete={() => setOnboardingDone(true)} />;
+  }
 
   return (
     <div className="flex flex-col h-screen bg-[#0f0f23]">
