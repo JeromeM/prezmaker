@@ -1,10 +1,11 @@
 use crate::bbcode_to_html;
 use prezmaker_lib::config::Config;
-use prezmaker_lib::models::{Application, Game, TechInfo, Tracker};
+use prezmaker_lib::models::{Application, Game, MediaTechInfo, TechInfo, Tracker};
 use prezmaker_lib::providers::llm::LlmClient;
 use prezmaker_lib::orchestrator_api::{GameDetailsResponse, OrchestratorApi, SearchResult};
+use prezmaker_lib::torrent::{self, TorrentInfo};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 pub struct AppState {
@@ -148,6 +149,41 @@ pub async fn generate_app(
         logo_url: payload.logo_url,
     };
     api.generate_app(app).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn parse_torrent(path: String) -> Result<TorrentInfo, String> {
+    torrent::analyze_torrent(Path::new(&path))
+}
+
+#[tauri::command]
+pub async fn generate_film_with_tech(
+    state: tauri::State<'_, AppState>,
+    tmdb_id: u64,
+    tracker: String,
+    title_color: Option<String>,
+    tech: MediaTechInfo,
+) -> Result<String, String> {
+    let config = state.config.lock().unwrap().clone();
+    let api = make_api(&config, &tracker, title_color.as_deref());
+    api.generate_film_with_tech(tmdb_id, false, tech)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn generate_serie_with_tech(
+    state: tauri::State<'_, AppState>,
+    tmdb_id: u64,
+    tracker: String,
+    title_color: Option<String>,
+    tech: MediaTechInfo,
+) -> Result<String, String> {
+    let config = state.config.lock().unwrap().clone();
+    let api = make_api(&config, &tracker, title_color.as_deref());
+    api.generate_serie_with_tech(tmdb_id, false, tech)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

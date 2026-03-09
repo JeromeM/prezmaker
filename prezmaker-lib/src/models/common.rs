@@ -24,6 +24,16 @@ pub struct Country {
     pub iso_code: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MediaTechInfo {
+    pub quality: Option<String>,
+    pub video_codec: Option<String>,
+    pub audio: Option<String>,
+    pub language: Option<String>,
+    pub subtitles: Option<String>,
+    pub size: Option<String>,
+}
+
 impl std::fmt::Display for Person {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)

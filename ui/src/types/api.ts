@@ -12,6 +12,15 @@ export interface TechInfo {
   size: string;
 }
 
+export interface MediaTechInfo {
+  quality: string | null;
+  video_codec: string | null;
+  audio: string | null;
+  language: string | null;
+  subtitles: string | null;
+  size: string | null;
+}
+
 export interface Game {
   title: string;
   release_date: string | null;
@@ -62,12 +71,48 @@ export interface SettingsPayload {
   llm_api_key: string | null;
 }
 
+// Torrent types
+
+export type DetectedContentType = "Film" | "Serie" | "Jeu" | "Unknown";
+
+export interface TorrentFile {
+  path: string;
+  size: number;
+}
+
+export interface TorrentMeta {
+  name: string;
+  files: TorrentFile[];
+  total_size: number;
+}
+
+export interface ReleaseParsed {
+  content_type: DetectedContentType;
+  title: string;
+  year: number | null;
+  quality: string | null;
+  video_codec: string | null;
+  audio: string | null;
+  language: string | null;
+  group: string | null;
+  season: number | null;
+  episode: number | null;
+}
+
+export interface TorrentInfo {
+  meta: TorrentMeta;
+  parsed: ReleaseParsed;
+  size_formatted: string;
+}
+
 export type AppState =
   | { step: "idle" }
   | { step: "searching" }
   | { step: "selecting"; results: SearchResult[]; contentType: ContentType }
-  | { step: "game_extras"; game: Game; claudeDescription: string | null }
+  | { step: "game_extras"; game: Game; claudeDescription: string | null; torrentInfo?: TorrentInfo }
   | { step: "app_form" }
   | { step: "generating" }
   | { step: "done"; bbcode: string; html: string }
-  | { step: "error"; message: string };
+  | { step: "error"; message: string }
+  | { step: "torrent_parsed"; torrentInfo: TorrentInfo }
+  | { step: "torrent_selecting"; results: SearchResult[]; contentType: ContentType; torrentInfo: TorrentInfo };

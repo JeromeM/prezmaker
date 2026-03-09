@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Game, TechInfo } from "../types/api";
+import type { Game, TechInfo, TorrentInfo } from "../types/api";
 
 interface Props {
   game: Game;
@@ -11,6 +11,7 @@ interface Props {
     techInfo: TechInfo
   ) => void;
   onCancel: () => void;
+  torrentInfo?: TorrentInfo;
 }
 
 export default function GameExtrasForm({
@@ -18,14 +19,15 @@ export default function GameExtrasForm({
   claudeDescription,
   onGenerate,
   onCancel,
+  torrentInfo,
 }: Props) {
   const [description, setDescription] = useState(
     claudeDescription || game.synopsis || ""
   );
   const [installation, setInstallation] = useState("");
-  const [platform, setPlatform] = useState("");
-  const [languages, setLanguages] = useState("");
-  const [size, setSize] = useState("");
+  const [platform, setPlatform] = useState(torrentInfo ? "PC (Windows)" : "");
+  const [languages, setLanguages] = useState(torrentInfo?.parsed.language || "");
+  const [size, setSize] = useState(torrentInfo?.size_formatted || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

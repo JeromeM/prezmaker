@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ContentType, TrackerType } from "../types/api";
+import TorrentImport from "./TorrentImport";
 
 interface Props {
   tracker: TrackerType;
@@ -8,6 +9,7 @@ interface Props {
   loading: boolean;
   onReset: () => void;
   onOpenSettings: () => void;
+  onImportTorrent: (filePath: string) => void;
 }
 
 export default function TopBar({
@@ -17,6 +19,7 @@ export default function TopBar({
   loading,
   onReset,
   onOpenSettings,
+  onImportTorrent,
 }: Props) {
   const [query, setQuery] = useState("");
   const [contentType, setContentType] = useState<ContentType>("film");
@@ -84,6 +87,8 @@ export default function TopBar({
         </button>
 
         <div className="flex items-center gap-2 ml-auto">
+          <TorrentImport onImport={onImportTorrent} disabled={loading} />
+
           <button
             type="button"
             onClick={onOpenSettings}

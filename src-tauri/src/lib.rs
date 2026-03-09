@@ -14,6 +14,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             config: Arc::new(Mutex::new(config)),
         })
@@ -21,6 +22,9 @@ pub fn run() {
             commands::search,
             commands::generate_film,
             commands::generate_serie,
+            commands::parse_torrent,
+            commands::generate_film_with_tech,
+            commands::generate_serie_with_tech,
             commands::fetch_game_details,
             commands::generate_jeu,
             commands::generate_app,

@@ -1,7 +1,11 @@
 use crate::formatters::bbcode::*;
-use crate::models::{Movie, Tracker};
+use crate::models::{MediaTechInfo, Movie, Tracker};
 
 pub fn format_movie(movie: &Movie, title_color: &str, tracker: Tracker) -> String {
+    format_movie_with_tech(movie, title_color, tracker, None)
+}
+
+pub fn format_movie_with_tech(movie: &Movie, title_color: &str, tracker: Tracker, tech: Option<&MediaTechInfo>) -> String {
     let mut out = String::new();
 
     // Header
@@ -136,31 +140,51 @@ pub fn format_movie(movie: &Movie, title_color: &str, tracker: Tracker) -> Strin
         }
     }
 
-    // Technical info (empty for uploader to fill)
+    // Technical info
     out.push_str(&sub_heading_for(tracker, "Informations techniques", title_color));
     out.push('\n');
     out.push('\n');
 
-    let tech_headers = ["Qualite", "Codec Video", "Langue(s)", "Sous-titres"];
-    match tracker {
-        Tracker::C411 => {
-            let mut tech_table = String::new();
-            let mut header_row = String::new();
-            for h in &tech_headers {
-                header_row.push_str(&th(h));
-            }
-            tech_table.push_str(&tr(&header_row));
-            let mut empty_row = String::new();
-            for _ in &tech_headers {
-                empty_row.push_str(&td(&center(" ")));
-            }
-            tech_table.push_str(&tr(&empty_row));
-            out.push_str(&table(&tech_table));
+    {
+        let quality_val = tech.and_then(|t| t.quality.as_deref()).unwrap_or(" ");
+        let codec_val = tech.and_then(|t| t.video_codec.as_deref()).unwrap_or(" ");
+        let lang_val = tech.and_then(|t| t.language.as_deref()).unwrap_or(" ");
+        let sub_val = tech.and_then(|t| t.subtitles.as_deref()).unwrap_or(" ");
+        let audio_val = tech.and_then(|t| t.audio.as_deref());
+        let size_val = tech.and_then(|t| t.size.as_deref());
+
+        let mut headers: Vec<&str> = vec!["Qualite", "Codec Video", "Langue(s)", "Sous-titres"];
+        let mut values: Vec<&str> = vec![quality_val, codec_val, lang_val, sub_val];
+
+        if let Some(a) = audio_val {
+            headers.push("Audio");
+            values.push(a);
         }
-        Tracker::TorrXyz => {
-            for h in &tech_headers {
-                out.push_str(&center(&field_for(tracker, h, " ")));
-                out.push('\n');
+        if let Some(s) = size_val {
+            headers.push("Taille");
+            values.push(s);
+        }
+
+        match tracker {
+            Tracker::C411 => {
+                let mut tech_table = String::new();
+                let mut header_row = String::new();
+                for h in &headers {
+                    header_row.push_str(&th(h));
+                }
+                tech_table.push_str(&tr(&header_row));
+                let mut val_row = String::new();
+                for v in &values {
+                    val_row.push_str(&td(&center(v)));
+                }
+                tech_table.push_str(&tr(&val_row));
+                out.push_str(&table(&tech_table));
+            }
+            Tracker::TorrXyz => {
+                for (h, v) in headers.iter().zip(values.iter()) {
+                    out.push_str(&center(&field_for(tracker, h, v)));
+                    out.push('\n');
+                }
             }
         }
     }

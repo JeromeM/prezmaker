@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::error::PrezError;
 use crate::formatters::{app_fmt, game_fmt, movie_fmt, series_fmt};
-use crate::models::{Application, Game, Movie, Series, TechInfo, Tracker};
+use crate::models::{Application, Game, MediaTechInfo, Movie, Series, TechInfo, Tracker};
 use crate::providers::allocine::AllocineClient;
 use crate::providers::igdb::IgdbClient;
 use crate::providers::tmdb::TmdbClient;
@@ -182,6 +182,64 @@ impl OrchestratorApi {
             &series,
             &self.title_color,
             self.tracker,
+        ))
+    }
+
+    pub async fn generate_film_with_tech(
+        &self,
+        tmdb_id: u64,
+        no_allocine: bool,
+        tech: MediaTechInfo,
+    ) -> Result<String, PrezError> {
+        let api_key = self.config.tmdb_api_key()?;
+        let tmdb = TmdbClient::new(api_key.to_string(), self.language.clone());
+
+        let mut movie = tmdb
+            .get_movie_details(tmdb_id)
+            .await
+            .map_err(|e| PrezError::Other(format!("Erreur details TMDB : {}", e)))?;
+
+        if !no_allocine {
+            match Self::enrich_movie_allocine(&mut movie).await {
+                Ok(_) => info!("Notes Allocine recuperees"),
+                Err(e) => warn!("Allocine indisponible : {}", e),
+            }
+        }
+
+        Ok(movie_fmt::format_movie_with_tech(
+            &movie,
+            &self.title_color,
+            self.tracker,
+            Some(&tech),
+        ))
+    }
+
+    pub async fn generate_serie_with_tech(
+        &self,
+        tmdb_id: u64,
+        no_allocine: bool,
+        tech: MediaTechInfo,
+    ) -> Result<String, PrezError> {
+        let api_key = self.config.tmdb_api_key()?;
+        let tmdb = TmdbClient::new(api_key.to_string(), self.language.clone());
+
+        let mut series = tmdb
+            .get_series_details(tmdb_id)
+            .await
+            .map_err(|e| PrezError::Other(format!("Erreur details TMDB : {}", e)))?;
+
+        if !no_allocine {
+            match Self::enrich_series_allocine(&mut series).await {
+                Ok(_) => info!("Notes Allocine recuperees"),
+                Err(e) => warn!("Allocine indisponible : {}", e),
+            }
+        }
+
+        Ok(series_fmt::format_series_with_tech(
+            &series,
+            &self.title_color,
+            self.tracker,
+            Some(&tech),
         ))
     }
 

@@ -6,6 +6,7 @@ import GameExtrasForm from "./components/GameExtrasForm";
 import AppForm from "./components/AppForm";
 import SplitPreview from "./components/SplitPreview";
 import SettingsModal from "./components/SettingsModal";
+import TorrentContentTypePicker from "./components/TorrentContentTypePicker";
 
 function App() {
   const [showSettings, setShowSettings] = useState(false);
@@ -15,6 +16,9 @@ function App() {
     setTracker,
     search,
     selectResult,
+    selectTorrentResult,
+    importTorrent,
+    confirmTorrentContentType,
     generateGame,
     generateApp,
     convertBBCode,
@@ -32,6 +36,7 @@ function App() {
         loading={isLoading}
         onReset={reset}
         onOpenSettings={() => setShowSettings(true)}
+        onImportTorrent={importTorrent}
       />
 
       <main className="flex-1 flex flex-col min-h-0">
@@ -103,12 +108,30 @@ function App() {
           />
         )}
 
+        {state.step === "torrent_selecting" && (
+          <ResultSelector
+            results={state.results}
+            contentType={state.contentType}
+            onSelect={(id, ct) => selectTorrentResult(id, ct, state.torrentInfo)}
+            onCancel={reset}
+          />
+        )}
+
+        {state.step === "torrent_parsed" && (
+          <TorrentContentTypePicker
+            torrentInfo={state.torrentInfo}
+            onConfirm={confirmTorrentContentType}
+            onCancel={reset}
+          />
+        )}
+
         {state.step === "game_extras" && (
           <GameExtrasForm
             game={state.game}
             claudeDescription={state.claudeDescription}
             onGenerate={generateGame}
             onCancel={reset}
+            torrentInfo={state.torrentInfo}
           />
         )}
 
