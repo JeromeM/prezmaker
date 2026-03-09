@@ -1,6 +1,7 @@
 pub mod allocine;
 pub mod igdb;
 pub mod llm;
+pub mod steam;
 pub mod tmdb;
 pub mod translator;
 pub mod wikipedia;
