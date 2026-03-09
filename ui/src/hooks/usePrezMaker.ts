@@ -100,7 +100,7 @@ export function usePrezMaker() {
         }
 
         if (results.length === 1 && contentType !== "jeu") {
-          await selectResult(results[0].id, contentType);
+          await selectResult(results[0].id, contentType, "default", results[0].source);
           return;
         }
 
@@ -114,13 +114,13 @@ export function usePrezMaker() {
 
   // --- Select result (normal flow, uses template) ---
   const selectResult = useCallback(
-    async (id: number, contentType: ContentType, templateName: string = "default") => {
+    async (id: number, contentType: ContentType, templateName: string = "default", source?: string) => {
       if (contentType === "jeu") {
         setState({ step: "generating" });
         try {
           const response = await invoke<GameDetailsResponse>(
             "fetch_game_details",
-            { igdbId: id, tracker: TRACKER, titleColor: titleColor || null }
+            { gameId: id, source: source ?? null, tracker: TRACKER, titleColor: titleColor || null }
           );
           setState({
             step: "game_extras",
@@ -140,13 +140,13 @@ export function usePrezMaker() {
 
   // --- Torrent result (with tech info) ---
   const selectTorrentResult = useCallback(
-    async (id: number, contentType: ContentType, torrentInfo: TorrentInfo, templateName: string = "default") => {
+    async (id: number, contentType: ContentType, torrentInfo: TorrentInfo, templateName: string = "default", source?: string) => {
       if (contentType === "jeu") {
         setState({ step: "generating" });
         try {
           const response = await invoke<GameDetailsResponse>(
             "fetch_game_details",
-            { igdbId: id, tracker: TRACKER, titleColor: titleColor || null }
+            { gameId: id, source: source ?? null, tracker: TRACKER, titleColor: titleColor || null }
           );
           setState({
             step: "game_extras",
@@ -205,7 +205,7 @@ export function usePrezMaker() {
         }
 
         if (results.length === 1 && contentType !== "jeu") {
-          await selectTorrentResult(results[0].id, contentType, info);
+          await selectTorrentResult(results[0].id, contentType, info, "default", results[0].source);
           return;
         }
 

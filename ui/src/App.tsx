@@ -7,12 +7,14 @@ import AppForm from "./components/AppForm";
 import SplitPreview from "./components/SplitPreview";
 import SettingsModal from "./components/SettingsModal";
 import TemplateEditor from "./components/TemplateEditor";
+import AboutModal from "./components/AboutModal";
 import TorrentContentTypePicker from "./components/TorrentContentTypePicker";
 import Onboarding, { isOnboardingDone } from "./components/Onboarding";
 
 function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [onboardingDone, setOnboardingDone] = useState(isOnboardingDone);
   const {
     state,
@@ -42,6 +44,7 @@ function App() {
         onOpenSettings={() => setShowSettings(true)}
         onImportTorrent={importTorrent}
         onOpenTemplateEditor={() => setShowTemplateEditor(true)}
+        onOpenAbout={() => setShowAbout(true)}
       />
 
       <main className="flex-1 flex flex-col min-h-0">
@@ -108,7 +111,7 @@ function App() {
           <ResultSelector
             results={state.results}
             contentType={state.contentType}
-            onSelect={selectResult}
+            onSelect={(id, ct, source) => selectResult(id, ct, "default", source)}
             onCancel={reset}
           />
         )}
@@ -117,7 +120,7 @@ function App() {
           <ResultSelector
             results={state.results}
             contentType={state.contentType}
-            onSelect={(id, ct) => selectTorrentResult(id, ct, state.torrentInfo)}
+            onSelect={(id, ct, source) => selectTorrentResult(id, ct, state.torrentInfo, "default", source)}
             onCancel={reset}
           />
         )}
@@ -171,6 +174,9 @@ function App() {
       )}
       {showTemplateEditor && (
         <TemplateEditor onClose={() => setShowTemplateEditor(false)} />
+      )}
+      {showAbout && (
+        <AboutModal onClose={() => setShowAbout(false)} />
       )}
     </div>
   );
