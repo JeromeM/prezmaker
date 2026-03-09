@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   AppState,
@@ -9,12 +9,19 @@ import type {
   Game,
   TechInfo,
   AppPayload,
+  SettingsPayload,
 } from "../types/api";
 
 export function usePrezMaker() {
   const [state, setState] = useState<AppState>({ step: "idle" });
   const [tracker, setTracker] = useState<TrackerType>("C411");
   const [titleColor, setTitleColor] = useState<string>("");
+
+  useEffect(() => {
+    invoke<SettingsPayload>("get_settings").then((s) => {
+      setTitleColor(s.title_color || "");
+    });
+  }, []);
 
   const search = useCallback(
     async (query: string, contentType: ContentType) => {
@@ -146,8 +153,6 @@ export function usePrezMaker() {
     state,
     tracker,
     setTracker,
-    titleColor,
-    setTitleColor,
     search,
     selectResult,
     generateGame,

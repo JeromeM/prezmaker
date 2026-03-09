@@ -13,8 +13,6 @@ function App() {
     state,
     tracker,
     setTracker,
-    titleColor,
-    setTitleColor,
     search,
     selectResult,
     generateGame,
@@ -30,8 +28,6 @@ function App() {
       <TopBar
         tracker={tracker}
         onTrackerChange={setTracker}
-        titleColor={titleColor}
-        onTitleColorChange={setTitleColor}
         onSearch={search}
         loading={isLoading}
         onReset={reset}
