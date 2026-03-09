@@ -1,7 +1,9 @@
 use crate::config::Config;
 use crate::error::PrezError;
 use crate::formatters::{app_fmt, game_fmt, movie_fmt, series_fmt};
+use crate::formatters::bbcode;
 use crate::models::{Application, Game, MediaTechInfo, Movie, Series, TechInfo, Tracker};
+use crate::template_engine::{self, RenderContext};
 use crate::providers::allocine::AllocineClient;
 use crate::providers::igdb::IgdbClient;
 use crate::providers::tmdb::TmdbClient;
@@ -291,6 +293,265 @@ impl OrchestratorApi {
             &self.title_color,
             self.tracker,
         ))
+    }
+
+    // --- Template-based generation ---
+
+    pub async fn generate_film_from_template(
+        &self,
+        tmdb_id: u64,
+        no_allocine: bool,
+        tech: Option<MediaTechInfo>,
+        template_name: &str,
+    ) -> Result<String, PrezError> {
+        let api_key = self.config.tmdb_api_key()?;
+        let tmdb = TmdbClient::new(api_key.to_string(), self.language.clone());
+        let mut movie = tmdb.get_movie_details(tmdb_id).await
+            .map_err(|e| PrezError::Other(format!("Erreur details TMDB : {}", e)))?;
+        if !no_allocine {
+            match Self::enrich_movie_allocine(&mut movie).await {
+                Ok(_) => info!("Notes Allocine recuperees"),
+                Err(e) => warn!("Allocine indisponible : {}", e),
+            }
+        }
+
+        let tpl = template_engine::get_template("film", template_name)
+            .map_err(|e| PrezError::Other(e))?;
+        let data = template_engine::build_movie_data(&movie, tech.as_ref());
+
+        // Build info BBCode for poster_info composite
+        let info_bbcode = self.build_movie_info_bbcode(&movie);
+        let ctx = RenderContext {
+            ratings: movie.ratings.clone(),
+            poster_url: movie.poster_url.clone(),
+            tech,
+            info_bbcode: Some(info_bbcode),
+            ..Default::default()
+        };
+
+        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color))
+    }
+
+    pub async fn generate_serie_from_template(
+        &self,
+        tmdb_id: u64,
+        no_allocine: bool,
+        tech: Option<MediaTechInfo>,
+        template_name: &str,
+    ) -> Result<String, PrezError> {
+        let api_key = self.config.tmdb_api_key()?;
+        let tmdb = TmdbClient::new(api_key.to_string(), self.language.clone());
+        let mut series = tmdb.get_series_details(tmdb_id).await
+            .map_err(|e| PrezError::Other(format!("Erreur details TMDB : {}", e)))?;
+        if !no_allocine {
+            match Self::enrich_series_allocine(&mut series).await {
+                Ok(_) => info!("Notes Allocine recuperees"),
+                Err(e) => warn!("Allocine indisponible : {}", e),
+            }
+        }
+
+        let tpl = template_engine::get_template("serie", template_name)
+            .map_err(|e| PrezError::Other(e))?;
+        let data = template_engine::build_series_data(&series, tech.as_ref());
+
+        let info_bbcode = self.build_series_info_bbcode(&series);
+        let ctx = RenderContext {
+            ratings: series.ratings.clone(),
+            poster_url: series.poster_url.clone(),
+            tech,
+            info_bbcode: Some(info_bbcode),
+            ..Default::default()
+        };
+
+        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color))
+    }
+
+    pub fn generate_jeu_from_template(
+        &self,
+        mut game: Game,
+        description: Option<String>,
+        installation: Option<String>,
+        tech_info: TechInfo,
+        template_name: &str,
+    ) -> Result<String, PrezError> {
+        if let Some(desc) = description {
+            game.synopsis = Some(desc);
+        }
+        game.installation = installation;
+        game.tech_info = Some(tech_info);
+
+        let tpl = template_engine::get_template("jeu", template_name)
+            .map_err(|e| PrezError::Other(e))?;
+        let data = template_engine::build_game_data(&game);
+
+        let info_bbcode = self.build_game_info_bbcode(&game);
+        let ctx = RenderContext {
+            ratings: game.ratings.clone(),
+            cover_url: game.cover_url.clone(),
+            screenshots: game.screenshots.clone(),
+            game_tech: game.tech_info.clone(),
+            info_bbcode: Some(info_bbcode),
+            ..Default::default()
+        };
+
+        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color))
+    }
+
+    pub fn generate_app_from_template(
+        &self,
+        app: Application,
+        template_name: &str,
+    ) -> Result<String, PrezError> {
+        let tpl = template_engine::get_template("app", template_name)
+            .map_err(|e| PrezError::Other(e))?;
+        let data = template_engine::build_app_data(&app);
+
+        let info_bbcode = self.build_app_info_bbcode(&app);
+        let ctx = RenderContext {
+            logo_url: app.logo_url.clone(),
+            info_bbcode: Some(info_bbcode),
+            ..Default::default()
+        };
+
+        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color))
+    }
+
+    // --- Info BBCode builders (for poster_info/cover_info composites) ---
+
+    fn build_movie_info_bbcode(&self, movie: &Movie) -> String {
+        let t = self.tracker;
+        let mut info = String::new();
+        if !movie.countries.is_empty() {
+            info.push_str(&bbcode::field_for(t, "Origine", &movie.countries_display()));
+            info.push('\n');
+        }
+        if let Some(ref date) = movie.release_date {
+            info.push_str(&bbcode::field_for(t, "Sortie", &template_engine::format_date_fr_pub(date)));
+            info.push('\n');
+        }
+        if let Some(ref dur) = movie.duration_formatted() {
+            info.push_str(&bbcode::field_for(t, "Duree", dur));
+            info.push('\n');
+        }
+        if !movie.directors.is_empty() {
+            info.push_str(&bbcode::field_for(t, "Realisateur", &movie.directors_display()));
+            info.push('\n');
+        }
+        if !movie.genres.is_empty() {
+            info.push_str(&bbcode::field_for(t, "Genres", &movie.genres_display()));
+            info.push('\n');
+        }
+        if !movie.cast.is_empty() {
+            info.push('\n');
+            info.push_str(&bbcode::inline_heading_for(t, "Casting", &self.title_color));
+            info.push_str("\n\n");
+            info.push_str(&bbcode::field_for(t, "Acteurs", &movie.cast_display(6)));
+            info.push('\n');
+        }
+        info
+    }
+
+    fn build_series_info_bbcode(&self, series: &Series) -> String {
+        let t = self.tracker;
+        let mut info = String::new();
+        if !series.countries.is_empty() {
+            info.push_str(&bbcode::field_for(t, "Origine", &series.countries_display()));
+            info.push('\n');
+        }
+        if let Some(ref date) = series.first_air_date {
+            info.push_str(&bbcode::field_for(t, "Premiere diffusion", &template_engine::format_date_fr_pub(date)));
+            info.push('\n');
+        }
+        if let Some(ref status) = series.status {
+            info.push_str(&bbcode::field_for(t, "Statut", &template_engine::translate_status_pub(status)));
+            info.push('\n');
+        }
+        if let Some(seasons) = series.seasons_count {
+            info.push_str(&bbcode::field_for(t, "Saisons", &seasons.to_string()));
+            info.push('\n');
+        }
+        if let Some(episodes) = series.episodes_count {
+            info.push_str(&bbcode::field_for(t, "Episodes", &episodes.to_string()));
+            info.push('\n');
+        }
+        if let Some(ref runtime) = series.runtime_formatted() {
+            info.push_str(&bbcode::field_for(t, "Duree par episode", runtime));
+            info.push('\n');
+        }
+        if !series.creators.is_empty() {
+            info.push_str(&bbcode::field_for(t, "Createur(s)", &series.creators_display()));
+            info.push('\n');
+        }
+        if !series.networks.is_empty() {
+            info.push_str(&bbcode::field_for(t, "Chaine / Plateforme", &series.networks_display()));
+            info.push('\n');
+        }
+        if !series.genres.is_empty() {
+            info.push_str(&bbcode::field_for(t, "Genres", &series.genres_display()));
+            info.push('\n');
+        }
+        if !series.cast.is_empty() {
+            info.push('\n');
+            info.push_str(&bbcode::inline_heading_for(t, "Casting", &self.title_color));
+            info.push_str("\n\n");
+            info.push_str(&bbcode::field_for(t, "Acteurs", &series.cast_display(8)));
+            info.push('\n');
+        }
+        info
+    }
+
+    fn build_game_info_bbcode(&self, game: &Game) -> String {
+        let t = self.tracker;
+        let mut info = String::new();
+        if let Some(ref date) = game.release_date {
+            info.push_str(&bbcode::field_for(t, "Date de sortie", date));
+            info.push('\n');
+        }
+        if !game.developers.is_empty() {
+            info.push_str(&bbcode::field_for(t, "Developpeur(s)", &game.developers_display()));
+            info.push('\n');
+        }
+        if !game.publishers.is_empty() {
+            info.push_str(&bbcode::field_for(t, "Editeur(s)", &game.publishers_display()));
+            info.push('\n');
+        }
+        if !game.genres.is_empty() {
+            info.push_str(&bbcode::field_for(t, "Genres", &game.genres_display()));
+            info.push('\n');
+        }
+        if !game.platforms.is_empty() {
+            info.push_str(&bbcode::field_for(t, "Plateformes", &game.platforms_display()));
+            info.push('\n');
+        }
+        info
+    }
+
+    fn build_app_info_bbcode(&self, app: &Application) -> String {
+        let t = self.tracker;
+        let mut info = String::new();
+        info.push_str(&bbcode::field_for(t, "Nom", &app.name));
+        info.push('\n');
+        if let Some(ref version) = app.version {
+            info.push_str(&bbcode::field_for(t, "Version", version));
+            info.push('\n');
+        }
+        if let Some(ref dev) = app.developer {
+            info.push_str(&bbcode::field_for(t, "Developpeur", dev));
+            info.push('\n');
+        }
+        if let Some(ref license) = app.license {
+            info.push_str(&bbcode::field_for(t, "Licence", license));
+            info.push('\n');
+        }
+        if let Some(ref website) = app.website {
+            info.push_str(&bbcode::field_for(t, "Site web", &bbcode::url(website, website)));
+            info.push('\n');
+        }
+        if !app.platforms.is_empty() {
+            info.push_str(&bbcode::field_for(t, "Plateformes", &app.platforms_display()));
+            info.push('\n');
+        }
+        info
     }
 
     async fn enrich_movie_allocine(movie: &mut Movie) -> anyhow::Result<()> {

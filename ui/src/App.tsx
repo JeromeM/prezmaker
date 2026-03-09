@@ -6,10 +6,12 @@ import GameExtrasForm from "./components/GameExtrasForm";
 import AppForm from "./components/AppForm";
 import SplitPreview from "./components/SplitPreview";
 import SettingsModal from "./components/SettingsModal";
+import TemplateEditor from "./components/TemplateEditor";
 import TorrentContentTypePicker from "./components/TorrentContentTypePicker";
 
 function App() {
   const [showSettings, setShowSettings] = useState(false);
+  const [showTemplateEditor, setShowTemplateEditor] = useState(false);
   const {
     state,
     tracker,
@@ -37,6 +39,7 @@ function App() {
         onReset={reset}
         onOpenSettings={() => setShowSettings(true)}
         onImportTorrent={importTorrent}
+        onOpenTemplateEditor={() => setShowTemplateEditor(true)}
       />
 
       <main className="flex-1 flex flex-col min-h-0">
@@ -163,6 +166,9 @@ function App() {
       </main>
       {showSettings && (
         <SettingsModal onClose={() => setShowSettings(false)} />
+      )}
+      {showTemplateEditor && (
+        <TemplateEditor onClose={() => setShowTemplateEditor(false)} />
       )}
     </div>
   );

@@ -4,6 +4,7 @@ use prezmaker_lib::models::{Application, Game, MediaTechInfo, TechInfo, Tracker}
 use prezmaker_lib::providers::llm::LlmClient;
 use prezmaker_lib::orchestrator_api::{GameDetailsResponse, OrchestratorApi, SearchResult};
 use prezmaker_lib::torrent::{self, TorrentInfo};
+use prezmaker_lib::template_engine::{self, ContentTemplate, TemplateTag};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -184,6 +185,92 @@ pub async fn generate_serie_with_tech(
     api.generate_serie_with_tech(tmdb_id, false, tech)
         .await
         .map_err(|e| e.to_string())
+}
+
+// --- Content Templates ---
+
+#[tauri::command]
+pub fn list_content_templates(content_type: String) -> Result<Vec<ContentTemplate>, String> {
+    template_engine::list_templates(&content_type)
+}
+
+#[tauri::command]
+pub fn get_content_template(content_type: String, name: String) -> Result<ContentTemplate, String> {
+    template_engine::get_template(&content_type, &name)
+}
+
+#[tauri::command]
+pub fn save_content_template(content_type: String, name: String, body: String) -> Result<(), String> {
+    template_engine::save_template(&content_type, &name, &body)
+}
+
+#[tauri::command]
+pub fn delete_content_template(content_type: String, name: String) -> Result<(), String> {
+    template_engine::delete_template(&content_type, &name)
+}
+
+#[tauri::command]
+pub fn duplicate_content_template(content_type: String, name: String, new_name: String) -> Result<(), String> {
+    template_engine::duplicate_template(&content_type, &name, &new_name)
+}
+
+#[tauri::command]
+pub fn get_template_tags(content_type: String) -> Vec<TemplateTag> {
+    template_engine::get_available_tags(&content_type)
+}
+
+// --- Template-based generation ---
+
+#[tauri::command]
+pub async fn generate_from_template(
+    state: tauri::State<'_, AppState>,
+    content_type: String,
+    tmdb_id: Option<u64>,
+    tracker: String,
+    title_color: Option<String>,
+    template_name: String,
+    tech: Option<MediaTechInfo>,
+    game_payload: Option<GenerateJeuPayload>,
+    app_payload: Option<GenerateAppPayload>,
+) -> Result<String, String> {
+    let config = state.config.lock().unwrap().clone();
+    let api = make_api(&config, &tracker, title_color.as_deref());
+
+    match content_type.as_str() {
+        "film" => {
+            let id = tmdb_id.ok_or("tmdb_id required for film")?;
+            api.generate_film_from_template(id, false, tech, &template_name)
+                .await
+                .map_err(|e| e.to_string())
+        }
+        "serie" => {
+            let id = tmdb_id.ok_or("tmdb_id required for serie")?;
+            api.generate_serie_from_template(id, false, tech, &template_name)
+                .await
+                .map_err(|e| e.to_string())
+        }
+        "jeu" => {
+            let p = game_payload.ok_or("game_payload required for jeu")?;
+            api.generate_jeu_from_template(p.game, p.description, p.installation, p.tech_info, &template_name)
+                .map_err(|e| e.to_string())
+        }
+        "app" => {
+            let p = app_payload.ok_or("app_payload required for app")?;
+            let app = Application {
+                name: p.name,
+                version: p.version,
+                developer: p.developer,
+                description: p.description,
+                website: p.website,
+                license: p.license,
+                platforms: p.platforms,
+                logo_url: p.logo_url,
+            };
+            api.generate_app_from_template(app, &template_name)
+                .map_err(|e| e.to_string())
+        }
+        _ => Err(format!("Unknown content type: {}", content_type)),
+    }
 }
 
 #[tauri::command]

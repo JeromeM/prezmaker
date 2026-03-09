@@ -26,14 +26,6 @@ function buildMediaTech(parsed: TorrentInfo["parsed"], sizeFormatted: string): M
   };
 }
 
-function buildGameTech(parsed: TorrentInfo["parsed"], sizeFormatted: string): { platform: string; languages: string; size: string } {
-  return {
-    platform: "PC (Windows)",
-    languages: parsed.language || "",
-    size: sizeFormatted,
-  };
-}
-
 function torrentContentTypeToContentType(t: DetectedContentType): ContentType | null {
   switch (t) {
     case "Film": return "film";
@@ -54,6 +46,38 @@ export function usePrezMaker() {
     });
   }, []);
 
+  // --- Helper: generate via template ---
+  const generateWithTemplate = useCallback(
+    async (
+      contentType: ContentType,
+      templateName: string,
+      tmdbId?: number,
+      tech?: MediaTechInfo | null,
+      gamePayload?: { game: Game; description: string | null; installation: string | null; tech_info: TechInfo },
+      appPayload?: AppPayload,
+    ) => {
+      setState({ step: "generating" });
+      try {
+        const bbcode = await invoke<string>("generate_from_template", {
+          contentType,
+          tmdbId: tmdbId ?? null,
+          tracker,
+          titleColor: titleColor || null,
+          templateName,
+          tech: tech ?? null,
+          gamePayload: gamePayload ?? null,
+          appPayload: appPayload ?? null,
+        });
+        const html = await invoke<string>("convert_bbcode", { bbcode });
+        setState({ step: "done", bbcode, html });
+      } catch (e) {
+        setState({ step: "error", message: String(e) });
+      }
+    },
+    [tracker, titleColor]
+  );
+
+  // --- Search ---
   const search = useCallback(
     async (query: string, contentType: ContentType) => {
       if (contentType === "app") {
@@ -88,57 +112,41 @@ export function usePrezMaker() {
     [tracker, titleColor]
   );
 
+  // --- Select result (normal flow, uses template) ---
   const selectResult = useCallback(
-    async (id: number, contentType: ContentType) => {
-      setState({ step: "generating" });
-      try {
-        if (contentType === "jeu") {
+    async (id: number, contentType: ContentType, templateName: string = "default") => {
+      if (contentType === "jeu") {
+        setState({ step: "generating" });
+        try {
           const response = await invoke<GameDetailsResponse>(
             "fetch_game_details",
-            {
-              igdbId: id,
-              tracker,
-              titleColor: titleColor || null,
-            }
+            { igdbId: id, tracker, titleColor: titleColor || null }
           );
           setState({
             step: "game_extras",
             game: response.game,
             claudeDescription: response.claude_description,
           });
-          return;
+        } catch (e) {
+          setState({ step: "error", message: String(e) });
         }
-
-        const cmd =
-          contentType === "film" ? "generate_film" : "generate_serie";
-        const paramKey = "tmdbId";
-
-        const bbcode = await invoke<string>(cmd, {
-          [paramKey]: id,
-          tracker,
-          titleColor: titleColor || null,
-        });
-        const html = await invoke<string>("convert_bbcode", { bbcode });
-        setState({ step: "done", bbcode, html });
-      } catch (e) {
-        setState({ step: "error", message: String(e) });
+        return;
       }
+
+      await generateWithTemplate(contentType, templateName, id);
     },
-    [tracker, titleColor]
+    [tracker, titleColor, generateWithTemplate]
   );
 
+  // --- Torrent result (with tech info) ---
   const selectTorrentResult = useCallback(
-    async (id: number, contentType: ContentType, torrentInfo: TorrentInfo) => {
-      setState({ step: "generating" });
-      try {
-        if (contentType === "jeu") {
+    async (id: number, contentType: ContentType, torrentInfo: TorrentInfo, templateName: string = "default") => {
+      if (contentType === "jeu") {
+        setState({ step: "generating" });
+        try {
           const response = await invoke<GameDetailsResponse>(
             "fetch_game_details",
-            {
-              igdbId: id,
-              tracker,
-              titleColor: titleColor || null,
-            }
+            { igdbId: id, tracker, titleColor: titleColor || null }
           );
           setState({
             step: "game_extras",
@@ -146,28 +154,19 @@ export function usePrezMaker() {
             claudeDescription: response.claude_description,
             torrentInfo,
           });
-          return;
+        } catch (e) {
+          setState({ step: "error", message: String(e) });
         }
-
-        const tech = buildMediaTech(torrentInfo.parsed, torrentInfo.size_formatted);
-        const cmd =
-          contentType === "film" ? "generate_film_with_tech" : "generate_serie_with_tech";
-
-        const bbcode = await invoke<string>(cmd, {
-          tmdbId: id,
-          tracker,
-          titleColor: titleColor || null,
-          tech,
-        });
-        const html = await invoke<string>("convert_bbcode", { bbcode });
-        setState({ step: "done", bbcode, html });
-      } catch (e) {
-        setState({ step: "error", message: String(e) });
+        return;
       }
+
+      const tech = buildMediaTech(torrentInfo.parsed, torrentInfo.size_formatted);
+      await generateWithTemplate(contentType, templateName, id, tech);
     },
-    [tracker, titleColor]
+    [tracker, titleColor, generateWithTemplate]
   );
 
+  // --- Torrent import ---
   const importTorrent = useCallback(
     async (filePath: string) => {
       setState({ step: "searching" });
@@ -176,12 +175,10 @@ export function usePrezMaker() {
         const ct = torrentContentTypeToContentType(info.parsed.content_type);
 
         if (!ct) {
-          // Unknown type → user picks
           setState({ step: "torrent_parsed", torrentInfo: info });
           return;
         }
 
-        // Auto-search
         await searchForTorrent(info, ct);
       } catch (e) {
         setState({ step: "error", message: String(e) });
@@ -227,45 +224,31 @@ export function usePrezMaker() {
     [searchForTorrent]
   );
 
+  // --- Game generation (with template) ---
   const generateGame = useCallback(
     async (
       game: Game,
       description: string | null,
       installation: string | null,
-      techInfo: TechInfo
+      techInfo: TechInfo,
+      templateName: string = "default",
     ) => {
-      setState({ step: "generating" });
-      try {
-        const bbcode = await invoke<string>("generate_jeu", {
-          payload: { game, description, installation, tech_info: techInfo },
-          tracker,
-          titleColor: titleColor || null,
-        });
-        const html = await invoke<string>("convert_bbcode", { bbcode });
-        setState({ step: "done", bbcode, html });
-      } catch (e) {
-        setState({ step: "error", message: String(e) });
-      }
+      await generateWithTemplate("jeu", templateName, undefined, undefined, {
+        game,
+        description,
+        installation,
+        tech_info: techInfo,
+      });
     },
-    [tracker, titleColor]
+    [generateWithTemplate]
   );
 
+  // --- App generation (with template) ---
   const generateApp = useCallback(
-    async (payload: AppPayload) => {
-      setState({ step: "generating" });
-      try {
-        const bbcode = await invoke<string>("generate_app", {
-          payload,
-          tracker,
-          titleColor: titleColor || null,
-        });
-        const html = await invoke<string>("convert_bbcode", { bbcode });
-        setState({ step: "done", bbcode, html });
-      } catch (e) {
-        setState({ step: "error", message: String(e) });
-      }
+    async (payload: AppPayload, templateName: string = "default") => {
+      await generateWithTemplate("app", templateName, undefined, undefined, undefined, payload);
     },
-    [tracker, titleColor]
+    [generateWithTemplate]
   );
 
   const convertBBCode = useCallback(async (bbcode: string) => {

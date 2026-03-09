@@ -71,6 +71,20 @@ export interface SettingsPayload {
   llm_api_key: string | null;
 }
 
+// Content Templates
+
+export interface ContentTemplate {
+  name: string;
+  content_type: string;
+  body: string;
+  is_default: boolean;
+}
+
+export interface TemplateTag {
+  name: string;
+  description: string;
+}
+
 // Torrent types
 
 export type DetectedContentType = "Film" | "Serie" | "Jeu" | "Unknown";
