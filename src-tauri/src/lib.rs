@@ -25,8 +25,15 @@ pub fn run() {
             commands::generate_jeu,
             commands::generate_app,
             commands::convert_bbcode,
+            commands::generate_nfo,
             commands::get_settings,
             commands::save_settings,
+            commands::list_templates,
+            commands::load_template,
+            commands::save_template,
+            commands::delete_template,
+            commands::rename_template,
+            commands::duplicate_template,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

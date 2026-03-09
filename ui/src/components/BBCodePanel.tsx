@@ -3,9 +3,11 @@ import { useState } from "react";
 interface Props {
   bbcode: string;
   onChange: (bbcode: string) => void;
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
+  headerActions?: React.ReactNode;
 }
 
-export default function BBCodePanel({ bbcode, onChange }: Props) {
+export default function BBCodePanel({ bbcode, onChange, textareaRef, headerActions }: Props) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -30,14 +32,18 @@ export default function BBCodePanel({ bbcode, onChange }: Props) {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 bg-[#16213e] border-b border-[#2a2a4a]">
         <span className="text-sm font-medium text-gray-300">BBCode</span>
-        <button
-          onClick={handleCopy}
-          className="text-xs bg-[#2a2a4a] hover:bg-[#3a3a5a] text-gray-300 px-3 py-1 rounded transition-colors"
-        >
-          {copied ? "Copié !" : "Copier"}
-        </button>
+        <div className="flex items-center gap-2">
+          {headerActions}
+          <button
+            onClick={handleCopy}
+            className="text-xs bg-[#2a2a4a] hover:bg-[#3a3a5a] text-gray-300 px-3 py-1 rounded transition-colors"
+          >
+            {copied ? "Copié !" : "Copier"}
+          </button>
+        </div>
       </div>
       <textarea
+        ref={textareaRef}
         value={bbcode}
         onChange={(e) => onChange(e.target.value)}
         className="flex-1 bg-[#0a0a1a] text-green-300 font-mono text-xs p-3 outline-none resize-none border-none"

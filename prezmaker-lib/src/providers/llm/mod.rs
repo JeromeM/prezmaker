@@ -7,6 +7,43 @@ Tu reponds UNIQUEMENT en francais. Toute ta production doit etre integralement e
 Tu ne dois jamais repondre en anglais, meme si le contenu fourni est en anglais. \
 Tu retournes uniquement la description demandee, sans titre, sans commentaire, sans explication.";
 
+const NFO_SYSTEM_PROMPT: &str = r#"Tu es un generateur de fichiers NFO pour des releases de contenus multimedia.
+A partir du BBCode fourni, genere un fichier NFO en texte brut avec un style ASCII art.
+
+Regles :
+- Utilise des separateurs avec des caracteres === ou --- pour delimiter les sections
+- Aligne le texte proprement (largeur ~70 caracteres)
+- Extrais les informations du BBCode : titre, description, infos techniques, etc.
+- Le resultat doit etre du texte brut uniquement, pas de BBCode, pas de HTML
+- Retourne UNIQUEMENT le contenu NFO, sans commentaire ni explication
+- Le texte doit rester en francais
+
+Exemple de structure :
+======================================================================
+                         TITRE DU CONTENU
+======================================================================
+
+  Type ........... : Film / Serie / Jeu / Application
+  Genre .......... : Action, Aventure
+  Annee .......... : 2024
+  Langue ......... : Francais
+
+======================================================================
+                           DESCRIPTION
+======================================================================
+
+  Description du contenu extraite du BBCode...
+
+======================================================================
+                        INFOS TECHNIQUES
+======================================================================
+
+  Format ......... : MKV
+  Taille ......... : 4.2 Go
+
+======================================================================
+"#;
+
 pub struct LlmClient {
     provider: String,
     api_key: String,
@@ -95,22 +132,41 @@ impl LlmClient {
         english_summary: Option<&str>,
     ) -> anyhow::Result<String> {
         let user_prompt = Self::build_user_prompt(title, english_summary);
-        debug!("LLM ({}) generation pour : {}", self.provider, title);
+        self.generate_with_prompt(SYSTEM_PROMPT, &user_prompt).await
+    }
+
+    pub async fn generate_with_prompt(
+        &self,
+        system: &str,
+        user: &str,
+    ) -> anyhow::Result<String> {
+        debug!("LLM ({}) generation, prompt len: {}", self.provider, user.len());
 
         match self.provider.as_str() {
-            "groq" => self.call_openai_compatible(
+            "groq" => self.call_openai_compatible_custom(
                 "https://api.groq.com/openai/v1/chat/completions",
                 "llama-3.3-70b-versatile",
-                &user_prompt,
+                system,
+                user,
             ).await,
-            "mistral" => self.call_openai_compatible(
+            "mistral" => self.call_openai_compatible_custom(
                 "https://api.mistral.ai/v1/chat/completions",
                 "mistral-small-latest",
-                &user_prompt,
+                system,
+                user,
             ).await,
-            "gemini" => self.call_gemini(&user_prompt).await,
+            "gemini" => self.call_gemini_custom(system, user).await,
             other => anyhow::bail!("Provider LLM inconnu : {}", other),
         }
+    }
+
+    pub async fn generate_nfo(&self, bbcode: &str) -> anyhow::Result<String> {
+        let system = NFO_SYSTEM_PROMPT;
+        let user = format!(
+            "Voici le BBCode de la presentation. Genere le fichier NFO correspondant :\n\n{}",
+            bbcode
+        );
+        self.generate_with_prompt(system, &user).await
     }
 
     fn build_user_prompt(title: &str, english_summary: Option<&str>) -> String {
@@ -129,10 +185,11 @@ impl LlmClient {
         )
     }
 
-    async fn call_openai_compatible(
+    async fn call_openai_compatible_custom(
         &self,
         url: &str,
         model: &str,
+        system_prompt: &str,
         user_prompt: &str,
     ) -> anyhow::Result<String> {
         let body = ChatRequest {
@@ -140,7 +197,7 @@ impl LlmClient {
             messages: vec![
                 ChatMessage {
                     role: "system".to_string(),
-                    content: SYSTEM_PROMPT.to_string(),
+                    content: system_prompt.to_string(),
                 },
                 ChatMessage {
                     role: "user".to_string(),
@@ -175,7 +232,7 @@ impl LlmClient {
         Ok(text)
     }
 
-    async fn call_gemini(&self, user_prompt: &str) -> anyhow::Result<String> {
+    async fn call_gemini_custom(&self, system_prompt: &str, user_prompt: &str) -> anyhow::Result<String> {
         let url = format!(
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={}",
             self.api_key
@@ -184,7 +241,7 @@ impl LlmClient {
         let body = GeminiRequest {
             system_instruction: GeminiContent {
                 parts: vec![GeminiPart {
-                    text: SYSTEM_PROMPT.to_string(),
+                    text: system_prompt.to_string(),
                 }],
             },
             contents: vec![GeminiContent {

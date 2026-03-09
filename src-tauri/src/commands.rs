@@ -1,8 +1,10 @@
 use crate::bbcode_to_html;
 use prezmaker_lib::config::Config;
 use prezmaker_lib::models::{Application, Game, TechInfo, Tracker};
+use prezmaker_lib::providers::llm::LlmClient;
 use prezmaker_lib::orchestrator_api::{GameDetailsResponse, OrchestratorApi, SearchResult};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 pub struct AppState {
@@ -153,6 +155,26 @@ pub fn convert_bbcode(bbcode: String) -> String {
     bbcode_to_html::convert_bbcode_to_html(&bbcode)
 }
 
+#[tauri::command]
+pub async fn generate_nfo(
+    state: tauri::State<'_, AppState>,
+    bbcode: String,
+) -> Result<String, String> {
+    let config = state.config.lock().unwrap().clone();
+    let provider = config.llm.provider.as_deref().unwrap_or("");
+    let api_key = config.llm.api_key.as_deref().unwrap_or("");
+
+    if provider.is_empty() || api_key.is_empty() {
+        return Err("LLM non configuré. Allez dans les paramètres pour configurer un provider LLM.".to_string());
+    }
+
+    let client = LlmClient::new(provider, api_key);
+    client
+        .generate_nfo(&bbcode)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // --- Settings ---
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -197,4 +219,109 @@ pub fn save_settings(
     config.llm.provider = settings.llm_provider;
     config.llm.api_key = settings.llm_api_key;
     config.save().map_err(|e| e.to_string())
+}
+
+// --- Templates ---
+
+fn templates_dir() -> Result<PathBuf, String> {
+    let dir = dirs::config_dir()
+        .ok_or_else(|| "Cannot find config directory".to_string())?
+        .join("prezmaker")
+        .join("templates");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("Cannot create templates dir: {}", e))?;
+    Ok(dir)
+}
+
+fn sanitize_name(name: &str) -> String {
+    name.chars()
+        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' || c == ' ' || c == '.' { c } else { '_' })
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
+fn template_path(name: &str) -> Result<PathBuf, String> {
+    let safe = sanitize_name(name);
+    if safe.is_empty() {
+        return Err("Template name is empty".to_string());
+    }
+    Ok(templates_dir()?.join(format!("{}.bbcode", safe)))
+}
+
+#[derive(Serialize)]
+pub struct TemplateInfo {
+    pub name: String,
+    pub size: u64,
+    pub modified: u64,
+}
+
+#[tauri::command]
+pub fn list_templates() -> Result<Vec<TemplateInfo>, String> {
+    let dir = templates_dir()?;
+    let mut templates = Vec::new();
+    let entries = std::fs::read_dir(&dir).map_err(|e| e.to_string())?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) == Some("bbcode") {
+            if let Ok(meta) = path.metadata() {
+                let name = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+                    .to_string();
+                let modified = meta
+                    .modified()
+                    .ok()
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                templates.push(TemplateInfo {
+                    name,
+                    size: meta.len(),
+                    modified,
+                });
+            }
+        }
+    }
+    templates.sort_by(|a, b| b.modified.cmp(&a.modified));
+    Ok(templates)
+}
+
+#[tauri::command]
+pub fn load_template(name: String) -> Result<String, String> {
+    let path = template_path(&name)?;
+    std::fs::read_to_string(&path).map_err(|e| format!("Cannot read template: {}", e))
+}
+
+#[tauri::command]
+pub fn save_template(name: String, content: String) -> Result<(), String> {
+    let path = template_path(&name)?;
+    std::fs::write(&path, content).map_err(|e| format!("Cannot write template: {}", e))
+}
+
+#[tauri::command]
+pub fn delete_template(name: String) -> Result<(), String> {
+    let path = template_path(&name)?;
+    std::fs::remove_file(&path).map_err(|e| format!("Cannot delete template: {}", e))
+}
+
+#[tauri::command]
+pub fn rename_template(old_name: String, new_name: String) -> Result<(), String> {
+    let old_path = template_path(&old_name)?;
+    let new_path = template_path(&new_name)?;
+    if new_path.exists() {
+        return Err(format!("Template '{}' already exists", new_name));
+    }
+    std::fs::rename(&old_path, &new_path).map_err(|e| format!("Cannot rename template: {}", e))
+}
+
+#[tauri::command]
+pub fn duplicate_template(name: String, new_name: String) -> Result<(), String> {
+    let src = template_path(&name)?;
+    let dst = template_path(&new_name)?;
+    if dst.exists() {
+        return Err(format!("Template '{}' already exists", new_name));
+    }
+    std::fs::copy(&src, &dst).map_err(|e| format!("Cannot duplicate template: {}", e))?;
+    Ok(())
 }

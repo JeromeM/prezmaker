@@ -45,6 +45,12 @@ export interface AppPayload {
   logo_url: string | null;
 }
 
+export interface TemplateInfo {
+  name: string;
+  size: number;
+  modified: number;
+}
+
 export interface SettingsPayload {
   tmdb_api_key: string | null;
   igdb_client_id: string | null;
