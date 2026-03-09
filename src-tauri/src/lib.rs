@@ -28,6 +28,7 @@ pub fn run() {
             commands::fetch_game_details,
             commands::generate_jeu,
             commands::generate_app,
+            commands::preview_template,
             commands::list_content_templates,
             commands::get_content_template,
             commands::save_content_template,

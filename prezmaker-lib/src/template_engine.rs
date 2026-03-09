@@ -572,6 +572,9 @@ pub fn build_game_data(game: &crate::models::Game) -> HashMap<String, String> {
         data.insert("tech_plateforme".into(), tech.platform.clone());
         data.insert("tech_langues".into(), tech.languages.clone());
         data.insert("tech_taille".into(), tech.size.clone());
+        if !tech.install_size.is_empty() {
+            data.insert("tech_taille_installee".into(), tech.install_size.clone());
+        }
     }
 
     build_ratings_data(&mut data, &game.ratings);
@@ -743,7 +746,11 @@ pub fn render_game_tech_block(
     ));
     out.push_str("\n\n");
 
-    let tech_headers = ["Plateforme", "Langue(s)", "Taille"];
+    let mut tech_headers: Vec<&str> = vec!["Plateforme", "Langue(s)", "Taille"];
+    let has_install_size = tech.map_or(false, |t| !t.install_size.is_empty());
+    if has_install_size {
+        tech_headers.push("Taille installee");
+    }
 
     match tracker {
         Tracker::C411 => {
@@ -755,7 +762,10 @@ pub fn render_game_tech_block(
             tech_table.push_str(&bbcode::tr(&header_row));
             let mut values_row = String::new();
             if let Some(t) = tech {
-                let values = [&t.platform, &t.languages, &t.size];
+                let mut values: Vec<&str> = vec![&t.platform, &t.languages, &t.size];
+                if has_install_size {
+                    values.push(&t.install_size);
+                }
                 for val in &values {
                     let display = if val.is_empty() { " " } else { val };
                     values_row.push_str(&bbcode::td(&bbcode::center(display)));
@@ -770,7 +780,10 @@ pub fn render_game_tech_block(
         }
         Tracker::TorrXyz => {
             if let Some(t) = tech {
-                let values = [&t.platform, &t.languages, &t.size];
+                let mut values: Vec<&str> = vec![&t.platform, &t.languages, &t.size];
+                if has_install_size {
+                    values.push(&t.install_size);
+                }
                 for (h, val) in tech_headers.iter().zip(values.iter()) {
                     let display = if val.is_empty() { " " } else { val };
                     out.push_str(&bbcode::center(&bbcode::field_for(tracker, h, display)));
@@ -904,6 +917,321 @@ pub fn render_cover_info_block(
     out
 }
 
+// --- Preview with sample data ---
+
+pub fn preview_template(
+    template_body: &str,
+    content_type: &str,
+    tracker: Tracker,
+    title_color: &str,
+) -> String {
+    let (data, ctx) = build_sample_data(content_type, tracker, title_color);
+    render(template_body, &data, &ctx, tracker, title_color)
+}
+
+fn build_sample_data(
+    content_type: &str,
+    tracker: Tracker,
+    title_color: &str,
+) -> (HashMap<String, String>, RenderContext) {
+    match content_type {
+        "film" => build_sample_movie(tracker, title_color),
+        "serie" => build_sample_series(tracker, title_color),
+        "jeu" => build_sample_game(tracker, title_color),
+        "app" => build_sample_app(tracker, title_color),
+        _ => (HashMap::new(), RenderContext::default()),
+    }
+}
+
+fn build_sample_movie(tracker: Tracker, title_color: &str) -> (HashMap<String, String>, RenderContext) {
+    use crate::models::{Movie, MediaTechInfo, Rating, Genre, Country, Person};
+
+    let movie = Movie {
+        title: "Interstellar".into(),
+        original_title: Some("Interstellar".into()),
+        year: Some(2014),
+        release_date: Some("2014-11-05".into()),
+        duration_minutes: Some(169),
+        synopsis: Some("Les aventures d'un groupe d'explorateurs qui utilisent une faille dans l'espace-temps pour repousser les limites de l'exploration spatiale et conquerir les distances astronomiques.".into()),
+        poster_url: Some("https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg".into()),
+        backdrop_url: None,
+        genres: vec![
+            Genre { name: "Science-Fiction".into() },
+            Genre { name: "Drame".into() },
+            Genre { name: "Aventure".into() },
+        ],
+        countries: vec![Country { name: "Etats-Unis".into(), iso_code: Some("US".into()) }],
+        directors: vec![Person { name: "Christopher Nolan".into(), role: None }],
+        cast: vec![
+            Person { name: "Matthew McConaughey".into(), role: Some("Cooper".into()) },
+            Person { name: "Anne Hathaway".into(), role: Some("Brand".into()) },
+            Person { name: "Jessica Chastain".into(), role: Some("Murph".into()) },
+            Person { name: "Michael Caine".into(), role: Some("Professeur Brand".into()) },
+        ],
+        ratings: vec![
+            Rating { source: "TMDB".into(), value: 8.4, max: 10.0 },
+            Rating { source: "Allocine".into(), value: 4.2, max: 5.0 },
+        ],
+        tmdb_id: Some(157336),
+        imdb_id: Some("tt0816692".into()),
+        allocine_url: None,
+    };
+
+    let tech = MediaTechInfo {
+        quality: Some("1080p".into()),
+        video_codec: Some("x264".into()),
+        audio: Some("DTS-HD MA 5.1".into()),
+        language: Some("Multi (FR, EN)".into()),
+        subtitles: Some("FR, EN".into()),
+        size: Some("12.5 Go".into()),
+    };
+
+    let data = build_movie_data(&movie, Some(&tech));
+    let info_bbcode = build_sample_movie_info(&movie, tracker, title_color);
+    let ctx = RenderContext {
+        ratings: movie.ratings.clone(),
+        poster_url: movie.poster_url.clone(),
+        tech: Some(tech),
+        info_bbcode: Some(info_bbcode),
+        ..Default::default()
+    };
+    (data, ctx)
+}
+
+fn build_sample_movie_info(movie: &crate::models::Movie, t: Tracker, title_color: &str) -> String {
+    let mut info = String::new();
+    info.push_str(&bbcode::field_for(t, "Origine", &movie.countries_display()));
+    info.push('\n');
+    if let Some(ref d) = movie.release_date {
+        info.push_str(&bbcode::field_for(t, "Sortie", &format_date_fr(d)));
+        info.push('\n');
+    }
+    if let Some(ref dur) = movie.duration_formatted() {
+        info.push_str(&bbcode::field_for(t, "Duree", dur));
+        info.push('\n');
+    }
+    info.push_str(&bbcode::field_for(t, "Realisateur", &movie.directors_display()));
+    info.push('\n');
+    info.push_str(&bbcode::field_for(t, "Genres", &movie.genres_display()));
+    info.push('\n');
+    info.push('\n');
+    info.push_str(&bbcode::inline_heading_for(t, "Casting", title_color));
+    info.push_str("\n\n");
+    info.push_str(&bbcode::field_for(t, "Acteurs", &movie.cast_display(6)));
+    info.push('\n');
+    info
+}
+
+fn build_sample_series(tracker: Tracker, title_color: &str) -> (HashMap<String, String>, RenderContext) {
+    use crate::models::{Series, MediaTechInfo, Rating, Genre, Country, Person};
+
+    let series = Series {
+        title: "Breaking Bad".into(),
+        original_title: Some("Breaking Bad".into()),
+        year: Some(2008),
+        end_year: Some(2013),
+        first_air_date: Some("2008-01-20".into()),
+        synopsis: Some("Un professeur de chimie atteint d'un cancer du poumon s'associe a un ancien eleve pour fabriquer et vendre de la methamphétamine.".into()),
+        poster_url: Some("https://image.tmdb.org/t/p/w500/ggFHVNu6YYI5L9pCfOacjizRGt.jpg".into()),
+        backdrop_url: None,
+        genres: vec![
+            Genre { name: "Drame".into() },
+            Genre { name: "Crime".into() },
+        ],
+        countries: vec![Country { name: "Etats-Unis".into(), iso_code: Some("US".into()) }],
+        creators: vec![Person { name: "Vince Gilligan".into(), role: None }],
+        cast: vec![
+            Person { name: "Bryan Cranston".into(), role: Some("Walter White".into()) },
+            Person { name: "Aaron Paul".into(), role: Some("Jesse Pinkman".into()) },
+            Person { name: "Anna Gunn".into(), role: Some("Skyler White".into()) },
+        ],
+        ratings: vec![
+            Rating { source: "TMDB".into(), value: 8.9, max: 10.0 },
+            Rating { source: "Allocine".into(), value: 4.6, max: 5.0 },
+        ],
+        seasons_count: Some(5),
+        episodes_count: Some(62),
+        episode_runtime: Some(47),
+        status: Some("Ended".into()),
+        networks: vec!["AMC".into()],
+        tmdb_id: Some(1396),
+        imdb_id: Some("tt0903747".into()),
+        allocine_url: None,
+    };
+
+    let tech = MediaTechInfo {
+        quality: Some("1080p".into()),
+        video_codec: Some("x265".into()),
+        audio: Some("AAC 5.1".into()),
+        language: Some("Multi (FR, EN)".into()),
+        subtitles: Some("FR".into()),
+        size: Some("45.2 Go".into()),
+    };
+
+    let data = build_series_data(&series, Some(&tech));
+    let info_bbcode = build_sample_series_info(&series, tracker, title_color);
+    let ctx = RenderContext {
+        ratings: series.ratings.clone(),
+        poster_url: series.poster_url.clone(),
+        tech: Some(tech),
+        info_bbcode: Some(info_bbcode),
+        ..Default::default()
+    };
+    (data, ctx)
+}
+
+fn build_sample_series_info(series: &crate::models::Series, t: Tracker, title_color: &str) -> String {
+    let mut info = String::new();
+    info.push_str(&bbcode::field_for(t, "Origine", &series.countries_display()));
+    info.push('\n');
+    if let Some(ref d) = series.first_air_date {
+        info.push_str(&bbcode::field_for(t, "Premiere diffusion", &format_date_fr(d)));
+        info.push('\n');
+    }
+    if let Some(ref s) = series.status {
+        info.push_str(&bbcode::field_for(t, "Statut", &translate_status(s)));
+        info.push('\n');
+    }
+    if let Some(s) = series.seasons_count {
+        info.push_str(&bbcode::field_for(t, "Saisons", &s.to_string()));
+        info.push('\n');
+    }
+    if let Some(e) = series.episodes_count {
+        info.push_str(&bbcode::field_for(t, "Episodes", &e.to_string()));
+        info.push('\n');
+    }
+    if let Some(ref rt) = series.runtime_formatted() {
+        info.push_str(&bbcode::field_for(t, "Duree par episode", rt));
+        info.push('\n');
+    }
+    info.push_str(&bbcode::field_for(t, "Createur(s)", &series.creators_display()));
+    info.push('\n');
+    info.push_str(&bbcode::field_for(t, "Chaine / Plateforme", &series.networks_display()));
+    info.push('\n');
+    info.push_str(&bbcode::field_for(t, "Genres", &series.genres_display()));
+    info.push('\n');
+    info.push('\n');
+    info.push_str(&bbcode::inline_heading_for(t, "Casting", title_color));
+    info.push_str("\n\n");
+    info.push_str(&bbcode::field_for(t, "Acteurs", &series.cast_display(8)));
+    info.push('\n');
+    info
+}
+
+fn build_sample_game(tracker: Tracker, title_color: &str) -> (HashMap<String, String>, RenderContext) {
+    use crate::models::{Game, TechInfo, Rating, Genre};
+
+    let tech_info = TechInfo {
+        platform: "PC (Windows)".into(),
+        languages: "FR, EN, DE, ES".into(),
+        size: "85.3 Go".into(),
+        install_size: "120 Go".into(),
+    };
+
+    let game = Game {
+        title: "Cyberpunk 2077".into(),
+        release_date: Some("10 decembre 2020".into()),
+        year: Some(2020),
+        synopsis: Some("Cyberpunk 2077 est un RPG en monde ouvert se deroulant a Night City, une megalopole obsedee par le pouvoir, le glamour et la modification corporelle.".into()),
+        cover_url: Some("https://images.igdb.com/igdb/image/upload/t_cover_big/co4hkv.png".into()),
+        screenshots: vec![
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_big/sc7ngs.jpg".into(),
+            "https://images.igdb.com/igdb/image/upload/t_screenshot_big/sc7ngt.jpg".into(),
+        ],
+        genres: vec![
+            Genre { name: "RPG".into() },
+            Genre { name: "Aventure".into() },
+        ],
+        platforms: vec!["PC".into(), "PlayStation 5".into(), "Xbox Series X|S".into()],
+        developers: vec!["CD Projekt Red".into()],
+        publishers: vec!["CD Projekt".into()],
+        ratings: vec![
+            Rating { source: "IGDB".into(), value: 78.0, max: 100.0 },
+        ],
+        igdb_id: Some(1877),
+        tech_info: Some(tech_info.clone()),
+        installation: Some("1. Extraire l'archive\n2. Lancer le setup\n3. Jouer".into()),
+    };
+
+    let data = build_game_data(&game);
+    let info_bbcode = build_sample_game_info(&game, tracker, title_color);
+    let ctx = RenderContext {
+        ratings: game.ratings.clone(),
+        cover_url: game.cover_url.clone(),
+        screenshots: game.screenshots.clone(),
+        game_tech: Some(tech_info),
+        info_bbcode: Some(info_bbcode),
+        ..Default::default()
+    };
+    (data, ctx)
+}
+
+fn build_sample_game_info(game: &crate::models::Game, t: Tracker, _title_color: &str) -> String {
+    let mut info = String::new();
+    if let Some(ref d) = game.release_date {
+        info.push_str(&bbcode::field_for(t, "Date de sortie", d));
+        info.push('\n');
+    }
+    info.push_str(&bbcode::field_for(t, "Developpeur(s)", &game.developers_display()));
+    info.push('\n');
+    info.push_str(&bbcode::field_for(t, "Editeur(s)", &game.publishers_display()));
+    info.push('\n');
+    info.push_str(&bbcode::field_for(t, "Genres", &game.genres_display()));
+    info.push('\n');
+    info.push_str(&bbcode::field_for(t, "Plateformes", &game.platforms_display()));
+    info.push('\n');
+    info
+}
+
+fn build_sample_app(_tracker: Tracker, _title_color: &str) -> (HashMap<String, String>, RenderContext) {
+    use crate::models::Application;
+
+    let app = Application {
+        name: "qBittorrent".into(),
+        version: Some("4.6.3".into()),
+        developer: Some("qBittorrent Team".into()),
+        description: Some("Client BitTorrent libre et open source avec une interface intuitive, un moteur de recherche integre et le support des flux RSS.".into()),
+        website: Some("https://www.qbittorrent.org".into()),
+        license: Some("GPLv2".into()),
+        platforms: vec!["Windows".into(), "macOS".into(), "Linux".into()],
+        logo_url: None,
+    };
+
+    let data = build_app_data(&app);
+    let info_bbcode = build_sample_app_info(&app, _tracker);
+    let ctx = RenderContext {
+        logo_url: app.logo_url.clone(),
+        info_bbcode: Some(info_bbcode),
+        ..Default::default()
+    };
+    (data, ctx)
+}
+
+fn build_sample_app_info(app: &crate::models::Application, t: Tracker) -> String {
+    let mut info = String::new();
+    info.push_str(&bbcode::field_for(t, "Nom", &app.name));
+    info.push('\n');
+    if let Some(ref v) = app.version {
+        info.push_str(&bbcode::field_for(t, "Version", v));
+        info.push('\n');
+    }
+    if let Some(ref d) = app.developer {
+        info.push_str(&bbcode::field_for(t, "Developpeur", d));
+        info.push('\n');
+    }
+    if let Some(ref l) = app.license {
+        info.push_str(&bbcode::field_for(t, "Licence", l));
+        info.push('\n');
+    }
+    if let Some(ref w) = app.website {
+        info.push_str(&bbcode::field_for(t, "Site web", &bbcode::url(w, w)));
+        info.push('\n');
+    }
+    info.push_str(&bbcode::field_for(t, "Plateformes", &app.platforms_display()));
+    info.push('\n');
+    info
+}
+
 // --- Tag reference ---
 
 pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
@@ -991,6 +1319,7 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tech_plateforme", "Plateforme technique"),
                 tag("tech_langues", "Langue(s)"),
                 tag("tech_taille", "Taille"),
+                tag("tech_taille_installee", "Taille d'installation"),
                 tag("screenshots", "Active la section screenshots"),
                 tag("screenshots_grid", "Grille de screenshots (bloc composite)"),
             ]);

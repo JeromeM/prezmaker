@@ -157,7 +157,11 @@ pub fn format_game(game: &Game, title_color: &str, tracker: Tracker) -> String {
     out.push('\n');
     out.push('\n');
 
-    let tech_headers = ["Plateforme", "Langue(s)", "Taille"];
+    let mut tech_headers: Vec<&str> = vec!["Plateforme", "Langue(s)", "Taille"];
+    let has_install_size = game.tech_info.as_ref().map_or(false, |t| !t.install_size.is_empty());
+    if has_install_size {
+        tech_headers.push("Taille installee");
+    }
     match tracker {
         Tracker::C411 => {
             let mut tech_table = String::new();
@@ -168,7 +172,10 @@ pub fn format_game(game: &Game, title_color: &str, tracker: Tracker) -> String {
             tech_table.push_str(&tr(&header_row));
             let mut values_row = String::new();
             if let Some(ref tech) = game.tech_info {
-                let values = [&tech.platform, &tech.languages, &tech.size];
+                let mut values: Vec<&str> = vec![&tech.platform, &tech.languages, &tech.size];
+                if has_install_size {
+                    values.push(&tech.install_size);
+                }
                 for val in &values {
                     let display = if val.is_empty() { " " } else { val };
                     values_row.push_str(&td(&center(display)));
@@ -183,7 +190,10 @@ pub fn format_game(game: &Game, title_color: &str, tracker: Tracker) -> String {
         }
         Tracker::TorrXyz => {
             if let Some(ref tech) = game.tech_info {
-                let values = [&tech.platform, &tech.languages, &tech.size];
+                let mut values: Vec<&str> = vec![&tech.platform, &tech.languages, &tech.size];
+                if has_install_size {
+                    values.push(&tech.install_size);
+                }
                 for (h, val) in tech_headers.iter().zip(values.iter()) {
                     let display = if val.is_empty() { " " } else { val };
                     out.push_str(&center(&field_for(tracker, h, display)));

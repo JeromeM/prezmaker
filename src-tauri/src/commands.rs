@@ -190,6 +190,18 @@ pub async fn generate_serie_with_tech(
 // --- Content Templates ---
 
 #[tauri::command]
+pub fn preview_template(
+    body: String,
+    content_type: String,
+    tracker: String,
+    title_color: Option<String>,
+) -> String {
+    let t = parse_tracker(&tracker);
+    let color = title_color.as_deref().unwrap_or("c0392b");
+    template_engine::preview_template(&body, &content_type, t, color)
+}
+
+#[tauri::command]
 pub fn list_content_templates(content_type: String) -> Result<Vec<ContentTemplate>, String> {
     template_engine::list_templates(&content_type)
 }

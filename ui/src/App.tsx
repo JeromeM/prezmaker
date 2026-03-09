@@ -14,8 +14,6 @@ function App() {
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
   const {
     state,
-    tracker,
-    setTracker,
     search,
     selectResult,
     selectTorrentResult,
@@ -32,8 +30,6 @@ function App() {
   return (
     <div className="flex flex-col h-screen bg-[#0f0f23]">
       <TopBar
-        tracker={tracker}
-        onTrackerChange={setTracker}
         onSearch={search}
         loading={isLoading}
         onReset={reset}

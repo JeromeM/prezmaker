@@ -370,6 +370,7 @@ impl Orchestrator {
             platform,
             languages,
             size,
+            install_size: String::new(),
         })
     }
 

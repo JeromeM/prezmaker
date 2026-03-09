@@ -6,6 +6,8 @@ pub struct TechInfo {
     pub platform: String,
     pub languages: String,
     pub size: String,
+    #[serde(default)]
+    pub install_size: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

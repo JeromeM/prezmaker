@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { ContentType, ContentTemplate, TemplateTag } from "../types/api";
 
@@ -16,6 +16,32 @@ export default function TemplateEditor({ onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [newName, setNewName] = useState("");
+  const [previewHtml, setPreviewHtml] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+
+  const updatePreview = useCallback(async (templateBody: string, ct: string) => {
+    try {
+      const bbcode = await invoke<string>("preview_template", {
+        body: templateBody,
+        contentType: ct,
+        tracker: "C411",
+        titleColor: null,
+      });
+      const html = await invoke<string>("convert_bbcode", { bbcode });
+      setPreviewHtml(html);
+    } catch (e) {
+      console.error("Preview error:", e);
+    }
+  }, []);
+
+  const debouncedPreview = useCallback((templateBody: string, ct: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => updatePreview(templateBody, ct), 400);
+  }, [updatePreview]);
+
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, []);
 
   const loadTemplates = useCallback(async (ct: string) => {
     try {
@@ -41,6 +67,11 @@ export default function TemplateEditor({ onClose }: Props) {
     loadTemplates(contentType);
     loadTags(contentType);
   }, [contentType]);
+
+  // Update preview when body or contentType changes
+  useEffect(() => {
+    if (body) debouncedPreview(body, contentType);
+  }, [body, contentType, debouncedPreview]);
 
   const handleSelectTemplate = async (name: string) => {
     if (dirty && !confirm("Modifications non sauvegardées. Continuer ?")) return;
@@ -82,7 +113,6 @@ export default function TemplateEditor({ onClose }: Props) {
       setNewName("");
       setSelected(safe);
       await loadTemplates(contentType);
-      // Load the new one
       const tpl = await invoke<ContentTemplate>("get_content_template", {
         contentType,
         name: safe,
@@ -123,7 +153,7 @@ export default function TemplateEditor({ onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg w-[90vw] h-[85vh] flex flex-col">
+      <div className="bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg w-[95vw] h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2a4a]">
           <div className="flex items-center gap-3">
@@ -212,23 +242,12 @@ export default function TemplateEditor({ onClose }: Props) {
           </div>
         )}
 
-        {/* Main content */}
+        {/* Main content: 3 columns */}
         <div className="flex flex-1 min-h-0">
-          {/* Editor */}
-          <div className="flex-1 flex flex-col min-w-0">
-            <textarea
-              id="template-body"
-              value={body}
-              onChange={(e) => { setBody(e.target.value); setDirty(true); }}
-              className="flex-1 bg-[#0f0f23] text-gray-200 font-mono text-sm p-4 resize-none outline-none border-none"
-              spellCheck={false}
-            />
-          </div>
-
           {/* Tag reference sidebar */}
-          <div className="w-64 border-l border-[#2a2a4a] flex flex-col bg-[#16213e]/30">
+          <div className="w-56 border-r border-[#2a2a4a] flex flex-col bg-[#16213e]/30">
             <div className="px-3 py-2 border-b border-[#2a2a4a] text-sm font-medium text-gray-300">
-              Balises disponibles
+              Balises
             </div>
             <div className="flex-1 overflow-y-auto">
               {tags.map((t) => (
@@ -240,11 +259,40 @@ export default function TemplateEditor({ onClose }: Props) {
                   <div className="text-xs font-mono text-blue-400 group-hover:text-blue-300">
                     {"{{" + t.name + "}}"}
                   </div>
-                  <div className="text-xs text-gray-500 group-hover:text-gray-400">
+                  <div className="text-xs text-gray-500 group-hover:text-gray-400 truncate">
                     {t.description}
                   </div>
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Editor */}
+          <div className="flex-1 flex flex-col min-w-0 border-r border-[#2a2a4a]">
+            <div className="px-3 py-2 border-b border-[#2a2a4a] bg-[#16213e]">
+              <span className="text-sm font-medium text-gray-300">Template</span>
+            </div>
+            <textarea
+              id="template-body"
+              value={body}
+              onChange={(e) => { setBody(e.target.value); setDirty(true); }}
+              className="flex-1 bg-[#0f0f23] text-gray-200 font-mono text-sm p-4 resize-none outline-none border-none"
+              spellCheck={false}
+            />
+          </div>
+
+          {/* Preview */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <div className="px-3 py-2 border-b border-[#2a2a4a] bg-[#16213e]">
+              <span className="text-sm font-medium text-gray-300">Aperçu (données fictives)</span>
+            </div>
+            <div className="flex-1 bg-[#1a1a2e]">
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full h-full border-none"
+                sandbox="allow-same-origin"
+                title="Aperçu template"
+              />
             </div>
           </div>
         </div>

@@ -10,6 +10,7 @@ export interface TechInfo {
   platform: string;
   languages: string;
   size: string;
+  install_size: string;
 }
 
 export interface MediaTechInfo {

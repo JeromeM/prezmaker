@@ -317,7 +317,9 @@ pub fn parse_release_name(name: &str) -> ReleaseParsed {
 }
 
 fn extract_title(clean: &str, year: Option<u32>, has_season: bool) -> String {
-    let mut title = clean.to_string();
+    // Strip bracketed content like [FitGirl Repack], [DODI], [elamigos], etc.
+    let bracket_re = Regex::new(r"\s*\[.*?\]").unwrap();
+    let mut title = bracket_re.replace_all(clean, "").to_string();
 
     // Cut at season pattern first (highest priority)
     if has_season {
@@ -329,7 +331,7 @@ fn extract_title(clean: &str, year: Option<u32>, has_season: bool) -> String {
 
     // Cut at quality/codec/language/version markers
     let markers = Regex::new(
-        r"(?i)\b(2160p|1080p|720p|480p|4K|UHD|REMUX|BDRip|BRRip|HDRip|WEB-?DL|WEBRip|HDTV|DVDRip|BluRay|Blu-Ray|x264|x265|H\.?264|H\.?265|HEVC|AV1|MULTI|MULTi|FRENCH|VOSTFR|COMPLETE|v\d+[\. ]\d+)",
+        r"(?i)\b(2160p|1080p|720p|480p|4K|UHD|REMUX|BDRip|BRRip|HDRip|WEB-?DL|WEBRip|HDTV|DVDRip|BluRay|Blu-Ray|x264|x265|H\.?264|H\.?265|HEVC|AV1|MULTI|MULTi|FRENCH|VOSTFR|COMPLETE|v\d+[\. ]?\d+)",
     )
     .unwrap();
     if let Some(m) = markers.find(&title) {
@@ -477,6 +479,19 @@ mod tests {
     fn test_parse_fitgirl_release() {
         let p = parse_release_name("Baldurs.Gate.3.v4.1.1-FitGirl.Repack");
         assert_eq!(p.content_type, DetectedContentType::Jeu);
+    }
+
+    #[test]
+    fn test_parse_fitgirl_bracket() {
+        let p = parse_release_name("Chernobylite [FitGirl Repack]");
+        assert_eq!(p.content_type, DetectedContentType::Jeu);
+        assert_eq!(p.title, "Chernobylite");
+    }
+
+    #[test]
+    fn test_parse_bracket_repack() {
+        let p = parse_release_name("Hogwarts.Legacy.v1121023 [DODI Repack]");
+        assert_eq!(p.title, "Hogwarts Legacy");
     }
 
     #[test]

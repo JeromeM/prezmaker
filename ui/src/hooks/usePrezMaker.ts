@@ -4,7 +4,6 @@ import type {
   AppState,
   ContentType,
   DetectedContentType,
-  TrackerType,
   SearchResult,
   GameDetailsResponse,
   Game,
@@ -14,6 +13,8 @@ import type {
   SettingsPayload,
   TorrentInfo,
 } from "../types/api";
+
+const TRACKER = "C411";
 
 function buildMediaTech(parsed: TorrentInfo["parsed"], sizeFormatted: string): MediaTechInfo {
   return {
@@ -37,7 +38,6 @@ function torrentContentTypeToContentType(t: DetectedContentType): ContentType | 
 
 export function usePrezMaker() {
   const [state, setState] = useState<AppState>({ step: "idle" });
-  const [tracker, setTracker] = useState<TrackerType>("C411");
   const [titleColor, setTitleColor] = useState<string>("");
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function usePrezMaker() {
         const bbcode = await invoke<string>("generate_from_template", {
           contentType,
           tmdbId: tmdbId ?? null,
-          tracker,
+          tracker: TRACKER,
           titleColor: titleColor || null,
           templateName,
           tech: tech ?? null,
@@ -74,7 +74,7 @@ export function usePrezMaker() {
         setState({ step: "error", message: String(e) });
       }
     },
-    [tracker, titleColor]
+    [titleColor]
   );
 
   // --- Search ---
@@ -90,7 +90,7 @@ export function usePrezMaker() {
         const results = await invoke<SearchResult[]>("search", {
           query,
           contentType,
-          tracker,
+          tracker: TRACKER,
           titleColor: titleColor || null,
         });
 
@@ -109,7 +109,7 @@ export function usePrezMaker() {
         setState({ step: "error", message: String(e) });
       }
     },
-    [tracker, titleColor]
+    [titleColor]
   );
 
   // --- Select result (normal flow, uses template) ---
@@ -120,7 +120,7 @@ export function usePrezMaker() {
         try {
           const response = await invoke<GameDetailsResponse>(
             "fetch_game_details",
-            { igdbId: id, tracker, titleColor: titleColor || null }
+            { igdbId: id, tracker: TRACKER, titleColor: titleColor || null }
           );
           setState({
             step: "game_extras",
@@ -135,7 +135,7 @@ export function usePrezMaker() {
 
       await generateWithTemplate(contentType, templateName, id);
     },
-    [tracker, titleColor, generateWithTemplate]
+    [titleColor, generateWithTemplate]
   );
 
   // --- Torrent result (with tech info) ---
@@ -146,7 +146,7 @@ export function usePrezMaker() {
         try {
           const response = await invoke<GameDetailsResponse>(
             "fetch_game_details",
-            { igdbId: id, tracker, titleColor: titleColor || null }
+            { igdbId: id, tracker: TRACKER, titleColor: titleColor || null }
           );
           setState({
             step: "game_extras",
@@ -163,7 +163,7 @@ export function usePrezMaker() {
       const tech = buildMediaTech(torrentInfo.parsed, torrentInfo.size_formatted);
       await generateWithTemplate(contentType, templateName, id, tech);
     },
-    [tracker, titleColor, generateWithTemplate]
+    [titleColor, generateWithTemplate]
   );
 
   // --- Torrent import ---
@@ -184,7 +184,7 @@ export function usePrezMaker() {
         setState({ step: "error", message: String(e) });
       }
     },
-    [tracker, titleColor]
+    [titleColor]
   );
 
   const searchForTorrent = useCallback(
@@ -195,7 +195,7 @@ export function usePrezMaker() {
         const results = await invoke<SearchResult[]>("search", {
           query,
           contentType,
-          tracker,
+          tracker: TRACKER,
           titleColor: titleColor || null,
         });
 
@@ -214,7 +214,7 @@ export function usePrezMaker() {
         setState({ step: "error", message: String(e) });
       }
     },
-    [tracker, titleColor, selectTorrentResult]
+    [titleColor, selectTorrentResult]
   );
 
   const confirmTorrentContentType = useCallback(
@@ -265,8 +265,6 @@ export function usePrezMaker() {
 
   return {
     state,
-    tracker,
-    setTracker,
     search,
     selectResult,
     selectTorrentResult,
