@@ -35,6 +35,7 @@ export default function Onboarding({ onComplete }: Props) {
     auto_clipboard: false,
     llm_provider: null,
     llm_api_key: null,
+    pseudo: "",
   });
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
@@ -176,7 +177,20 @@ export default function Onboarding({ onComplete }: Props) {
                 </div>
               </div>
 
-              <p className="text-gray-500 text-xs text-center mt-6">
+              <div className="mt-6 flex flex-col gap-1">
+                <label className="text-sm text-gray-400">Votre pseudo (pour la signature des presentations)</label>
+                <input
+                  type="text"
+                  value={settings.pseudo}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, pseudo: e.target.value }))
+                  }
+                  className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+                  placeholder="Laisser vide pour ne pas afficher de footer"
+                />
+              </div>
+
+              <p className="text-gray-500 text-xs text-center mt-4">
                 Commençons par configurer les cles API necessaires.
               </p>
 

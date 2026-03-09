@@ -1,7 +1,7 @@
 use crate::formatters::bbcode::*;
 use crate::models::{Application, Tracker};
 
-pub fn format_application(app: &Application, title_color: &str, tracker: Tracker) -> String {
+pub fn format_application(app: &Application, title_color: &str, tracker: Tracker, pseudo: &str) -> String {
     let mut out = String::new();
 
     // Header
@@ -120,8 +120,11 @@ pub fn format_application(app: &Application, title_color: &str, tracker: Tracker
     out.push('\n');
     out.push('\n');
 
-    out.push_str(&footer_for(tracker));
-    out.push('\n');
+    let footer = footer_for(tracker, pseudo);
+    if !footer.is_empty() {
+        out.push_str(&footer);
+        out.push('\n');
+    }
 
     out
 }
@@ -143,7 +146,7 @@ mod tests {
             logo_url: None,
         };
 
-        let bbcode = format_application(&app, "c0392b", Tracker::C411);
+        let bbcode = format_application(&app, "c0392b", Tracker::C411, "TestUser");
         assert!(bbcode.contains("VLC"));
         assert!(bbcode.contains("3.0.20"));
         assert!(bbcode.contains("VideoLAN"));
@@ -152,7 +155,7 @@ mod tests {
         assert!(bbcode.contains("Windows, macOS, Linux"));
         assert!(bbcode.contains("Lecteur multimedia libre"));
         assert!(bbcode.contains("Upload"));
-        assert!(bbcode.contains("Grommey"));
+        assert!(bbcode.contains("TestUser"));
     }
 
     #[test]
@@ -168,7 +171,7 @@ mod tests {
             logo_url: None,
         };
 
-        let bbcode = format_application(&app, "c0392b", Tracker::TorrXyz);
+        let bbcode = format_application(&app, "c0392b", Tracker::TorrXyz, "TestUser");
         // Title format
         assert!(bbcode.contains("[size=6]\u{1F4BB} VLC \u{1F4BB}[/size]"));
         assert!(!bbcode.contains("[h1]"));

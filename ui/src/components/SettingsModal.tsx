@@ -17,6 +17,7 @@ export default function SettingsModal({ onClose }: Props) {
     auto_clipboard: false,
     llm_provider: null,
     llm_api_key: null,
+    pseudo: "",
   });
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
@@ -165,6 +166,19 @@ export default function SettingsModal({ onClose }: Props) {
                   <option value="fr-FR">Français (fr-FR)</option>
                   <option value="en-US">English (en-US)</option>
                 </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-400">Pseudo (signature footer)</label>
+                <input
+                  type="text"
+                  value={settings.pseudo}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, pseudo: e.target.value }))
+                  }
+                  className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+                  placeholder="Laisser vide pour ne pas afficher de footer"
+                />
               </div>
 
               <div className="flex flex-col gap-1">

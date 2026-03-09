@@ -1,11 +1,11 @@
 use crate::formatters::bbcode::*;
 use crate::models::{MediaTechInfo, Movie, Tracker};
 
-pub fn format_movie(movie: &Movie, title_color: &str, tracker: Tracker) -> String {
-    format_movie_with_tech(movie, title_color, tracker, None)
+pub fn format_movie(movie: &Movie, title_color: &str, tracker: Tracker, pseudo: &str) -> String {
+    format_movie_with_tech(movie, title_color, tracker, None, pseudo)
 }
 
-pub fn format_movie_with_tech(movie: &Movie, title_color: &str, tracker: Tracker, tech: Option<&MediaTechInfo>) -> String {
+pub fn format_movie_with_tech(movie: &Movie, title_color: &str, tracker: Tracker, tech: Option<&MediaTechInfo>, pseudo: &str) -> String {
     let mut out = String::new();
 
     // Header
@@ -195,8 +195,11 @@ pub fn format_movie_with_tech(movie: &Movie, title_color: &str, tracker: Tracker
     out.push('\n');
 
     // Footer
-    out.push_str(&footer_for(tracker));
-    out.push('\n');
+    let footer = footer_for(tracker, pseudo);
+    if !footer.is_empty() {
+        out.push_str(&footer);
+        out.push('\n');
+    }
 
     out
 }
@@ -276,7 +279,7 @@ mod tests {
     #[test]
     fn test_format_movie_c411_contains_title() {
         let movie = sample_movie();
-        let bbcode = format_movie(&movie, "c0392b", Tracker::C411);
+        let bbcode = format_movie(&movie, "c0392b", Tracker::C411, "TestUser");
         assert!(bbcode.contains("INTOUCHABLES"));
         assert!(bbcode.contains("[h1]"));
         assert!(bbcode.contains("[color=#c0392b]"));
@@ -285,7 +288,7 @@ mod tests {
     #[test]
     fn test_format_movie_torrxyz_format() {
         let movie = sample_movie();
-        let bbcode = format_movie(&movie, "c0392b", Tracker::TorrXyz);
+        let bbcode = format_movie(&movie, "c0392b", Tracker::TorrXyz, "TestUser");
         // Title: [b][color][size=6]
         assert!(bbcode.contains("[size=6]\u{1F3AC} INTOUCHABLES \u{1F3AC}[/size]"));
         assert!(!bbcode.contains("[h1]"));
@@ -305,7 +308,7 @@ mod tests {
     #[test]
     fn test_format_movie_c411_ratings_colors() {
         let movie = sample_movie();
-        let bbcode = format_movie(&movie, "c0392b", Tracker::C411);
+        let bbcode = format_movie(&movie, "c0392b", Tracker::C411, "TestUser");
         assert!(bbcode.contains("8.2"));
         assert!(bbcode.contains("[color=#27ae60]"));
     }
@@ -313,7 +316,7 @@ mod tests {
     #[test]
     fn test_format_movie_torrxyz_ratings() {
         let movie = sample_movie();
-        let bbcode = format_movie(&movie, "c0392b", Tracker::TorrXyz);
+        let bbcode = format_movie(&movie, "c0392b", Tracker::TorrXyz, "TestUser");
         assert!(bbcode.contains("[color=#55efc4]"));
         assert!(bbcode.contains("[size=5]8.2[/size]"));
         assert!(bbcode.contains("[color=#aaaaaa] / 10[/color]"));
@@ -322,7 +325,7 @@ mod tests {
     #[test]
     fn test_format_movie_contains_info() {
         let movie = sample_movie();
-        let bbcode = format_movie(&movie, "c0392b", Tracker::C411);
+        let bbcode = format_movie(&movie, "c0392b", Tracker::C411, "TestUser");
         assert!(bbcode.contains("France"));
         assert!(bbcode.contains("2 novembre 2011"));
         assert!(bbcode.contains("1h et 52min"));
@@ -333,7 +336,7 @@ mod tests {
     #[test]
     fn test_format_movie_torrxyz_sub_heading_for_tech() {
         let movie = sample_movie();
-        let bbcode = format_movie(&movie, "c0392b", Tracker::TorrXyz);
+        let bbcode = format_movie(&movie, "c0392b", Tracker::TorrXyz, "TestUser");
         assert!(bbcode.contains("[b][color=#c0392b][size=6]Informations techniques"));
     }
 }

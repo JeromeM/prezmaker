@@ -4,6 +4,7 @@ export type TrackerType = "C411" | "torr.xyz";
 export interface SearchResult {
   id: number;
   label: string;
+  source?: string;
 }
 
 export interface TechInfo {
@@ -70,6 +71,7 @@ export interface SettingsPayload {
   auto_clipboard: boolean;
   llm_provider: string | null;
   llm_api_key: string | null;
+  pseudo: string;
 }
 
 // Content Templates
