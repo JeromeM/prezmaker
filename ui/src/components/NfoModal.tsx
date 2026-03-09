@@ -18,6 +18,16 @@ export default function NfoModal({ content, onClose }: Props) {
     }
   };
 
+  const handleDownload = () => {
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "info.nfo";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
@@ -35,6 +45,12 @@ export default function NfoModal({ content, onClose }: Props) {
               className="text-xs bg-[#2a2a4a] hover:bg-[#3a3a5a] text-gray-300 px-3 py-1 rounded transition-colors"
             >
               {copied ? "Copié !" : "Copier"}
+            </button>
+            <button
+              onClick={handleDownload}
+              className="text-xs bg-[#2a2a4a] hover:bg-[#3a3a5a] text-gray-300 px-3 py-1 rounded transition-colors"
+            >
+              Télécharger
             </button>
             <button
               onClick={onClose}
