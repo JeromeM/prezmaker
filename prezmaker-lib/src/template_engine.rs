@@ -187,6 +187,7 @@ pub fn render(
     ctx: &RenderContext,
     tracker: Tracker,
     title_color: &str,
+    pseudo: &str,
 ) -> String {
     let mut output = template_body.to_string();
 
@@ -197,13 +198,7 @@ pub fn render(
     output = replace_data_tags(&output, data);
 
     // Pass 3: Render layout tags {{layout:args}}
-    output = render_layout_tags(&output, ctx, tracker, title_color);
-
-    // Pass 4: Always append "Prez by Grommey" footer
-    let prez_footer = prez_footer(tracker);
-    output.push('\n');
-    output.push_str(&prez_footer);
-    output.push('\n');
+    output = render_layout_tags(&output, ctx, tracker, title_color, pseudo);
 
     output
 }
@@ -264,7 +259,7 @@ fn replace_data_tags(template: &str, data: &HashMap<String, String>) -> String {
     result
 }
 
-fn render_layout_tags(template: &str, ctx: &RenderContext, tracker: Tracker, title_color: &str) -> String {
+fn render_layout_tags(template: &str, ctx: &RenderContext, tracker: Tracker, title_color: &str, pseudo: &str) -> String {
     let mut result = String::new();
     let mut pos = 0;
 
@@ -274,7 +269,7 @@ fn render_layout_tags(template: &str, ctx: &RenderContext, tracker: Tracker, tit
                 let tag_content = &template[pos + 2..pos + 2 + end];
                 let after = pos + 2 + end + 2;
 
-                if let Some(rendered) = render_single_layout_tag(tag_content, ctx, tracker, title_color)
+                if let Some(rendered) = render_single_layout_tag(tag_content, ctx, tracker, title_color, pseudo)
                 {
                     result.push_str(&rendered);
                     pos = after;
@@ -297,6 +292,7 @@ fn render_single_layout_tag(
     ctx: &RenderContext,
     tracker: Tracker,
     title_color: &str,
+    pseudo: &str,
 ) -> Option<String> {
     // Parse tag:arg format
     let (tag_name, arg) = if let Some(colon_pos) = tag_content.find(':') {
@@ -348,6 +344,28 @@ fn render_single_layout_tag(
             let text = arg.unwrap_or("");
             Some(bbcode::bold(text))
         }
+        "color" => {
+            // {{color:hex:texte}}
+            let text = arg.unwrap_or("");
+            if let Some(sep) = text.find(':') {
+                let hex = &text[..sep];
+                let content = &text[sep + 1..];
+                Some(bbcode::color(hex, content))
+            } else {
+                Some(text.to_string())
+            }
+        }
+        "size" => {
+            // {{size:N:texte}}
+            let text = arg.unwrap_or("");
+            if let Some(sep) = text.find(':') {
+                let size = &text[..sep];
+                let content = &text[sep + 1..];
+                Some(format!("[size={}]{}[/size]", size, content))
+            } else {
+                Some(text.to_string())
+            }
+        }
         "img" => {
             let url = arg.unwrap_or("");
             Some(bbcode::img_width(url, 300))
@@ -364,7 +382,7 @@ fn render_single_layout_tag(
             let url = arg.unwrap_or("");
             Some(bbcode::img_sized_for(tracker, url, 200, 200))
         }
-        "footer" => Some(bbcode::footer_for(tracker)),
+        "footer" => Some(bbcode::footer_for(tracker, pseudo)),
         // Composite blocks
         "ratings_table" => {
             Some(render_ratings_block(&ctx.ratings, tracker, title_color))
@@ -395,19 +413,6 @@ fn render_single_layout_tag(
             Some(render_cover_info_block(ctx.logo_url.as_deref(), info, tracker))
         }
         _ => None, // Unknown tag → leave as-is
-    }
-}
-
-fn prez_footer(tracker: Tracker) -> String {
-    let content = format!(
-        "{} {} {}",
-        bbcode::color("e74c3c", "Prez"),
-        bbcode::color("3498db", "by"),
-        bbcode::color("e74c3c", "Grommey")
-    );
-    match tracker {
-        Tracker::C411 => bbcode::center(&bbcode::small(&content)),
-        Tracker::TorrXyz => bbcode::center(&content),
     }
 }
 
@@ -924,9 +929,10 @@ pub fn preview_template(
     content_type: &str,
     tracker: Tracker,
     title_color: &str,
+    pseudo: &str,
 ) -> String {
     let (data, ctx) = build_sample_data(content_type, tracker, title_color);
-    render(template_body, &data, &ctx, tracker, title_color)
+    render(template_body, &data, &ctx, tracker, title_color, pseudo)
 }
 
 fn build_sample_data(
@@ -1246,7 +1252,9 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
         tag("quote:texte", "Citation/bloc quote"),
         tag("center:texte", "Centrer le texte"),
         tag("bold:texte", "Texte en gras"),
-        tag("footer", "Signature Upload by Grommey"),
+        tag("color:hex:texte", "Texte coloré (ex: color:e74c3c:Mon texte)"),
+        tag("size:N:texte", "Taille de texte (ex: size:18:Gros titre)"),
+        tag("footer", "Signature 'Upload by [pseudo]' (configurable dans les parametres)"),
         tag("#if tag", "Bloc conditionnel (affiche si tag a une valeur)"),
         tag("/if", "Fin du bloc conditionnel"),
         tag("ratings_table", "Tableau des notes (bloc composite)"),
@@ -1459,6 +1467,7 @@ mod tests {
             &ctx,
             Tracker::C411,
             "c0392b",
+            "",
         );
         assert!(result.contains("[h1]"));
         assert!(result.contains("[color=#c0392b]TEST"));
@@ -1472,17 +1481,27 @@ mod tests {
             &ctx,
             Tracker::C411,
             "c0392b",
+            "",
         );
         assert!(result.contains("[b]Genre :[/b] Action"));
     }
 
     #[test]
-    fn test_prez_footer_always_present() {
+    fn test_footer_with_pseudo() {
         let mut data = HashMap::new();
         data.insert("titre".into(), "Test".into());
         let ctx = RenderContext::default();
-        let result = render("{{titre}}", &data, &ctx, Tracker::C411, "c0392b");
-        assert!(result.contains("Prez"));
-        assert!(result.contains("Grommey"));
+        let result = render("{{titre}}\n{{footer}}", &data, &ctx, Tracker::C411, "c0392b", "MonPseudo");
+        assert!(result.contains("Upload"));
+        assert!(result.contains("MonPseudo"));
+    }
+
+    #[test]
+    fn test_footer_empty_pseudo() {
+        let mut data = HashMap::new();
+        data.insert("titre".into(), "Test".into());
+        let ctx = RenderContext::default();
+        let result = render("{{titre}}\n{{footer}}", &data, &ctx, Tracker::C411, "c0392b", "");
+        assert!(!result.contains("Upload"));
     }
 }

@@ -6,6 +6,7 @@ use prezmaker_lib::models::Application;
 use prezmaker_lib::providers::allocine::AllocineClient;
 use prezmaker_lib::providers::igdb::IgdbClient;
 use prezmaker_lib::providers::llm::LlmClient;
+use prezmaker_lib::providers::steam::SteamClient;
 use prezmaker_lib::providers::tmdb::TmdbClient;
 use prezmaker_lib::providers::translator::ClaudeClient;
 use prezmaker_lib::providers::wikipedia::WikipediaClient;
@@ -19,6 +20,7 @@ pub struct Orchestrator {
     config: Config,
     language: String,
     title_color: String,
+    pseudo: String,
     tracker: Tracker,
 }
 
@@ -26,10 +28,12 @@ impl Orchestrator {
     pub fn new(config: Config, language: Option<String>, title_color: Option<String>, tracker: Tracker) -> Self {
         let lang = language.unwrap_or_else(|| config.preferences.language.clone());
         let color = title_color.unwrap_or_else(|| config.preferences.title_color.clone());
+        let pseudo = config.preferences.pseudo.clone();
         Self {
             config,
             language: lang,
             title_color: color,
+            pseudo,
             tracker,
         }
     }
@@ -86,7 +90,7 @@ impl Orchestrator {
             }
         }
 
-        let bbcode = movie_fmt::format_movie(&movie, &self.title_color, self.tracker);
+        let bbcode = movie_fmt::format_movie(&movie, &self.title_color, self.tracker, &self.pseudo);
         Ok(bbcode)
     }
 
@@ -129,18 +133,46 @@ impl Orchestrator {
             }
         }
 
-        let bbcode = series_fmt::format_series(&series, &self.title_color, self.tracker);
+        let bbcode = series_fmt::format_series(&series, &self.title_color, self.tracker, &self.pseudo);
         Ok(bbcode)
     }
 
     async fn handle_jeu(&self, query: &str) -> Result<String, PrezError> {
-        let (client_id, client_secret) = self.config.igdb_credentials()?;
-        let igdb = IgdbClient::new(client_id.to_string(), client_secret.to_string());
-
         info!("Recherche jeu : {}", query);
-        let results = igdb.search_games(query).await.map_err(|e| {
-            PrezError::Other(format!("Erreur recherche IGDB : {}", e))
-        })?;
+
+        // Search IGDB first, fallback to Steam
+        let (results, use_steam) = match self.config.igdb_credentials() {
+            Ok((client_id, client_secret)) => {
+                let igdb = IgdbClient::new(client_id.to_string(), client_secret.to_string());
+                match igdb.search_games(query).await {
+                    Ok(r) if !r.is_empty() => (r, false),
+                    Ok(_) => {
+                        info!("IGDB : aucun resultat, fallback Steam");
+                        let steam = SteamClient::new(self.language.clone());
+                        let r = steam.search_games(query).await.map_err(|e| {
+                            PrezError::Other(format!("Erreur recherche Steam : {}", e))
+                        })?;
+                        (r, true)
+                    }
+                    Err(e) => {
+                        warn!("IGDB indisponible ({}), fallback Steam", e);
+                        let steam = SteamClient::new(self.language.clone());
+                        let r = steam.search_games(query).await.map_err(|e| {
+                            PrezError::Other(format!("Erreur recherche Steam : {}", e))
+                        })?;
+                        (r, true)
+                    }
+                }
+            }
+            Err(_) => {
+                info!("IGDB non configure, recherche Steam");
+                let steam = SteamClient::new(self.language.clone());
+                let r = steam.search_games(query).await.map_err(|e| {
+                    PrezError::Other(format!("Erreur recherche Steam : {}", e))
+                })?;
+                (r, true)
+            }
+        };
 
         if results.is_empty() {
             return Err(PrezError::NoResults(query.to_string()));
@@ -150,19 +182,30 @@ impl Orchestrator {
             &results
                 .iter()
                 .map(|g| {
+                    let suffix = if use_steam { " [Steam]" } else { "" };
                     format!(
-                        "{} ({})",
+                        "{} ({}){}",
                         g.title,
-                        g.year.map(|y| y.to_string()).unwrap_or_default()
+                        g.year.map(|y| y.to_string()).unwrap_or_default(),
+                        suffix,
                     )
                 })
                 .collect::<Vec<_>>(),
         )?;
 
-        let igdb_id = results[selected_id].igdb_id.unwrap();
-        let mut game = igdb.get_game_details(igdb_id).await.map_err(|e| {
-            PrezError::Other(format!("Erreur details IGDB : {}", e))
-        })?;
+        let game_id = results[selected_id].igdb_id.unwrap();
+        let mut game = if use_steam {
+            let steam = SteamClient::new(self.language.clone());
+            steam.get_game_details(game_id).await.map_err(|e| {
+                PrezError::Other(format!("Erreur details Steam : {}", e))
+            })?
+        } else {
+            let (client_id, client_secret) = self.config.igdb_credentials()?;
+            let igdb = IgdbClient::new(client_id.to_string(), client_secret.to_string());
+            igdb.get_game_details(game_id).await.map_err(|e| {
+                PrezError::Other(format!("Erreur details IGDB : {}", e))
+            })?
+        };
 
         // Description en francais : LLM > Claude CLI > Wikipedia FR > saisie manuelle
         game.synopsis = self.resolve_french_description(&game.title, game.synopsis.as_deref()).await?;
@@ -173,7 +216,7 @@ impl Orchestrator {
         // Saisie interactive des informations techniques
         game.tech_info = Some(self.prompt_tech_info()?);
 
-        let bbcode = game_fmt::format_game(&game, &self.title_color, self.tracker);
+        let bbcode = game_fmt::format_game(&game, &self.title_color, self.tracker, &self.pseudo);
         Ok(bbcode)
     }
 
@@ -206,7 +249,7 @@ impl Orchestrator {
             logo_url: logo.clone(),
         };
 
-        let bbcode = app_fmt::format_application(&app, &self.title_color, self.tracker);
+        let bbcode = app_fmt::format_application(&app, &self.title_color, self.tracker, &self.pseudo);
         Ok(bbcode)
     }
 

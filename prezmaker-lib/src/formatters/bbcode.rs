@@ -222,12 +222,15 @@ pub fn rating_header_torrxyz(source: &str) -> String {
 }
 
 /// Footer signature
-pub fn footer_for(tracker: Tracker) -> String {
+pub fn footer_for(tracker: Tracker, pseudo: &str) -> String {
+    if pseudo.is_empty() {
+        return String::new();
+    }
     let content = format!(
         "{} {} {}",
         color("e74c3c", "Upload"),
         color("3498db", "by"),
-        color("e74c3c", "Grommey")
+        color("e74c3c", pseudo)
     );
     match tracker {
         Tracker::C411 => center(&small(&content)),
@@ -314,9 +317,16 @@ mod tests {
 
     #[test]
     fn test_footer_torrxyz_no_small() {
-        let result = footer_for(Tracker::TorrXyz);
+        let result = footer_for(Tracker::TorrXyz, "TestUser");
         assert!(!result.contains("[size=12]"));
         assert!(result.contains("[center]"));
         assert!(result.contains("Upload"));
+        assert!(result.contains("TestUser"));
+    }
+
+    #[test]
+    fn test_footer_empty_pseudo() {
+        let result = footer_for(Tracker::C411, "");
+        assert!(result.is_empty());
     }
 }

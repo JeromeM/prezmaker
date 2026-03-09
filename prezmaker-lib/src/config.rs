@@ -40,6 +40,8 @@ pub struct Preferences {
     pub title_color: String,
     #[serde(default)]
     pub auto_clipboard: bool,
+    #[serde(default = "default_pseudo")]
+    pub pseudo: String,
 }
 
 impl Default for Preferences {
@@ -48,6 +50,7 @@ impl Default for Preferences {
             language: default_language(),
             title_color: default_title_color(),
             auto_clipboard: false,
+            pseudo: default_pseudo(),
         }
     }
 }
@@ -58,6 +61,10 @@ fn default_language() -> String {
 
 fn default_title_color() -> String {
     "c0392b".to_string()
+}
+
+fn default_pseudo() -> String {
+    String::new()
 }
 
 impl Config {

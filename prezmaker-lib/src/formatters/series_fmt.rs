@@ -1,11 +1,11 @@
 use crate::formatters::bbcode::*;
 use crate::models::{MediaTechInfo, Series, Tracker};
 
-pub fn format_series(series: &Series, title_color: &str, tracker: Tracker) -> String {
-    format_series_with_tech(series, title_color, tracker, None)
+pub fn format_series(series: &Series, title_color: &str, tracker: Tracker, pseudo: &str) -> String {
+    format_series_with_tech(series, title_color, tracker, None, pseudo)
 }
 
-pub fn format_series_with_tech(series: &Series, title_color: &str, tracker: Tracker, tech: Option<&MediaTechInfo>) -> String {
+pub fn format_series_with_tech(series: &Series, title_color: &str, tracker: Tracker, tech: Option<&MediaTechInfo>, pseudo: &str) -> String {
     let mut out = String::new();
 
     // Header
@@ -210,8 +210,11 @@ pub fn format_series_with_tech(series: &Series, title_color: &str, tracker: Trac
     out.push('\n');
     out.push('\n');
 
-    out.push_str(&footer_for(tracker));
-    out.push('\n');
+    let footer = footer_for(tracker, pseudo);
+    if !footer.is_empty() {
+        out.push_str(&footer);
+        out.push('\n');
+    }
 
     out
 }

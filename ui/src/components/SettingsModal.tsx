@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { SettingsPayload } from "../types/api";
+import { resetOnboarding } from "./Onboarding";
 
 interface Props {
   onClose: () => void;
@@ -16,6 +17,7 @@ export default function SettingsModal({ onClose }: Props) {
     auto_clipboard: false,
     llm_provider: null,
     llm_api_key: null,
+    pseudo: "",
   });
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
@@ -167,6 +169,19 @@ export default function SettingsModal({ onClose }: Props) {
               </div>
 
               <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-400">Pseudo (signature footer)</label>
+                <input
+                  type="text"
+                  value={settings.pseudo}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, pseudo: e.target.value }))
+                  }
+                  className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+                  placeholder="Laisser vide pour ne pas afficher de footer"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
                 <label className="text-xs text-gray-400">
                   Couleur titre par défaut
                 </label>
@@ -197,6 +212,17 @@ export default function SettingsModal({ onClose }: Props) {
                   Copier automatiquement dans le presse-papier
                 </span>
               </label>
+
+              <button
+                type="button"
+                onClick={() => {
+                  resetOnboarding();
+                  window.location.reload();
+                }}
+                className="text-xs text-gray-500 hover:text-gray-300 underline transition-colors"
+              >
+                Relancer le tutoriel de premiere utilisation
+              </button>
             </div>
           </section>
 

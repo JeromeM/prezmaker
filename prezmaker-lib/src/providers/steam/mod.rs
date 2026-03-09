@@ -1,0 +1,244 @@
+pub mod models;
+
+use models::{SteamAppDetailsWrapper, SteamSearchResponse};
+use reqwest::Client;
+use tracing::debug;
+
+use crate::models::{Game, Genre, Rating};
+use crate::providers::GameProvider;
+use async_trait::async_trait;
+use std::collections::HashMap;
+
+pub struct SteamClient {
+    client: Client,
+    language: String,
+}
+
+impl SteamClient {
+    pub fn new(language: String) -> Self {
+        Self {
+            client: Client::new(),
+            language,
+        }
+    }
+
+    /// Map Steam language code from our app format (fr-FR -> french, en-US -> english)
+    fn steam_language(&self) -> &str {
+        if self.language.starts_with("fr") {
+            "french"
+        } else {
+            "english"
+        }
+    }
+
+    fn country_code(&self) -> &str {
+        if self.language.starts_with("fr") {
+            "FR"
+        } else {
+            "US"
+        }
+    }
+}
+
+#[async_trait]
+impl GameProvider for SteamClient {
+    async fn search_games(&self, query: &str) -> anyhow::Result<Vec<Game>> {
+        let url = "https://store.steampowered.com/api/storesearch/";
+        debug!("Steam search: {}", query);
+
+        let resp = self
+            .client
+            .get(url)
+            .query(&[
+                ("term", query),
+                ("l", self.steam_language()),
+                ("cc", self.country_code()),
+            ])
+            .send()
+            .await?;
+
+        let search: SteamSearchResponse = resp.json().await?;
+
+        let games = search
+            .items
+            .into_iter()
+            .map(|item| {
+                let metacritic_rating = item
+                    .metascore
+                    .as_deref()
+                    .and_then(|s| s.parse::<f64>().ok())
+                    .filter(|&v| v > 0.0)
+                    .map(|v| vec![Rating {
+                        source: "Metacritic".to_string(),
+                        value: v,
+                        max: 100.0,
+                    }])
+                    .unwrap_or_default();
+
+                Game {
+                    title: item.name,
+                    release_date: None,
+                    year: None,
+                    synopsis: None,
+                    cover_url: item.tiny_image,
+                    screenshots: vec![],
+                    genres: vec![],
+                    platforms: vec![],
+                    developers: vec![],
+                    publishers: vec![],
+                    ratings: metacritic_rating,
+                    igdb_id: Some(item.id), // Steam app ID stored here
+                    tech_info: None,
+                    installation: None,
+                }
+            })
+            .collect();
+
+        Ok(games)
+    }
+
+    async fn get_game_details(&self, id: u64) -> anyhow::Result<Game> {
+        let url = "https://store.steampowered.com/api/appdetails";
+        debug!("Steam details: {}", id);
+
+        let resp = self
+            .client
+            .get(url)
+            .query(&[
+                ("appids", &id.to_string()),
+                ("l", &self.steam_language().to_string()),
+                ("cc", &self.country_code().to_string()),
+            ])
+            .send()
+            .await?;
+
+        let body: HashMap<String, SteamAppDetailsWrapper> = resp.json().await?;
+        let wrapper = body
+            .into_values()
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("Empty Steam response"))?;
+
+        if !wrapper.success {
+            return Err(anyhow::anyhow!("Steam app not found: {}", id));
+        }
+
+        let data = wrapper
+            .data
+            .ok_or_else(|| anyhow::anyhow!("No data for Steam app: {}", id))?;
+
+        let genres = data
+            .genres
+            .into_iter()
+            .map(|g| Genre {
+                name: g.description,
+            })
+            .collect();
+
+        let screenshots = data
+            .screenshots
+            .into_iter()
+            .map(|s| s.path_full)
+            .collect();
+
+        let platforms = {
+            let mut p = Vec::new();
+            if let Some(ref plat) = data.platforms {
+                if plat.windows {
+                    p.push("Windows".to_string());
+                }
+                if plat.mac {
+                    p.push("macOS".to_string());
+                }
+                if plat.linux {
+                    p.push("Linux".to_string());
+                }
+            }
+            p
+        };
+
+        let year = data
+            .release_date
+            .as_ref()
+            .and_then(|rd| extract_year_from_steam_date(&rd.date));
+
+        let release_date = data.release_date.as_ref().map(|rd| rd.date.clone());
+
+        let mut ratings = Vec::new();
+        if let Some(mc) = data.metacritic {
+            if mc.score > 0 {
+                ratings.push(Rating {
+                    source: "Metacritic".to_string(),
+                    value: mc.score as f64,
+                    max: 100.0,
+                });
+            }
+        }
+
+        // Clean HTML from short_description
+        let synopsis = data.short_description.map(|s| strip_html_tags(&s));
+
+        Ok(Game {
+            title: data.name,
+            release_date,
+            year,
+            synopsis,
+            cover_url: data.header_image,
+            screenshots,
+            genres,
+            platforms,
+            developers: data.developers,
+            publishers: data.publishers,
+            ratings,
+            igdb_id: Some(data.steam_appid),
+            tech_info: None,
+            installation: None,
+        })
+    }
+}
+
+/// Extract year from Steam date formats like "9 déc. 2020" or "Dec 9, 2020"
+fn extract_year_from_steam_date(date: &str) -> Option<u16> {
+    // Try to find a 4-digit year
+    date.split(|c: char| !c.is_ascii_digit())
+        .filter(|s| s.len() == 4)
+        .next()
+        .and_then(|y| y.parse::<u16>().ok())
+}
+
+/// Strip basic HTML tags from a string
+fn strip_html_tags(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let mut in_tag = false;
+    for ch in input.chars() {
+        match ch {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if !in_tag => result.push(ch),
+            _ => {}
+        }
+    }
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_year_from_steam_date() {
+        assert_eq!(extract_year_from_steam_date("9 déc. 2020"), Some(2020));
+        assert_eq!(extract_year_from_steam_date("Dec 9, 2020"), Some(2020));
+        assert_eq!(extract_year_from_steam_date("2023"), Some(2023));
+        assert_eq!(extract_year_from_steam_date("Coming soon"), None);
+    }
+
+    #[test]
+    fn test_strip_html_tags() {
+        assert_eq!(strip_html_tags("<b>Bold</b>"), "Bold");
+        assert_eq!(strip_html_tags("No tags"), "No tags");
+        assert_eq!(
+            strip_html_tags("<p>First</p><br>Second"),
+            "FirstSecond"
+        );
+    }
+}

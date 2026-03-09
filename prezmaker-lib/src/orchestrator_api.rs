@@ -6,6 +6,7 @@ use crate::models::{Application, Game, MediaTechInfo, Movie, Series, TechInfo, T
 use crate::template_engine::{self, RenderContext};
 use crate::providers::allocine::AllocineClient;
 use crate::providers::igdb::IgdbClient;
+use crate::providers::steam::SteamClient;
 use crate::providers::tmdb::TmdbClient;
 use crate::providers::llm::LlmClient;
 use crate::providers::translator::ClaudeClient;
@@ -18,6 +19,8 @@ use tracing::{info, warn};
 pub struct SearchResult {
     pub id: u64,
     pub label: String,
+    #[serde(default)]
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,6 +33,7 @@ pub struct OrchestratorApi {
     config: Config,
     language: String,
     title_color: String,
+    pseudo: String,
     tracker: Tracker,
 }
 
@@ -42,10 +46,12 @@ impl OrchestratorApi {
     ) -> Self {
         let lang = language.unwrap_or_else(|| config.preferences.language.clone());
         let color = title_color.unwrap_or_else(|| config.preferences.title_color.clone());
+        let pseudo = config.preferences.pseudo.clone();
         Self {
             config,
             language: lang,
             title_color: color,
+            pseudo,
             tracker,
         }
     }
@@ -78,6 +84,7 @@ impl OrchestratorApi {
                         m.title,
                         m.year.map(|y| y.to_string()).unwrap_or_default()
                     ),
+                    source: None,
                 })
             })
             .collect())
@@ -103,21 +110,53 @@ impl OrchestratorApi {
                         s.title,
                         s.year.map(|y| y.to_string()).unwrap_or_default()
                     ),
+                    source: None,
                 })
             })
             .collect())
     }
 
     pub async fn search_jeu(&self, query: &str) -> Result<Vec<SearchResult>, PrezError> {
-        let (client_id, client_secret) = self.config.igdb_credentials()?;
-        let igdb = IgdbClient::new(client_id.to_string(), client_secret.to_string());
-
         info!("Recherche jeu : {}", query);
-        let results = igdb
+
+        // Try IGDB first if configured
+        if let Ok((client_id, client_secret)) = self.config.igdb_credentials() {
+            match IgdbClient::new(client_id.to_string(), client_secret.to_string())
+                .search_games(query)
+                .await
+            {
+                Ok(results) if !results.is_empty() => {
+                    info!("IGDB : {} resultats", results.len());
+                    return Ok(results
+                        .into_iter()
+                        .filter_map(|g| {
+                            g.igdb_id.map(|id| SearchResult {
+                                id,
+                                label: format!(
+                                    "{} ({})",
+                                    g.title,
+                                    g.year.map(|y| y.to_string()).unwrap_or_default()
+                                ),
+                                source: Some("igdb".to_string()),
+                            })
+                        })
+                        .collect());
+                }
+                Ok(_) => info!("IGDB : aucun resultat, fallback Steam"),
+                Err(e) => warn!("IGDB indisponible ({}), fallback Steam", e),
+            }
+        } else {
+            info!("IGDB non configure, recherche Steam directe");
+        }
+
+        // Fallback: Steam (no API key needed)
+        let steam = SteamClient::new(self.language.clone());
+        let results = steam
             .search_games(query)
             .await
-            .map_err(|e| PrezError::Other(format!("Erreur recherche IGDB : {}", e)))?;
+            .map_err(|e| PrezError::Other(format!("Erreur recherche Steam : {}", e)))?;
 
+        info!("Steam : {} resultats", results.len());
         Ok(results
             .into_iter()
             .filter_map(|g| {
@@ -128,6 +167,7 @@ impl OrchestratorApi {
                         g.title,
                         g.year.map(|y| y.to_string()).unwrap_or_default()
                     ),
+                    source: Some("steam".to_string()),
                 })
             })
             .collect())
@@ -157,6 +197,7 @@ impl OrchestratorApi {
             &movie,
             &self.title_color,
             self.tracker,
+            &self.pseudo,
         ))
     }
 
@@ -184,6 +225,7 @@ impl OrchestratorApi {
             &series,
             &self.title_color,
             self.tracker,
+            &self.pseudo,
         ))
     }
 
@@ -213,6 +255,7 @@ impl OrchestratorApi {
             &self.title_color,
             self.tracker,
             Some(&tech),
+            &self.pseudo,
         ))
     }
 
@@ -242,20 +285,33 @@ impl OrchestratorApi {
             &self.title_color,
             self.tracker,
             Some(&tech),
+            &self.pseudo,
         ))
     }
 
     pub async fn fetch_game_details(
         &self,
-        igdb_id: u64,
+        game_id: u64,
+        source: Option<&str>,
     ) -> Result<GameDetailsResponse, PrezError> {
-        let (client_id, client_secret) = self.config.igdb_credentials()?;
-        let igdb = IgdbClient::new(client_id.to_string(), client_secret.to_string());
-
-        let game = igdb
-            .get_game_details(igdb_id)
-            .await
-            .map_err(|e| PrezError::Other(format!("Erreur details IGDB : {}", e)))?;
+        let game = match source.unwrap_or("igdb") {
+            "steam" => {
+                info!("Recuperation details Steam : {}", game_id);
+                let steam = SteamClient::new(self.language.clone());
+                steam
+                    .get_game_details(game_id)
+                    .await
+                    .map_err(|e| PrezError::Other(format!("Erreur details Steam : {}", e)))?
+            }
+            _ => {
+                info!("Recuperation details IGDB : {}", game_id);
+                let (client_id, client_secret) = self.config.igdb_credentials()?;
+                let igdb = IgdbClient::new(client_id.to_string(), client_secret.to_string());
+                igdb.get_game_details(game_id)
+                    .await
+                    .map_err(|e| PrezError::Other(format!("Erreur details IGDB : {}", e)))?
+            }
+        };
 
         let claude_description = self
             .resolve_description(&game.title, game.synopsis.as_deref())
@@ -284,6 +340,7 @@ impl OrchestratorApi {
             &game,
             &self.title_color,
             self.tracker,
+            &self.pseudo,
         ))
     }
 
@@ -292,6 +349,7 @@ impl OrchestratorApi {
             &app,
             &self.title_color,
             self.tracker,
+            &self.pseudo,
         ))
     }
 
@@ -329,7 +387,7 @@ impl OrchestratorApi {
             ..Default::default()
         };
 
-        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color))
+        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color, &self.pseudo))
     }
 
     pub async fn generate_serie_from_template(
@@ -363,7 +421,7 @@ impl OrchestratorApi {
             ..Default::default()
         };
 
-        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color))
+        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color, &self.pseudo))
     }
 
     pub fn generate_jeu_from_template(
@@ -394,7 +452,7 @@ impl OrchestratorApi {
             ..Default::default()
         };
 
-        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color))
+        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color, &self.pseudo))
     }
 
     pub fn generate_app_from_template(
@@ -413,7 +471,7 @@ impl OrchestratorApi {
             ..Default::default()
         };
 
-        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color))
+        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color, &self.pseudo))
     }
 
     // --- Info BBCode builders (for poster_info/cover_info composites) ---

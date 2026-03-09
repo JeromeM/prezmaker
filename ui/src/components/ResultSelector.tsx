@@ -3,7 +3,7 @@ import type { SearchResult, ContentType } from "../types/api";
 interface Props {
   results: SearchResult[];
   contentType: ContentType;
-  onSelect: (id: number, contentType: ContentType) => void;
+  onSelect: (id: number, contentType: ContentType, source?: string) => void;
   onCancel: () => void;
 }
 
@@ -22,12 +22,15 @@ export default function ResultSelector({ results, contentType, onSelect, onCance
         </div>
         <ul className="max-h-80 overflow-y-auto">
           {results.map((r) => (
-            <li key={r.id}>
+            <li key={`${r.source ?? "default"}-${r.id}`}>
               <button
-                onClick={() => onSelect(r.id, contentType)}
+                onClick={() => onSelect(r.id, contentType, r.source)}
                 className="w-full text-left px-4 py-3 hover:bg-[#16213e] transition-colors border-b border-[#2a2a4a]/50 last:border-b-0"
               >
-                {r.label}
+                <span>{r.label}</span>
+                {r.source === "steam" && (
+                  <span className="ml-2 text-xs text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded">Steam</span>
+                )}
               </button>
             </li>
           ))}

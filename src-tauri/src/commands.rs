@@ -81,13 +81,14 @@ pub async fn generate_serie(
 #[tauri::command]
 pub async fn fetch_game_details(
     state: tauri::State<'_, AppState>,
-    igdb_id: u64,
+    game_id: u64,
+    source: Option<String>,
     tracker: String,
     title_color: Option<String>,
 ) -> Result<GameDetailsResponse, String> {
     let config = state.config.lock().unwrap().clone();
     let api = make_api(&config, &tracker, title_color.as_deref());
-    api.fetch_game_details(igdb_id)
+    api.fetch_game_details(game_id, source.as_deref())
         .await
         .map_err(|e| e.to_string())
 }
@@ -191,14 +192,17 @@ pub async fn generate_serie_with_tech(
 
 #[tauri::command]
 pub fn preview_template(
+    state: tauri::State<'_, AppState>,
     body: String,
     content_type: String,
     tracker: String,
     title_color: Option<String>,
 ) -> String {
+    let config = state.config.lock().unwrap();
     let t = parse_tracker(&tracker);
     let color = title_color.as_deref().unwrap_or("c0392b");
-    template_engine::preview_template(&body, &content_type, t, color)
+    let pseudo = &config.preferences.pseudo;
+    template_engine::preview_template(&body, &content_type, t, color, pseudo)
 }
 
 #[tauri::command]
@@ -322,6 +326,7 @@ pub struct SettingsPayload {
     pub auto_clipboard: bool,
     pub llm_provider: Option<String>,
     pub llm_api_key: Option<String>,
+    pub pseudo: String,
 }
 
 #[tauri::command]
@@ -336,6 +341,7 @@ pub fn get_settings(state: tauri::State<'_, AppState>) -> SettingsPayload {
         auto_clipboard: config.preferences.auto_clipboard,
         llm_provider: config.llm.provider.clone(),
         llm_api_key: config.llm.api_key.clone(),
+        pseudo: config.preferences.pseudo.clone(),
     }
 }
 
@@ -353,6 +359,7 @@ pub fn save_settings(
     config.preferences.auto_clipboard = settings.auto_clipboard;
     config.llm.provider = settings.llm_provider;
     config.llm.api_key = settings.llm_api_key;
+    config.preferences.pseudo = settings.pseudo;
     config.save().map_err(|e| e.to_string())
 }
 

@@ -1,7 +1,7 @@
 use crate::formatters::bbcode::*;
 use crate::models::{Game, Tracker};
 
-pub fn format_game(game: &Game, title_color: &str, tracker: Tracker) -> String {
+pub fn format_game(game: &Game, title_color: &str, tracker: Tracker, pseudo: &str) -> String {
     let mut out = String::new();
 
     // Header
@@ -233,8 +233,11 @@ pub fn format_game(game: &Game, title_color: &str, tracker: Tracker) -> String {
     }
 
     // Signature
-    out.push_str(&footer_for(tracker));
-    out.push('\n');
+    let footer = footer_for(tracker, pseudo);
+    if !footer.is_empty() {
+        out.push_str(&footer);
+        out.push('\n');
+    }
 
     out
 }
