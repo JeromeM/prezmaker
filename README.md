@@ -1,8 +1,8 @@
 # PrezMaker
 
-Generateur de presentations BBCode pour les trackers. Recherchez un film, une serie, un jeu ou une application, et obtenez une presentation complete formatee en BBCode, prete a etre collee sur un tracker.
+Génerateur de présentations BBCode pour les trackers. Recherchez un film, une serie, un jeu ou une application, et obtenez une presentation complète formatée en BBCode, prête a être collée sur un tracker.
 
-## Fonctionnalites
+## Fonctionnalités
 
 - **Recherche automatique** : interroge TMDB (films/series), IGDB (jeux) pour recuperer les metadonnees
 - **Enrichissement Allocine** : recupere les notes Allocine en plus de TMDB
@@ -17,19 +17,17 @@ Generateur de presentations BBCode pour les trackers. Recherchez un film, une se
 
 <!-- Ajoutez vos captures d'ecran ici -->
 
-| Vue principale | Resultats de recherche |
+| Vue principale | Résultats de recherche |
 |:-:|:-:|
 | ![Main](screenshots/main.png) | ![Search](screenshots/search.png) |
 
-| Presentation generee | Editeur de templates |
+| Présentation génerée | Editeur de templates |
 |:-:|:-:|
 | ![Preview](screenshots/preview.png) | ![Templates](screenshots/templates.png) |
 
 | Formulaire jeu | Settings |
 |:-:|:-:|
 | ![Game](screenshots/game.png) | ![Settings](screenshots/settings.png) |
-
-> Pour ajouter vos images : creez un dossier `screenshots/` a la racine et placez-y vos captures PNG.
 
 ## Installation
 
