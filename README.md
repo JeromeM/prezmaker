@@ -25,9 +25,9 @@ Generateur de presentations BBCode pour les trackers. Recherchez un film, une se
 |:-:|:-:|
 | ![Preview](screenshots/preview.png) | ![Templates](screenshots/templates.png) |
 
-| Import torrent | Formulaire jeu |
+| Formulaire jeu | Settings |
 |:-:|:-:|
-| ![Torrent](screenshots/torrent.png) | ![Game](screenshots/game.png) |
+| ![Game](screenshots/game.png) | ![Settings](screenshots/settings.png) |
 
 > Pour ajouter vos images : creez un dossier `screenshots/` a la racine et placez-y vos captures PNG.
 
