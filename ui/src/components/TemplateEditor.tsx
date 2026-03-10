@@ -1,10 +1,36 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { ContentType, ContentTemplate, TemplateTag } from "../types/api";
 
 interface Props {
   onClose: () => void;
 }
+
+const BLOCK_PAIRS: Record<string, string> = {
+  "center": "/center",
+  "quote": "/quote",
+  "bold": "/bold",
+  "italic": "/italic",
+  "underline": "/underline",
+  "table": "/table",
+  "tr": "/tr",
+};
+
+// Category display order
+const CATEGORY_ORDER = [
+  "Mise en page",
+  "Formatage",
+  "Images",
+  "Tableaux",
+  "Raccourcis",
+  "Donnees",
+  "Donnees techniques",
+  "Notes",
+  "Conditionnel",
+];
+
+// Categories collapsed by default
+const DEFAULT_COLLAPSED = new Set(["Images", "Tableaux", "Donnees techniques", "Notes"]);
 
 export default function TemplateEditor({ onClose }: Props) {
   const [contentType, setContentType] = useState<ContentType>("film");
@@ -17,6 +43,7 @@ export default function TemplateEditor({ onClose }: Props) {
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [newName, setNewName] = useState("");
   const [previewHtml, setPreviewHtml] = useState("");
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set(DEFAULT_COLLAPSED));
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const updatePreview = useCallback(async (templateBody: string, ct: string) => {
@@ -71,6 +98,29 @@ export default function TemplateEditor({ onClose }: Props) {
   useEffect(() => {
     if (body) debouncedPreview(body, contentType);
   }, [body, contentType, debouncedPreview]);
+
+  // Group tags by category
+  const tagsByCategory = useMemo(() => {
+    const map = new Map<string, TemplateTag[]>();
+    for (const t of tags) {
+      const list = map.get(t.category) || [];
+      list.push(t);
+      map.set(t.category, list);
+    }
+    // Sort by CATEGORY_ORDER
+    const sorted: [string, TemplateTag[]][] = [];
+    for (const cat of CATEGORY_ORDER) {
+      const list = map.get(cat);
+      if (list) sorted.push([cat, list]);
+    }
+    // Any remaining categories not in the order
+    for (const [cat, list] of map) {
+      if (!CATEGORY_ORDER.includes(cat)) {
+        sorted.push([cat, list]);
+      }
+    }
+    return sorted;
+  }, [tags]);
 
   const handleSelectTemplate = async (name: string) => {
     if (dirty && !confirm("Modifications non sauvegardées. Continuer ?")) return;
@@ -140,6 +190,47 @@ export default function TemplateEditor({ onClose }: Props) {
     if (!textarea) return;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
+    const selectedText = body.substring(start, end);
+
+    // Check if it's a display-only pair tag (like "center}}...{{/center")
+    const pairMatch = tagName.match(/^(\w+)\}\}\.\.\.\{\{\/\1$/);
+    if (pairMatch) {
+      const pairName = pairMatch[1];
+      const open = `{{${pairName}}}`;
+      const close = `{{/${pairName}}}`;
+      const newBody = body.substring(0, start) + open + selectedText + close + body.substring(end);
+      setBody(newBody);
+      setDirty(true);
+      setTimeout(() => {
+        textarea.focus();
+        if (selectedText) {
+          textarea.setSelectionRange(start, start + open.length + selectedText.length + close.length);
+        } else {
+          textarea.setSelectionRange(start + open.length, start + open.length);
+        }
+      }, 0);
+      return;
+    }
+
+    // Check if this tag is a block pair opener
+    if (tagName in BLOCK_PAIRS) {
+      const open = `{{${tagName}}}`;
+      const close = `{{${BLOCK_PAIRS[tagName]}}}`;
+      const newBody = body.substring(0, start) + open + selectedText + close + body.substring(end);
+      setBody(newBody);
+      setDirty(true);
+      setTimeout(() => {
+        textarea.focus();
+        if (selectedText) {
+          textarea.setSelectionRange(start, start + open.length + selectedText.length + close.length);
+        } else {
+          textarea.setSelectionRange(start + open.length, start + open.length);
+        }
+      }, 0);
+      return;
+    }
+
+    // Default: insert tag
     const tag = `{{${tagName}}}`;
     const newBody = body.substring(0, start) + tag + body.substring(end);
     setBody(newBody);
@@ -148,6 +239,18 @@ export default function TemplateEditor({ onClose }: Props) {
       textarea.focus();
       textarea.setSelectionRange(start + tag.length, start + tag.length);
     }, 0);
+  };
+
+  const toggleCategory = (cat: string) => {
+    setCollapsed(prev => {
+      const next = new Set(prev);
+      if (next.has(cat)) {
+        next.delete(cat);
+      } else {
+        next.add(cat);
+      }
+      return next;
+    });
   };
 
   return (
@@ -244,24 +347,36 @@ export default function TemplateEditor({ onClose }: Props) {
         {/* Main content: 3 columns */}
         <div className="flex flex-1 min-h-0">
           {/* Tag reference sidebar */}
-          <div className="w-56 border-r border-[#2a2a4a] flex flex-col bg-[#16213e]/30">
+          <div className="w-72 border-r border-[#2a2a4a] flex flex-col bg-[#16213e]/30">
             <div className="px-3 py-2 border-b border-[#2a2a4a] text-sm font-medium text-gray-300">
               Balises
             </div>
             <div className="flex-1 overflow-y-auto">
-              {tags.map((t) => (
-                <button
-                  key={t.name}
-                  onClick={() => insertTag(t.name)}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[#2a2a4a] transition-colors group"
-                >
-                  <div className="text-xs font-mono text-blue-400 group-hover:text-blue-300">
-                    {"{{" + t.name + "}}"}
-                  </div>
-                  <div className="text-xs text-gray-500 group-hover:text-gray-400 truncate">
-                    {t.description}
-                  </div>
-                </button>
+              {tagsByCategory.map(([category, categoryTags]) => (
+                <div key={category}>
+                  <button
+                    onClick={() => toggleCategory(category)}
+                    className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:bg-[#2a2a4a]/50 transition-colors"
+                  >
+                    <span className="text-[10px]">{collapsed.has(category) ? "\u25B6" : "\u25BC"}</span>
+                    {category}
+                  </button>
+                  {!collapsed.has(category) && categoryTags.map((t) => (
+                    <button
+                      key={t.name}
+                      onClick={() => insertTag(t.name)}
+                      title={`${t.description}${t.example ? '\nExemple : ' + t.example : ''}`}
+                      className="w-full text-left px-3 py-1 hover:bg-[#2a2a4a] transition-colors group"
+                    >
+                      <div className="text-xs font-mono text-blue-400 group-hover:text-blue-300">
+                        {"{{" + t.name + "}}"}
+                      </div>
+                      <div className="text-[11px] text-gray-500 group-hover:text-gray-400 leading-tight">
+                        {t.description}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               ))}
             </div>
           </div>

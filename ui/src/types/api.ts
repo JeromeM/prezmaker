@@ -85,6 +85,8 @@ export interface ContentTemplate {
 export interface TemplateTag {
   name: string;
   description: string;
+  category: string;
+  example?: string;
 }
 
 // Torrent types

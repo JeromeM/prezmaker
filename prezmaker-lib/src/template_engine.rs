@@ -31,6 +31,8 @@ pub struct ContentTemplate {
 pub struct TemplateTag {
     pub name: String,
     pub description: String,
+    pub category: String,
+    pub example: Option<String>,
 }
 
 // --- Template storage ---
@@ -190,11 +192,23 @@ pub fn render(
 ) -> String {
     let mut output = template_body.to_string();
 
+    // Inject info_bbcode into data if available
+    let mut augmented_data;
+    let effective_data = if ctx.info_bbcode.is_some() && !data.contains_key("info_bbcode") {
+        augmented_data = data.clone();
+        if let Some(ref info) = ctx.info_bbcode {
+            augmented_data.insert("info_bbcode".into(), info.clone());
+        }
+        &augmented_data
+    } else {
+        data
+    };
+
     // Pass 1: Process conditionals {{#if tag}}...{{/if}}
-    output = process_conditionals(&output, data);
+    output = process_conditionals(&output, effective_data);
 
     // Pass 2: Replace data tags {{tag}}
-    output = replace_data_tags(&output, data);
+    output = replace_data_tags(&output, effective_data);
 
     // Pass 3: Render layout tags {{layout:args}}
     output = render_layout_tags(&output, ctx, title_color, pseudo);
@@ -295,6 +309,18 @@ fn render_layout_tags(template: &str, ctx: &RenderContext, title_color: &str, ps
     result
 }
 
+/// Extract an optional hex color from the end of a tag argument.
+/// Returns (text, color). If no valid 6-char hex found at end, uses default.
+fn extract_optional_color<'a>(arg: &'a str, default: &'a str) -> (&'a str, &'a str) {
+    if let Some(rpos) = arg.rfind(':') {
+        let candidate = &arg[rpos + 1..];
+        if candidate.len() == 6 && candidate.chars().all(|c| c.is_ascii_hexdigit()) {
+            return (&arg[..rpos], candidate);
+        }
+    }
+    (arg, default)
+}
+
 fn render_single_layout_tag(
     tag_content: &str,
     ctx: &RenderContext,
@@ -312,24 +338,33 @@ fn render_single_layout_tag(
     };
 
     match tag_name.to_lowercase().as_str() {
+        // --- Line break ---
+        "br" => Some("\n".to_string()),
+
+        // --- Headings with optional color ---
         "heading" => {
             let text = arg.unwrap_or("");
-            Some(bbcode::heading_title(text, title_color))
+            let (label, col) = extract_optional_color(text, title_color);
+            Some(bbcode::heading_title(label, col))
         }
         "section" => {
             let text = arg.unwrap_or("");
-            Some(bbcode::section_heading(text, title_color))
+            let (label, col) = extract_optional_color(text, title_color);
+            Some(bbcode::section_heading(label, col))
         }
         "sub_section" => {
             let text = arg.unwrap_or("");
-            Some(bbcode::sub_heading(text, title_color))
+            let (label, col) = extract_optional_color(text, title_color);
+            Some(bbcode::sub_heading(label, col))
         }
         "inline_heading" => {
             let text = arg.unwrap_or("");
-            Some(bbcode::inline_heading(text, title_color))
+            let (label, col) = extract_optional_color(text, title_color);
+            Some(bbcode::inline_heading(label, col))
         }
+
+        // --- Field ---
         "field" => {
-            // {{field:label:value}}
             let text = arg.unwrap_or("");
             let (label, value) = if let Some(sep) = text.find(':') {
                 (&text[..sep], &text[sep + 1..])
@@ -338,21 +373,67 @@ fn render_single_layout_tag(
             };
             Some(bbcode::field(label, value))
         }
+
+        // --- Separator ---
         "hr" => Some(String::new()),
+
+        // --- Block pairs: opening/closing tags ---
+        // Closing tags
+        "/center" => Some("[/center]".to_string()),
+        "/quote" => Some("[/quote]".to_string()),
+        "/bold" => Some("[/b]".to_string()),
+        "/italic" => Some("[/i]".to_string()),
+        "/underline" => Some("[/u]".to_string()),
+        "/table" => Some("[/table]".to_string()),
+        "/tr" => Some("[/tr]\n".to_string()),
+        "/spoiler" => Some("[/spoiler]".to_string()),
+
+        // Opening tags: with arg → inline, without arg → opening only
         "quote" => {
-            let text = arg.unwrap_or("");
-            Some(bbcode::quote(text))
+            match arg {
+                Some(text) if !text.is_empty() => Some(bbcode::quote(text)),
+                _ => Some("[quote]".to_string()),
+            }
         }
         "center" => {
-            let text = arg.unwrap_or("");
-            Some(bbcode::center(text))
+            match arg {
+                Some(text) if !text.is_empty() => Some(bbcode::center(text)),
+                _ => Some("[center]".to_string()),
+            }
         }
         "bold" => {
-            let text = arg.unwrap_or("");
-            Some(bbcode::bold(text))
+            match arg {
+                Some(text) if !text.is_empty() => Some(bbcode::bold(text)),
+                _ => Some("[b]".to_string()),
+            }
         }
+        "italic" => {
+            match arg {
+                Some(text) if !text.is_empty() => Some(bbcode::italic(text)),
+                _ => Some("[i]".to_string()),
+            }
+        }
+        "underline" => {
+            match arg {
+                Some(text) if !text.is_empty() => Some(bbcode::underline(text)),
+                _ => Some("[u]".to_string()),
+            }
+        }
+
+        // --- Table tags ---
+        "table" => Some("[table]\n".to_string()),
+        "tr" => Some("[tr]\n".to_string()),
+        "td" => {
+            let text = arg.unwrap_or("");
+            Some(bbcode::td(text))
+        }
+        "th" => {
+            let text = arg.unwrap_or("");
+            Some(bbcode::th(text))
+        }
+
+        // --- Color & Size ---
         "color" => {
-            // {{color:hex:texte}}
             let text = arg.unwrap_or("");
             if let Some(sep) = text.find(':') {
                 let hex = &text[..sep];
@@ -363,19 +444,46 @@ fn render_single_layout_tag(
             }
         }
         "size" => {
-            // {{size:N:texte}}
             let text = arg.unwrap_or("");
             if let Some(sep) = text.find(':') {
-                let size = &text[..sep];
+                let size_str = &text[..sep];
                 let content = &text[sep + 1..];
-                Some(format!("[size={}]{}[/size]", size, content))
+                Some(format!("[size={}]{}[/size]", size_str, content))
             } else {
                 Some(text.to_string())
             }
         }
+
+        // --- Spoiler ---
+        "spoiler" => {
+            let text = arg.unwrap_or("");
+            if let Some(sep) = text.find(':') {
+                let label = &text[..sep];
+                let content = &text[sep + 1..];
+                Some(bbcode::spoiler(label, content))
+            } else {
+                // No content → opening tag only
+                if text.is_empty() {
+                    Some("[spoiler]".to_string())
+                } else {
+                    Some(format!("[spoiler={}]", text))
+                }
+            }
+        }
+
+        // --- Images ---
         "img" => {
-            let url = arg.unwrap_or("");
-            Some(bbcode::img_width(url, 300))
+            let url_full = arg.unwrap_or("");
+            // Check if last segment after ':' is a number (width)
+            if let Some(rpos) = url_full.rfind(':') {
+                let candidate = &url_full[rpos + 1..];
+                if let Ok(width) = candidate.parse::<u32>() {
+                    let url = &url_full[..rpos];
+                    return Some(bbcode::img_width(url, width));
+                }
+            }
+            // No width → original size
+            Some(bbcode::img(url_full))
         }
         "img_cover" => {
             let url = arg.unwrap_or("");
@@ -389,8 +497,11 @@ fn render_single_layout_tag(
             let url = arg.unwrap_or("");
             Some(bbcode::img_width(url, 200))
         }
+
+        // --- Footer ---
         "footer" => Some(bbcode::footer(pseudo)),
-        // Composite blocks
+
+        // --- Composite blocks ---
         "ratings_table" => {
             Some(render_ratings_block(&ctx.ratings, title_color))
         }
@@ -401,7 +512,6 @@ fn render_single_layout_tag(
             Some(render_game_tech_block(ctx.game_tech.as_ref(), title_color))
         }
         "app_tech_table" => {
-            // App uses same structure as game tech but always empty
             Some(render_game_tech_block(None, title_color))
         }
         "screenshots_grid" => {
@@ -1131,120 +1241,195 @@ fn build_sample_app_info(app: &crate::models::Application) -> String {
 // --- Tag reference ---
 
 pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
+    let layout = "Mise en page";
+    let formatting = "Formatage";
+    let images = "Images";
+    let tables = "Tableaux";
+    let shortcuts = "Raccourcis";
+    let data_cat = "Donnees";
+    let tech_cat = "Donnees techniques";
+    let notes_cat = "Notes";
+    let cond_cat = "Conditionnel";
+
     let mut tags = vec![
-        // Layout tags (all types)
-        tag("heading:texte", "Titre principal"),
-        tag("section:texte", "Titre de section"),
-        tag("sub_section:texte", "Sous-titre de section"),
-        tag("inline_heading:texte", "Titre inline (dans un bloc)"),
-        tag("field:label:valeur", "Champ label : valeur"),
-        tag("hr", "Ligne horizontale"),
-        tag("quote:texte", "Citation/bloc quote"),
-        tag("center:texte", "Centrer le texte"),
-        tag("bold:texte", "Texte en gras"),
-        tag("color:hex:texte", "Texte coloré (ex: color:e74c3c:Mon texte)"),
-        tag("size:N:texte", "Taille de texte (ex: size:18:Gros titre)"),
-        tag("footer", "Signature 'Upload by [pseudo]' (configurable dans les parametres)"),
-        tag("#if tag", "Bloc conditionnel (affiche si tag a une valeur)"),
-        tag("/if", "Fin du bloc conditionnel"),
-        tag("ratings_table", "Tableau des notes (bloc composite)"),
-        tag("tech_table", "Tableau infos techniques (bloc composite)"),
-        tag("poster_info", "Bloc poster + infos (bloc composite)"),
+        // --- Mise en page ---
+        tag_ex("heading:texte", "Titre principal centré", layout, "{{heading:Mon Titre}}"),
+        tag_ex("section:texte", "Titre de section centré", layout, "{{section:Synopsis}}"),
+        tag_ex("section:texte:couleur", "Section avec couleur personnalisée", layout, "{{section:Synopsis:3498db}}"),
+        tag_ex("sub_section:texte", "Sous-titre de section", layout, "{{sub_section:Details}}"),
+        tag_ex("inline_heading:texte", "Titre inline (dans un bloc)", layout, "{{inline_heading:Casting}}"),
+        tag_ex("field:label:valeur", "Champ label : valeur", layout, "{{field:Genre:Action}}"),
+        tag("hr", "Ligne de séparation", layout),
+        tag("br", "Saut de ligne", layout),
+        tag_ex("footer", "Signature 'Upload by [pseudo]'", layout, "{{footer}}"),
+
+        // --- Formatage ---
+        tag_ex("bold:texte", "Texte en gras (inline)", formatting, "{{bold:important}}"),
+        tag_ex("italic:texte", "Texte en italique (inline)", formatting, "{{italic:emphase}}"),
+        tag_ex("underline:texte", "Texte souligné (inline)", formatting, "{{underline:souligné}}"),
+        tag_ex("center:texte", "Centrer le texte (inline)", formatting, "{{center:texte centré}}"),
+        tag_ex("quote:texte", "Citation (inline)", formatting, "{{quote:contenu cité}}"),
+        tag_ex("color:hex:texte", "Texte coloré", formatting, "{{color:e74c3c:rouge}}"),
+        tag_ex("size:N:texte", "Taille de texte", formatting, "{{size:18:Gros titre}}"),
+        tag_ex("spoiler:label:contenu", "Spoiler avec contenu", formatting, "{{spoiler:Cliquer:texte caché}}"),
+        // Block pairs
+        tag_ex("center}}...{{/center", "Centrer un bloc de contenu", formatting, "{{center}}...{{/center}}"),
+        tag_ex("quote}}...{{/quote", "Bloc citation", formatting, "{{quote}}...{{/quote}}"),
+        tag_ex("bold}}...{{/bold", "Bloc gras", formatting, "{{bold}}...{{/bold}}"),
+        tag_ex("italic}}...{{/italic", "Bloc italique", formatting, "{{italic}}...{{/italic}}"),
+
+        // --- Images ---
+        tag_ex("img:URL", "Image taille originale", images, "{{img:https://...}}"),
+        tag_ex("img:URL:largeur", "Image avec largeur en pixels", images, "{{img:https://...:400}}"),
+        tag_ex("img_poster:URL", "Image poster (300px)", images, "{{img_poster:{{poster_url}}}}"),
+        tag_ex("img_cover:URL", "Image jaquette (264px)", images, "{{img_cover:{{cover_url}}}}"),
+        tag_ex("img_logo:URL", "Image logo (200px)", images, "{{img_logo:{{logo_url}}}}"),
+
+        // --- Tableaux ---
+        tag_ex("table}}...{{/table", "Bloc tableau", tables, "{{table}}...{{/table}}"),
+        tag_ex("tr}}...{{/tr", "Ligne de tableau", tables, "{{tr}}...{{/tr}}"),
+        tag_ex("td:contenu", "Cellule de tableau", tables, "{{td:contenu}}"),
+        tag_ex("th:contenu", "En-tête de tableau", tables, "{{th:Titre}}"),
+
+        // --- Raccourcis composites ---
+        tag("poster_info", "Bloc poster + infos (film/série)", shortcuts),
+        tag("cover_info", "Bloc jaquette + infos (jeu)", shortcuts),
+        tag("logo_info", "Bloc logo + infos (app)", shortcuts),
+        tag("ratings_table", "Tableau des notes formaté", shortcuts),
+        tag("tech_table", "Tableau infos techniques (film/série)", shortcuts),
+        tag("game_tech_table", "Tableau infos techniques (jeu)", shortcuts),
+        tag("screenshots_grid", "Grille de screenshots (jeu)", shortcuts),
+
+        // --- Conditionnel ---
+        tag_ex("#if tag", "Affiche le bloc si la balise a une valeur", cond_cat, "{{#if synopsis}}...{{/if}}"),
+        tag("/if", "Fin du bloc conditionnel", cond_cat),
     ];
 
+    // --- Données spécifiques au type ---
     match content_type {
         "film" => {
             tags.extend(vec![
-                tag("titre", "Titre du film"),
-                tag("titre_maj", "Titre en MAJUSCULES"),
-                tag("titre_original", "Titre original"),
-                tag("annee", "Année de sortie"),
-                tag("date_sortie", "Date de sortie formatée"),
-                tag("duree", "Durée formatée"),
-                tag("realisateurs", "Réalisateur(s)"),
-                tag("genres", "Genres"),
-                tag("pays", "Pays d'origine"),
-                tag("casting", "Acteurs principaux"),
-                tag("synopsis", "Synopsis"),
-                tag("poster_url", "URL de l'affiche"),
-                tag("tech_qualite", "Qualité (ex: 1080p)"),
-                tag("tech_codec", "Codec vidéo"),
-                tag("tech_audio", "Audio"),
-                tag("tech_langue", "Langue(s)"),
-                tag("tech_soustitres", "Sous-titres"),
-                tag("tech_taille", "Taille du fichier"),
+                tag("titre", "Titre du film", data_cat),
+                tag("titre_maj", "Titre en MAJUSCULES", data_cat),
+                tag("titre_original", "Titre original", data_cat),
+                tag("annee", "Année de sortie", data_cat),
+                tag("date_sortie", "Date de sortie formatée", data_cat),
+                tag("duree", "Durée formatée", data_cat),
+                tag("realisateurs", "Réalisateur(s)", data_cat),
+                tag("genres", "Genres", data_cat),
+                tag("pays", "Pays d'origine", data_cat),
+                tag("casting", "Acteurs principaux", data_cat),
+                tag("synopsis", "Synopsis", data_cat),
+                tag("poster_url", "URL de l'affiche", data_cat),
+                tag("info_bbcode", "Contenu info auto-généré (origine, durée, casting...)", data_cat),
+                // Tech
+                tag("tech_qualite", "Qualité (ex: 1080p)", tech_cat),
+                tag("tech_codec", "Codec vidéo", tech_cat),
+                tag("tech_audio", "Audio", tech_cat),
+                tag("tech_langue", "Langue(s)", tech_cat),
+                tag("tech_soustitres", "Sous-titres", tech_cat),
+                tag("tech_taille", "Taille du fichier", tech_cat),
             ]);
         }
         "serie" => {
             tags.extend(vec![
-                tag("titre", "Titre de la série"),
-                tag("titre_maj", "Titre en MAJUSCULES"),
-                tag("titre_original", "Titre original"),
-                tag("annee", "Année de début"),
-                tag("premiere_diffusion", "Date première diffusion"),
-                tag("statut", "Statut (En cours, Terminée...)"),
-                tag("saisons", "Nombre de saisons"),
-                tag("episodes", "Nombre d'épisodes"),
-                tag("duree_episode", "Durée par épisode"),
-                tag("createurs", "Créateur(s)"),
-                tag("chaines", "Chaîne / Plateforme"),
-                tag("genres", "Genres"),
-                tag("pays", "Pays d'origine"),
-                tag("casting", "Acteurs principaux"),
-                tag("synopsis", "Synopsis"),
-                tag("poster_url", "URL de l'affiche"),
-                tag("tech_qualite", "Qualité"),
-                tag("tech_codec", "Codec vidéo"),
-                tag("tech_audio", "Audio"),
-                tag("tech_langue", "Langue(s)"),
-                tag("tech_soustitres", "Sous-titres"),
-                tag("tech_taille", "Taille du fichier"),
+                tag("titre", "Titre de la série", data_cat),
+                tag("titre_maj", "Titre en MAJUSCULES", data_cat),
+                tag("titre_original", "Titre original", data_cat),
+                tag("annee", "Année de début", data_cat),
+                tag("premiere_diffusion", "Date première diffusion", data_cat),
+                tag("statut", "Statut (En cours, Terminée...)", data_cat),
+                tag("saisons", "Nombre de saisons", data_cat),
+                tag("episodes", "Nombre d'épisodes", data_cat),
+                tag("duree_episode", "Durée par épisode", data_cat),
+                tag("createurs", "Créateur(s)", data_cat),
+                tag("chaines", "Chaîne / Plateforme", data_cat),
+                tag("genres", "Genres", data_cat),
+                tag("pays", "Pays d'origine", data_cat),
+                tag("casting", "Acteurs principaux", data_cat),
+                tag("synopsis", "Synopsis", data_cat),
+                tag("poster_url", "URL de l'affiche", data_cat),
+                tag("info_bbcode", "Contenu info auto-généré (origine, statut, casting...)", data_cat),
+                // Tech
+                tag("tech_qualite", "Qualité", tech_cat),
+                tag("tech_codec", "Codec vidéo", tech_cat),
+                tag("tech_audio", "Audio", tech_cat),
+                tag("tech_langue", "Langue(s)", tech_cat),
+                tag("tech_soustitres", "Sous-titres", tech_cat),
+                tag("tech_taille", "Taille du fichier", tech_cat),
             ]);
         }
         "jeu" => {
             tags.extend(vec![
-                tag("titre", "Titre du jeu"),
-                tag("titre_maj", "Titre en MAJUSCULES"),
-                tag("annee", "Année de sortie"),
-                tag("date_sortie", "Date de sortie"),
-                tag("synopsis", "Description du jeu"),
-                tag("cover_url", "URL de la jaquette"),
-                tag("genres", "Genres"),
-                tag("plateformes", "Plateformes"),
-                tag("developpeurs", "Développeur(s)"),
-                tag("editeurs", "Éditeur(s)"),
-                tag("installation", "Instructions d'installation"),
-                tag("tech_plateforme", "Plateforme technique"),
-                tag("tech_langues", "Langue(s)"),
-                tag("tech_taille", "Taille"),
-                tag("tech_taille_installee", "Taille d'installation"),
-                tag("screenshots", "Active la section screenshots"),
-                tag("screenshots_grid", "Grille de screenshots (bloc composite)"),
+                tag("titre", "Titre du jeu", data_cat),
+                tag("titre_maj", "Titre en MAJUSCULES", data_cat),
+                tag("annee", "Année de sortie", data_cat),
+                tag("date_sortie", "Date de sortie", data_cat),
+                tag("synopsis", "Description du jeu", data_cat),
+                tag("cover_url", "URL de la jaquette", data_cat),
+                tag("genres", "Genres", data_cat),
+                tag("plateformes", "Plateformes", data_cat),
+                tag("developpeurs", "Développeur(s)", data_cat),
+                tag("editeurs", "Éditeur(s)", data_cat),
+                tag("installation", "Instructions d'installation", data_cat),
+                tag("info_bbcode", "Contenu info auto-généré (date, dev, genres...)", data_cat),
+                // Tech
+                tag("tech_plateforme", "Plateforme technique", tech_cat),
+                tag("tech_langues", "Langue(s)", tech_cat),
+                tag("tech_taille", "Taille", tech_cat),
+                tag("tech_taille_installee", "Taille d'installation", tech_cat),
             ]);
         }
         "app" => {
             tags.extend(vec![
-                tag("nom", "Nom de l'application"),
-                tag("nom_maj", "Nom en MAJUSCULES"),
-                tag("version", "Version"),
-                tag("developpeur", "Développeur"),
-                tag("description", "Description"),
-                tag("site_web", "URL du site web"),
-                tag("licence", "Licence"),
-                tag("plateformes", "Plateformes"),
-                tag("logo_url", "URL du logo"),
+                tag("nom", "Nom de l'application", data_cat),
+                tag("nom_maj", "Nom en MAJUSCULES", data_cat),
+                tag("version", "Version", data_cat),
+                tag("developpeur", "Développeur", data_cat),
+                tag("description", "Description", data_cat),
+                tag("site_web", "URL du site web", data_cat),
+                tag("licence", "Licence", data_cat),
+                tag("plateformes", "Plateformes", data_cat),
+                tag("logo_url", "URL du logo", data_cat),
+                tag("info_bbcode", "Contenu info auto-généré (nom, version, licence...)", data_cat),
             ]);
         }
         _ => {}
     }
 
+    // --- Notes individuelles (si ratings possibles) ---
+    if matches!(content_type, "film" | "serie" | "jeu") {
+        tags.extend(vec![
+            tag("ratings_count", "Nombre de notes disponibles", notes_cat),
+            tag_ex("rating_1_source", "Source de la note 1", notes_cat, "TMDB, Allocine, IGDB..."),
+            tag("rating_1_value", "Valeur de la note 1", notes_cat),
+            tag("rating_1_max", "Maximum de la note 1", notes_cat),
+            tag("rating_1_display", "Note 1 formatée avec couleur", notes_cat),
+            tag_ex("rating_2_source", "Source de la note 2", notes_cat, "TMDB, Allocine, IGDB..."),
+            tag("rating_2_value", "Valeur de la note 2", notes_cat),
+            tag("rating_2_max", "Maximum de la note 2", notes_cat),
+            tag("rating_2_display", "Note 2 formatée avec couleur", notes_cat),
+        ]);
+    }
+
     tags
 }
 
-fn tag(name: &str, desc: &str) -> TemplateTag {
+fn tag(name: &str, desc: &str, category: &str) -> TemplateTag {
     TemplateTag {
         name: name.to_string(),
         description: desc.to_string(),
+        category: category.to_string(),
+        example: None,
+    }
+}
+
+fn tag_ex(name: &str, desc: &str, category: &str, example: &str) -> TemplateTag {
+    TemplateTag {
+        name: name.to_string(),
+        description: desc.to_string(),
+        category: category.to_string(),
+        example: Some(example.to_string()),
     }
 }
 
@@ -1253,6 +1438,17 @@ fn tag(name: &str, desc: &str) -> TemplateTag {
 fn build_ratings_data(data: &mut HashMap<String, String>, ratings: &[crate::models::Rating]) {
     if !ratings.is_empty() {
         data.insert("has_ratings".into(), "true".into());
+        data.insert("ratings_count".into(), ratings.len().to_string());
+    }
+    for (i, rating) in ratings.iter().enumerate() {
+        let idx = i + 1;
+        data.insert(format!("rating_{}_source", idx), rating.source.clone());
+        data.insert(format!("rating_{}_value", idx), format!("{:.1}", rating.value));
+        data.insert(format!("rating_{}_max", idx), format!("{}", rating.max as u32));
+        data.insert(
+            format!("rating_{}_display", idx),
+            bbcode::colored_rating(rating.value, rating.max),
+        );
     }
 }
 
@@ -1391,5 +1587,168 @@ mod tests {
         let ctx = RenderContext::default();
         let result = render("{{titre}}\n{{footer}}", &data, &ctx, "c0392b", "");
         assert!(!result.contains("Upload"));
+    }
+
+    #[test]
+    fn test_br_tag() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("A{{br}}B", &ctx, "c0392b", "");
+        assert_eq!(result, "A\nB");
+    }
+
+    #[test]
+    fn test_block_center() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{center}}texte{{/center}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[center]texte[/center]");
+    }
+
+    #[test]
+    fn test_inline_center() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{center:texte}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[center]texte[/center]");
+    }
+
+    #[test]
+    fn test_block_quote() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{quote}}contenu{{/quote}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[quote]contenu[/quote]");
+    }
+
+    #[test]
+    fn test_block_bold_italic() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{bold}}gras{{/bold}} {{italic}}ital{{/italic}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[b]gras[/b] [i]ital[/i]");
+    }
+
+    #[test]
+    fn test_inline_italic() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{italic:emphase}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[i]emphase[/i]");
+    }
+
+    #[test]
+    fn test_inline_underline() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{underline:souligne}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[u]souligne[/u]");
+    }
+
+    #[test]
+    fn test_td_th() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{td:cellule}}{{th:entete}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[td]cellule[/td]\n[th]entete[/th]\n");
+    }
+
+    #[test]
+    fn test_spoiler_inline() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{spoiler:Cliquer:secret}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[spoiler=Cliquer]secret[/spoiler]");
+    }
+
+    #[test]
+    fn test_img_no_width() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{img:https://example.com/img.jpg}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[img]https://example.com/img.jpg[/img]");
+    }
+
+    #[test]
+    fn test_img_with_width() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{img:https://example.com/img.jpg:400}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[img width=400]https://example.com/img.jpg[/img]");
+    }
+
+    #[test]
+    fn test_section_custom_color() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{section:Synopsis:3498db}}", &ctx, "c0392b", "");
+        assert!(result.contains("[color=#3498db]Synopsis"));
+        assert!(!result.contains("c0392b"));
+    }
+
+    #[test]
+    fn test_section_default_color() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{section:Synopsis}}", &ctx, "c0392b", "");
+        assert!(result.contains("[color=#c0392b]Synopsis"));
+    }
+
+    #[test]
+    fn test_extract_optional_color_with_color() {
+        let (text, color) = extract_optional_color("Synopsis:3498db", "c0392b");
+        assert_eq!(text, "Synopsis");
+        assert_eq!(color, "3498db");
+    }
+
+    #[test]
+    fn test_extract_optional_color_no_color() {
+        let (text, color) = extract_optional_color("Synopsis", "c0392b");
+        assert_eq!(text, "Synopsis");
+        assert_eq!(color, "c0392b");
+    }
+
+    #[test]
+    fn test_extract_optional_color_not_hex() {
+        let (text, color) = extract_optional_color("Synopsis:notahex", "c0392b");
+        assert_eq!(text, "Synopsis:notahex");
+        assert_eq!(color, "c0392b");
+    }
+
+    #[test]
+    fn test_ratings_individual_data() {
+        use crate::models::Rating;
+        let mut data = HashMap::new();
+        let ratings = vec![
+            Rating { source: "TMDB".into(), value: 8.4, max: 10.0 },
+            Rating { source: "Allocine".into(), value: 4.2, max: 5.0 },
+        ];
+        build_ratings_data(&mut data, &ratings);
+        assert_eq!(data.get("ratings_count").unwrap(), "2");
+        assert_eq!(data.get("rating_1_source").unwrap(), "TMDB");
+        assert_eq!(data.get("rating_1_value").unwrap(), "8.4");
+        assert_eq!(data.get("rating_1_max").unwrap(), "10");
+        assert!(data.get("rating_1_display").unwrap().contains("[color="));
+        assert_eq!(data.get("rating_2_source").unwrap(), "Allocine");
+    }
+
+    #[test]
+    fn test_info_bbcode_injected() {
+        let data = HashMap::new();
+        let ctx = RenderContext {
+            info_bbcode: Some("test info content".into()),
+            ..Default::default()
+        };
+        let result = render("{{info_bbcode}}", &data, &ctx, "c0392b", "");
+        assert!(result.contains("test info content"));
+    }
+
+    #[test]
+    fn test_table_block() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{table}}{{tr}}{{td:A}}{{/tr}}{{/table}}", &ctx, "c0392b", "");
+        assert!(result.contains("[table]"));
+        assert!(result.contains("[tr]"));
+        assert!(result.contains("[td]A[/td]"));
+        assert!(result.contains("[/tr]"));
+        assert!(result.contains("[/table]"));
+    }
+
+    #[test]
+    fn test_tags_have_categories() {
+        let tags = get_available_tags("film");
+        for t in &tags {
+            assert!(!t.category.is_empty(), "Tag '{}' has empty category", t.name);
+        }
+        // Check a specific category
+        let heading = tags.iter().find(|t| t.name.starts_with("heading")).unwrap();
+        assert_eq!(heading.category, "Mise en page");
     }
 }
