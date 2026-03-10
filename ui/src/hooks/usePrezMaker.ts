@@ -14,7 +14,8 @@ import type {
   TorrentInfo,
 } from "../types/api";
 
-const TRACKER = "C411";
+/** Internal tracker format identifier sent to backend */
+const TRACKER = "default";
 
 function buildMediaTech(parsed: TorrentInfo["parsed"], sizeFormatted: string): MediaTechInfo {
   return {

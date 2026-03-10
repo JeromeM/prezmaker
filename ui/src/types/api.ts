@@ -1,5 +1,4 @@
 export type ContentType = "film" | "serie" | "jeu" | "app";
-export type TrackerType = "C411" | "torr.xyz";
 
 export interface SearchResult {
   id: number;

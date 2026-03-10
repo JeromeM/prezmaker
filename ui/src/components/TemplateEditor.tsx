@@ -24,7 +24,7 @@ export default function TemplateEditor({ onClose }: Props) {
       const bbcode = await invoke<string>("preview_template", {
         body: templateBody,
         contentType: ct,
-        tracker: "C411",
+        tracker: "default",
         titleColor: null,
       });
       const html = await invoke<string>("convert_bbcode", { bbcode });
