@@ -57,7 +57,19 @@ impl GameProvider for SteamClient {
             .send()
             .await?;
 
-        let search: SteamSearchResponse = resp.json().await?;
+        let mut search: SteamSearchResponse = resp.json().await?;
+
+        // Some games are not indexed in non-English locales; retry in English
+        if search.items.is_empty() && self.steam_language() != "english" {
+            debug!("Steam search: 0 results in {}, retrying in english", self.steam_language());
+            let resp = self
+                .client
+                .get(url)
+                .query(&[("term", query), ("l", "english"), ("cc", "US")])
+                .send()
+                .await?;
+            search = resp.json().await?;
+        }
 
         let games = search
             .items
