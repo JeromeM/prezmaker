@@ -85,8 +85,28 @@ pub fn convert_bbcode_to_html(bbcode: &str) -> String {
     html = replace_tag(&html, r"\[left\]([\s\S]*?)\[/left\]",
         "<div style=\"text-align:left\">$1</div>");
 
+    // Collapse 3+ consecutive newlines into 2
+    while html.contains("\n\n\n") {
+        html = html.replace("\n\n\n", "\n\n");
+    }
+
     // Newlines to <br> (after all tag replacements)
     html = html.replace('\n', "<br>");
+
+    // Remove <br> adjacent to block-level elements to prevent excessive spacing
+    for close_tag in &["</div>", "</table>", "</tr>", "</blockquote>", "</details>"] {
+        html = html.replace(&format!("{}<br>", close_tag), close_tag);
+    }
+    for open_tag in &["<div ", "<table ", "<tr>", "<blockquote ", "<details ", "<hr "] {
+        html = html.replace(&format!("<br>{}", open_tag), open_tag);
+    }
+    // Also handle <br><br> before/after block elements
+    for close_tag in &["</div>", "</table>", "</blockquote>"] {
+        html = html.replace(&format!("{}<br>", close_tag), close_tag);
+    }
+    for open_tag in &["<div ", "<table ", "<blockquote "] {
+        html = html.replace(&format!("<br>{}", open_tag), open_tag);
+    }
 
     wrap_in_document(&html)
 }

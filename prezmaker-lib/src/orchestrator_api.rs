@@ -577,10 +577,6 @@ impl OrchestratorApi {
             info.push_str(&bbcode::field_for(t, "Genres", &game.genres_display()));
             info.push('\n');
         }
-        if !game.platforms.is_empty() {
-            info.push_str(&bbcode::field_for(t, "Plateformes", &game.platforms_display()));
-            info.push('\n');
-        }
         info
     }
 

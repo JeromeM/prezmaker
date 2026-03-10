@@ -200,6 +200,15 @@ pub fn render(
     // Pass 3: Render layout tags {{layout:args}}
     output = render_layout_tags(&output, ctx, tracker, title_color, pseudo);
 
+    // Pass 4: Collapse excessive blank lines (3+ consecutive newlines → 2)
+    while output.contains("\n\n\n") {
+        output = output.replace("\n\n\n", "\n\n");
+    }
+
+    // Trim trailing whitespace
+    output = output.trim_end().to_string();
+    output.push('\n');
+
     output
 }
 
@@ -670,9 +679,6 @@ pub fn render_ratings_block(
             out.push_str(&bbcode::center(&bbcode::table(&ratings_table)));
         }
     }
-    out.push('\n');
-    out.push_str(&bbcode::hr_for(tracker));
-    out.push_str("\n\n");
 
     out
 }
@@ -731,9 +737,6 @@ pub fn render_movie_tech_block(
             }
         }
     }
-    out.push('\n');
-    out.push_str(&bbcode::hr_for(tracker));
-    out.push_str("\n\n");
 
     out
 }
@@ -802,9 +805,6 @@ pub fn render_game_tech_block(
             }
         }
     }
-    out.push('\n');
-    out.push_str(&bbcode::hr_for(tracker));
-    out.push_str("\n\n");
 
     out
 }
@@ -840,9 +840,6 @@ pub fn render_screenshots_block(
         inner.push_str(&line);
     }
     out.push_str(&bbcode::center(&inner));
-    out.push_str("\n\n");
-    out.push_str(&bbcode::hr_for(tracker));
-    out.push_str("\n\n");
 
     out
 }

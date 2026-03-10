@@ -17,6 +17,8 @@ const DEFAULT_FILM: &str = r#"{{heading:🎬 {{titre_maj}} 🎬}}
 
 {{ratings_table}}
 
+{{hr}}
+
 {{#if synopsis}}{{section:Synopsis}}
 
 {{quote:{{synopsis}}}}
@@ -35,6 +37,8 @@ const DEFAULT_SERIE: &str = r#"{{heading:📺 {{titre_maj}} 📺}}
 {{hr}}
 
 {{ratings_table}}
+
+{{hr}}
 
 {{#if synopsis}}{{section:Synopsis}}
 
@@ -61,17 +65,22 @@ const DEFAULT_JEU: &str = r#"{{heading:🎮 {{titre_maj}} 🎮}}
 
 {{/if}}{{screenshots_grid}}
 
+{{hr}}
+
 {{ratings_table}}
-
-{{game_tech_table}}
-
-{{#if installation}}{{sub_section:Installation}}
-
-{{quote:{{installation}}}}
 
 {{hr}}
 
-{{/if}}{{footer}}"#;
+{{game_tech_table}}
+
+{{#if installation}}
+{{hr}}
+
+{{sub_section:Installation}}
+
+{{quote:{{installation}}}}
+{{/if}}
+{{footer}}"#;
 
 const DEFAULT_APP: &str = r#"{{heading:💻 {{nom_maj}} 💻}}
 {{hr}}
