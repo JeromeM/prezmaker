@@ -3,9 +3,7 @@ mod orchestrator;
 
 use clap::Parser;
 use cli::Cli;
-use dialoguer::Select;
 use prezmaker_lib::config::Config;
-use prezmaker_lib::models::Tracker;
 use orchestrator::Orchestrator;
 use tracing_subscriber::EnvFilter;
 
@@ -44,25 +42,7 @@ async fn main() {
         }
     }
 
-    // Tracker selection
-    let tracker = {
-        let items = &["C411", "torr.xyz"];
-        let selection = Select::new()
-            .with_prompt("Selectionnez le tracker")
-            .items(items)
-            .default(0)
-            .interact()
-            .unwrap_or_else(|_| {
-                eprintln!("Selection annulee");
-                std::process::exit(1);
-            });
-        match selection {
-            0 => Tracker::C411,
-            _ => Tracker::TorrXyz,
-        }
-    };
-
-    let orchestrator = Orchestrator::new(config, cli.language.clone(), cli.color.clone(), tracker);
+    let orchestrator = Orchestrator::new(config, cli.language.clone(), cli.color.clone());
 
     match orchestrator.run(&cli.command).await {
         Ok(bbcode) => {

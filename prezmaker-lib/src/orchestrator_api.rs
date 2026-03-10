@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::error::PrezError;
 use crate::formatters::{app_fmt, game_fmt, movie_fmt, series_fmt};
 use crate::formatters::bbcode;
-use crate::models::{Application, Game, MediaTechInfo, Movie, Series, TechInfo, Tracker};
+use crate::models::{Application, Game, MediaTechInfo, Movie, Series, TechInfo};
 use crate::template_engine::{self, RenderContext};
 use crate::providers::allocine::AllocineClient;
 use crate::providers::igdb::IgdbClient;
@@ -34,7 +34,6 @@ pub struct OrchestratorApi {
     language: String,
     title_color: String,
     pseudo: String,
-    tracker: Tracker,
 }
 
 impl OrchestratorApi {
@@ -42,7 +41,6 @@ impl OrchestratorApi {
         config: Config,
         language: Option<String>,
         title_color: Option<String>,
-        tracker: Tracker,
     ) -> Self {
         let lang = language.unwrap_or_else(|| config.preferences.language.clone());
         let color = title_color.unwrap_or_else(|| config.preferences.title_color.clone());
@@ -52,12 +50,7 @@ impl OrchestratorApi {
             language: lang,
             title_color: color,
             pseudo,
-            tracker,
         }
-    }
-
-    pub fn set_tracker(&mut self, tracker: Tracker) {
-        self.tracker = tracker;
     }
 
     pub fn set_title_color(&mut self, color: String) {
@@ -196,7 +189,6 @@ impl OrchestratorApi {
         Ok(movie_fmt::format_movie(
             &movie,
             &self.title_color,
-            self.tracker,
             &self.pseudo,
         ))
     }
@@ -224,7 +216,6 @@ impl OrchestratorApi {
         Ok(series_fmt::format_series(
             &series,
             &self.title_color,
-            self.tracker,
             &self.pseudo,
         ))
     }
@@ -253,7 +244,6 @@ impl OrchestratorApi {
         Ok(movie_fmt::format_movie_with_tech(
             &movie,
             &self.title_color,
-            self.tracker,
             Some(&tech),
             &self.pseudo,
         ))
@@ -283,7 +273,6 @@ impl OrchestratorApi {
         Ok(series_fmt::format_series_with_tech(
             &series,
             &self.title_color,
-            self.tracker,
             Some(&tech),
             &self.pseudo,
         ))
@@ -339,7 +328,6 @@ impl OrchestratorApi {
         Ok(game_fmt::format_game(
             &game,
             &self.title_color,
-            self.tracker,
             &self.pseudo,
         ))
     }
@@ -348,7 +336,6 @@ impl OrchestratorApi {
         Ok(app_fmt::format_application(
             &app,
             &self.title_color,
-            self.tracker,
             &self.pseudo,
         ))
     }
@@ -387,7 +374,7 @@ impl OrchestratorApi {
             ..Default::default()
         };
 
-        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color, &self.pseudo))
+        Ok(template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo))
     }
 
     pub async fn generate_serie_from_template(
@@ -421,7 +408,7 @@ impl OrchestratorApi {
             ..Default::default()
         };
 
-        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color, &self.pseudo))
+        Ok(template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo))
     }
 
     pub fn generate_jeu_from_template(
@@ -452,7 +439,7 @@ impl OrchestratorApi {
             ..Default::default()
         };
 
-        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color, &self.pseudo))
+        Ok(template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo))
     }
 
     pub fn generate_app_from_template(
@@ -471,138 +458,134 @@ impl OrchestratorApi {
             ..Default::default()
         };
 
-        Ok(template_engine::render(&tpl.body, &data, &ctx, self.tracker, &self.title_color, &self.pseudo))
+        Ok(template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo))
     }
 
     // --- Info BBCode builders (for poster_info/cover_info composites) ---
 
     fn build_movie_info_bbcode(&self, movie: &Movie) -> String {
-        let t = self.tracker;
         let mut info = String::new();
         if !movie.countries.is_empty() {
-            info.push_str(&bbcode::field_for(t, "Origine", &movie.countries_display()));
+            info.push_str(&bbcode::field("Origine", &movie.countries_display()));
             info.push('\n');
         }
         if let Some(ref date) = movie.release_date {
-            info.push_str(&bbcode::field_for(t, "Sortie", &template_engine::format_date_fr_pub(date)));
+            info.push_str(&bbcode::field("Sortie", &template_engine::format_date_fr_pub(date)));
             info.push('\n');
         }
         if let Some(ref dur) = movie.duration_formatted() {
-            info.push_str(&bbcode::field_for(t, "Duree", dur));
+            info.push_str(&bbcode::field("Duree", dur));
             info.push('\n');
         }
         if !movie.directors.is_empty() {
-            info.push_str(&bbcode::field_for(t, "Realisateur", &movie.directors_display()));
+            info.push_str(&bbcode::field("Realisateur", &movie.directors_display()));
             info.push('\n');
         }
         if !movie.genres.is_empty() {
-            info.push_str(&bbcode::field_for(t, "Genres", &movie.genres_display()));
+            info.push_str(&bbcode::field("Genres", &movie.genres_display()));
             info.push('\n');
         }
         if !movie.cast.is_empty() {
             info.push('\n');
-            info.push_str(&bbcode::inline_heading_for(t, "Casting", &self.title_color));
+            info.push_str(&bbcode::inline_heading("Casting", &self.title_color));
             info.push_str("\n\n");
-            info.push_str(&bbcode::field_for(t, "Acteurs", &movie.cast_display(6)));
+            info.push_str(&bbcode::field("Acteurs", &movie.cast_display(6)));
             info.push('\n');
         }
         info
     }
 
     fn build_series_info_bbcode(&self, series: &Series) -> String {
-        let t = self.tracker;
         let mut info = String::new();
         if !series.countries.is_empty() {
-            info.push_str(&bbcode::field_for(t, "Origine", &series.countries_display()));
+            info.push_str(&bbcode::field("Origine", &series.countries_display()));
             info.push('\n');
         }
         if let Some(ref date) = series.first_air_date {
-            info.push_str(&bbcode::field_for(t, "Premiere diffusion", &template_engine::format_date_fr_pub(date)));
+            info.push_str(&bbcode::field("Premiere diffusion", &template_engine::format_date_fr_pub(date)));
             info.push('\n');
         }
         if let Some(ref status) = series.status {
-            info.push_str(&bbcode::field_for(t, "Statut", &template_engine::translate_status_pub(status)));
+            info.push_str(&bbcode::field("Statut", &template_engine::translate_status_pub(status)));
             info.push('\n');
         }
         if let Some(seasons) = series.seasons_count {
-            info.push_str(&bbcode::field_for(t, "Saisons", &seasons.to_string()));
+            info.push_str(&bbcode::field("Saisons", &seasons.to_string()));
             info.push('\n');
         }
         if let Some(episodes) = series.episodes_count {
-            info.push_str(&bbcode::field_for(t, "Episodes", &episodes.to_string()));
+            info.push_str(&bbcode::field("Episodes", &episodes.to_string()));
             info.push('\n');
         }
         if let Some(ref runtime) = series.runtime_formatted() {
-            info.push_str(&bbcode::field_for(t, "Duree par episode", runtime));
+            info.push_str(&bbcode::field("Duree par episode", runtime));
             info.push('\n');
         }
         if !series.creators.is_empty() {
-            info.push_str(&bbcode::field_for(t, "Createur(s)", &series.creators_display()));
+            info.push_str(&bbcode::field("Createur(s)", &series.creators_display()));
             info.push('\n');
         }
         if !series.networks.is_empty() {
-            info.push_str(&bbcode::field_for(t, "Chaine / Plateforme", &series.networks_display()));
+            info.push_str(&bbcode::field("Chaine / Plateforme", &series.networks_display()));
             info.push('\n');
         }
         if !series.genres.is_empty() {
-            info.push_str(&bbcode::field_for(t, "Genres", &series.genres_display()));
+            info.push_str(&bbcode::field("Genres", &series.genres_display()));
             info.push('\n');
         }
         if !series.cast.is_empty() {
             info.push('\n');
-            info.push_str(&bbcode::inline_heading_for(t, "Casting", &self.title_color));
+            info.push_str(&bbcode::inline_heading("Casting", &self.title_color));
             info.push_str("\n\n");
-            info.push_str(&bbcode::field_for(t, "Acteurs", &series.cast_display(8)));
+            info.push_str(&bbcode::field("Acteurs", &series.cast_display(8)));
             info.push('\n');
         }
         info
     }
 
     fn build_game_info_bbcode(&self, game: &Game) -> String {
-        let t = self.tracker;
         let mut info = String::new();
         if let Some(ref date) = game.release_date {
-            info.push_str(&bbcode::field_for(t, "Date de sortie", date));
+            info.push_str(&bbcode::field("Date de sortie", date));
             info.push('\n');
         }
         if !game.developers.is_empty() {
-            info.push_str(&bbcode::field_for(t, "Developpeur(s)", &game.developers_display()));
+            info.push_str(&bbcode::field("Developpeur(s)", &game.developers_display()));
             info.push('\n');
         }
         if !game.publishers.is_empty() {
-            info.push_str(&bbcode::field_for(t, "Editeur(s)", &game.publishers_display()));
+            info.push_str(&bbcode::field("Editeur(s)", &game.publishers_display()));
             info.push('\n');
         }
         if !game.genres.is_empty() {
-            info.push_str(&bbcode::field_for(t, "Genres", &game.genres_display()));
+            info.push_str(&bbcode::field("Genres", &game.genres_display()));
             info.push('\n');
         }
         info
     }
 
     fn build_app_info_bbcode(&self, app: &Application) -> String {
-        let t = self.tracker;
         let mut info = String::new();
-        info.push_str(&bbcode::field_for(t, "Nom", &app.name));
+        info.push_str(&bbcode::field("Nom", &app.name));
         info.push('\n');
         if let Some(ref version) = app.version {
-            info.push_str(&bbcode::field_for(t, "Version", version));
+            info.push_str(&bbcode::field("Version", version));
             info.push('\n');
         }
         if let Some(ref dev) = app.developer {
-            info.push_str(&bbcode::field_for(t, "Developpeur", dev));
+            info.push_str(&bbcode::field("Developpeur", dev));
             info.push('\n');
         }
         if let Some(ref license) = app.license {
-            info.push_str(&bbcode::field_for(t, "Licence", license));
+            info.push_str(&bbcode::field("Licence", license));
             info.push('\n');
         }
         if let Some(ref website) = app.website {
-            info.push_str(&bbcode::field_for(t, "Site web", &bbcode::url(website, website)));
+            info.push_str(&bbcode::field("Site web", &bbcode::url(website, website)));
             info.push('\n');
         }
         if !app.platforms.is_empty() {
-            info.push_str(&bbcode::field_for(t, "Plateformes", &app.platforms_display()));
+            info.push_str(&bbcode::field("Plateformes", &app.platforms_display()));
             info.push('\n');
         }
         info

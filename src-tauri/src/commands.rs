@@ -1,6 +1,6 @@
 use crate::bbcode_to_html;
 use prezmaker_lib::config::Config;
-use prezmaker_lib::models::{Application, Game, MediaTechInfo, TechInfo, Tracker};
+use prezmaker_lib::models::{Application, Game, MediaTechInfo, TechInfo};
 use prezmaker_lib::providers::llm::LlmClient;
 use prezmaker_lib::orchestrator_api::{GameDetailsResponse, OrchestratorApi, SearchResult};
 use prezmaker_lib::torrent::{self, TorrentInfo};
@@ -13,16 +13,8 @@ pub struct AppState {
     pub config: Arc<Mutex<Config>>,
 }
 
-fn parse_tracker(tracker: &str) -> Tracker {
-    match tracker {
-        "torr.xyz" | "TorrXyz" => Tracker::TorrXyz,
-        _ => Tracker::C411,
-    }
-}
-
-fn make_api(config: &Config, tracker: &str, title_color: Option<&str>) -> OrchestratorApi {
-    let t = parse_tracker(tracker);
-    let mut api = OrchestratorApi::new(config.clone(), None, None, t);
+fn make_api(config: &Config, title_color: Option<&str>) -> OrchestratorApi {
+    let mut api = OrchestratorApi::new(config.clone(), None, None);
     if let Some(color) = title_color {
         if !color.is_empty() {
             api.set_title_color(color.to_string());
@@ -36,11 +28,10 @@ pub async fn search(
     state: tauri::State<'_, AppState>,
     query: String,
     content_type: String,
-    tracker: String,
     title_color: Option<String>,
 ) -> Result<Vec<SearchResult>, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, &tracker, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref());
 
     match content_type.as_str() {
         "film" => api.search_film(&query).await.map_err(|e| e.to_string()),
@@ -54,11 +45,10 @@ pub async fn search(
 pub async fn generate_film(
     state: tauri::State<'_, AppState>,
     tmdb_id: u64,
-    tracker: String,
     title_color: Option<String>,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, &tracker, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref());
     api.generate_film(tmdb_id, false)
         .await
         .map_err(|e| e.to_string())
@@ -68,11 +58,10 @@ pub async fn generate_film(
 pub async fn generate_serie(
     state: tauri::State<'_, AppState>,
     tmdb_id: u64,
-    tracker: String,
     title_color: Option<String>,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, &tracker, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref());
     api.generate_serie(tmdb_id, false)
         .await
         .map_err(|e| e.to_string())
@@ -83,11 +72,10 @@ pub async fn fetch_game_details(
     state: tauri::State<'_, AppState>,
     game_id: u64,
     source: Option<String>,
-    tracker: String,
     title_color: Option<String>,
 ) -> Result<GameDetailsResponse, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, &tracker, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref());
     api.fetch_game_details(game_id, source.as_deref())
         .await
         .map_err(|e| e.to_string())
@@ -105,11 +93,10 @@ pub struct GenerateJeuPayload {
 pub async fn generate_jeu(
     state: tauri::State<'_, AppState>,
     payload: GenerateJeuPayload,
-    tracker: String,
     title_color: Option<String>,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, &tracker, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref());
     api.generate_jeu(
         payload.game,
         payload.description,
@@ -135,11 +122,10 @@ pub struct GenerateAppPayload {
 pub async fn generate_app(
     state: tauri::State<'_, AppState>,
     payload: GenerateAppPayload,
-    tracker: String,
     title_color: Option<String>,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, &tracker, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref());
     let app = Application {
         name: payload.name,
         version: payload.version,
@@ -162,12 +148,11 @@ pub fn parse_torrent(path: String) -> Result<TorrentInfo, String> {
 pub async fn generate_film_with_tech(
     state: tauri::State<'_, AppState>,
     tmdb_id: u64,
-    tracker: String,
     title_color: Option<String>,
     tech: MediaTechInfo,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, &tracker, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref());
     api.generate_film_with_tech(tmdb_id, false, tech)
         .await
         .map_err(|e| e.to_string())
@@ -177,12 +162,11 @@ pub async fn generate_film_with_tech(
 pub async fn generate_serie_with_tech(
     state: tauri::State<'_, AppState>,
     tmdb_id: u64,
-    tracker: String,
     title_color: Option<String>,
     tech: MediaTechInfo,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, &tracker, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref());
     api.generate_serie_with_tech(tmdb_id, false, tech)
         .await
         .map_err(|e| e.to_string())
@@ -195,14 +179,12 @@ pub fn preview_template(
     state: tauri::State<'_, AppState>,
     body: String,
     content_type: String,
-    tracker: String,
     title_color: Option<String>,
 ) -> String {
     let config = state.config.lock().unwrap();
-    let t = parse_tracker(&tracker);
     let color = title_color.as_deref().unwrap_or("c0392b");
     let pseudo = &config.preferences.pseudo;
-    template_engine::preview_template(&body, &content_type, t, color, pseudo)
+    template_engine::preview_template(&body, &content_type, color, pseudo)
 }
 
 #[tauri::command]
@@ -242,7 +224,6 @@ pub async fn generate_from_template(
     state: tauri::State<'_, AppState>,
     content_type: String,
     tmdb_id: Option<u64>,
-    tracker: String,
     title_color: Option<String>,
     template_name: String,
     tech: Option<MediaTechInfo>,
@@ -250,7 +231,7 @@ pub async fn generate_from_template(
     app_payload: Option<GenerateAppPayload>,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, &tracker, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref());
 
     match content_type.as_str() {
         "film" => {

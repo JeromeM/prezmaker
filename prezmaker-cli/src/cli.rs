@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 #[derive(Parser, Debug)]
 #[command(
     name = "prezmaker",
-    about = "Generateur de presentations BBCode pour trackers torrent",
+    about = "Generateur de presentations BBCode",
     version
 )]
 pub struct Cli {

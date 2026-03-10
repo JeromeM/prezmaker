@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::formatters::bbcode;
-use crate::models::{Rating, Tracker};
+use crate::models::Rating;
 
 /// Extra context for composite blocks that need model-level data
 #[derive(Default)]
@@ -185,7 +185,6 @@ pub fn render(
     template_body: &str,
     data: &HashMap<String, String>,
     ctx: &RenderContext,
-    tracker: Tracker,
     title_color: &str,
     pseudo: &str,
 ) -> String {
@@ -198,7 +197,7 @@ pub fn render(
     output = replace_data_tags(&output, data);
 
     // Pass 3: Render layout tags {{layout:args}}
-    output = render_layout_tags(&output, ctx, tracker, title_color, pseudo);
+    output = render_layout_tags(&output, ctx, title_color, pseudo);
 
     // Pass 4: Collapse excessive blank lines (3+ consecutive newlines → 2)
     while output.contains("\n\n\n") {
@@ -268,7 +267,7 @@ fn replace_data_tags(template: &str, data: &HashMap<String, String>) -> String {
     result
 }
 
-fn render_layout_tags(template: &str, ctx: &RenderContext, tracker: Tracker, title_color: &str, pseudo: &str) -> String {
+fn render_layout_tags(template: &str, ctx: &RenderContext, title_color: &str, pseudo: &str) -> String {
     let mut result = String::new();
     let mut pos = 0;
 
@@ -278,7 +277,7 @@ fn render_layout_tags(template: &str, ctx: &RenderContext, tracker: Tracker, tit
                 let tag_content = &template[pos + 2..pos + 2 + end];
                 let after = pos + 2 + end + 2;
 
-                if let Some(rendered) = render_single_layout_tag(tag_content, ctx, tracker, title_color, pseudo)
+                if let Some(rendered) = render_single_layout_tag(tag_content, ctx, title_color, pseudo)
                 {
                     result.push_str(&rendered);
                     pos = after;
@@ -299,7 +298,6 @@ fn render_layout_tags(template: &str, ctx: &RenderContext, tracker: Tracker, tit
 fn render_single_layout_tag(
     tag_content: &str,
     ctx: &RenderContext,
-    tracker: Tracker,
     title_color: &str,
     pseudo: &str,
 ) -> Option<String> {
@@ -316,19 +314,19 @@ fn render_single_layout_tag(
     match tag_name.to_lowercase().as_str() {
         "heading" => {
             let text = arg.unwrap_or("");
-            Some(bbcode::heading_title_for(tracker, text, title_color))
+            Some(bbcode::heading_title(text, title_color))
         }
         "section" => {
             let text = arg.unwrap_or("");
-            Some(bbcode::section_heading_for(tracker, text, title_color))
+            Some(bbcode::section_heading(text, title_color))
         }
         "sub_section" => {
             let text = arg.unwrap_or("");
-            Some(bbcode::sub_heading_for(tracker, text, title_color))
+            Some(bbcode::sub_heading(text, title_color))
         }
         "inline_heading" => {
             let text = arg.unwrap_or("");
-            Some(bbcode::inline_heading_for(tracker, text, title_color))
+            Some(bbcode::inline_heading(text, title_color))
         }
         "field" => {
             // {{field:label:value}}
@@ -338,12 +336,12 @@ fn render_single_layout_tag(
             } else {
                 (text, "")
             };
-            Some(bbcode::field_for(tracker, label, value))
+            Some(bbcode::field(label, value))
         }
-        "hr" => Some(bbcode::hr_for(tracker)),
+        "hr" => Some(String::new()),
         "quote" => {
             let text = arg.unwrap_or("");
-            Some(bbcode::quote_for(tracker, text))
+            Some(bbcode::quote(text))
         }
         "center" => {
             let text = arg.unwrap_or("");
@@ -381,45 +379,45 @@ fn render_single_layout_tag(
         }
         "img_cover" => {
             let url = arg.unwrap_or("");
-            Some(bbcode::img_sized_for(tracker, url, 264, 352))
+            Some(bbcode::img_width(url, 264))
         }
         "img_poster" => {
             let url = arg.unwrap_or("");
-            Some(bbcode::img_sized_for(tracker, url, 300, 450))
+            Some(bbcode::img_width(url, 300))
         }
         "img_logo" => {
             let url = arg.unwrap_or("");
-            Some(bbcode::img_sized_for(tracker, url, 200, 200))
+            Some(bbcode::img_width(url, 200))
         }
-        "footer" => Some(bbcode::footer_for(tracker, pseudo)),
+        "footer" => Some(bbcode::footer(pseudo)),
         // Composite blocks
         "ratings_table" => {
-            Some(render_ratings_block(&ctx.ratings, tracker, title_color))
+            Some(render_ratings_block(&ctx.ratings, title_color))
         }
         "tech_table" => {
-            Some(render_movie_tech_block(ctx.tech.as_ref(), tracker, title_color))
+            Some(render_movie_tech_block(ctx.tech.as_ref(), title_color))
         }
         "game_tech_table" => {
-            Some(render_game_tech_block(ctx.game_tech.as_ref(), tracker, title_color))
+            Some(render_game_tech_block(ctx.game_tech.as_ref(), title_color))
         }
         "app_tech_table" => {
             // App uses same structure as game tech but always empty
-            Some(render_game_tech_block(None, tracker, title_color))
+            Some(render_game_tech_block(None, title_color))
         }
         "screenshots_grid" => {
-            Some(render_screenshots_block(&ctx.screenshots, tracker, title_color))
+            Some(render_screenshots_block(&ctx.screenshots, title_color))
         }
         "poster_info" => {
             let info = ctx.info_bbcode.as_deref().unwrap_or("");
-            Some(render_poster_info_block(ctx.poster_url.as_deref(), info, tracker))
+            Some(render_poster_info_block(ctx.poster_url.as_deref(), info))
         }
         "cover_info" => {
             let info = ctx.info_bbcode.as_deref().unwrap_or("");
-            Some(render_cover_info_block(ctx.cover_url.as_deref(), info, tracker))
+            Some(render_cover_info_block(ctx.cover_url.as_deref(), info))
         }
         "logo_info" => {
             let info = ctx.info_bbcode.as_deref().unwrap_or("");
-            Some(render_cover_info_block(ctx.logo_url.as_deref(), info, tracker))
+            Some(render_cover_info_block(ctx.logo_url.as_deref(), info))
         }
         _ => None, // Unknown tag → leave as-is
     }
@@ -632,7 +630,6 @@ pub fn build_app_data(app: &crate::models::Application) -> HashMap<String, Strin
 
 pub fn render_ratings_block(
     ratings: &[crate::models::Rating],
-    tracker: Tracker,
     title_color: &str,
 ) -> String {
     if ratings.is_empty() {
@@ -640,57 +637,33 @@ pub fn render_ratings_block(
     }
 
     let mut out = String::new();
-    out.push_str(&bbcode::section_heading_for(tracker, "Notes", title_color));
+    out.push_str(&bbcode::section_heading("Notes", title_color));
     out.push_str("\n\n");
 
-    match tracker {
-        Tracker::C411 => {
-            let mut ratings_table = String::new();
-            let mut header_row = String::new();
-            for rating in ratings {
-                header_row.push_str(&bbcode::th(&rating.source));
-            }
-            ratings_table.push_str(&bbcode::tr(&header_row));
-            let mut values_row = String::new();
-            for rating in ratings {
-                values_row.push_str(&bbcode::td(&bbcode::center(
-                    &bbcode::colored_rating_for(tracker, rating.value, rating.max),
-                )));
-            }
-            ratings_table.push_str(&bbcode::tr(&values_row));
-            out.push_str(&bbcode::table(&ratings_table));
-        }
-        Tracker::TorrXyz => {
-            let mut header_row = String::new();
-            let mut values_row = String::new();
-            for (i, rating) in ratings.iter().enumerate() {
-                if i > 0 {
-                    header_row.push_str(&bbcode::th("        "));
-                    values_row.push_str(&bbcode::td(""));
-                }
-                header_row.push_str(&bbcode::rating_header_torrxyz(&rating.source));
-                values_row.push_str(&bbcode::td(&bbcode::colored_rating_for(
-                    tracker,
-                    rating.value,
-                    rating.max,
-                )));
-            }
-            let ratings_table = format!("{}{}", bbcode::tr(&header_row), bbcode::tr(&values_row));
-            out.push_str(&bbcode::center(&bbcode::table(&ratings_table)));
-        }
+    let mut ratings_table = String::new();
+    let mut header_row = String::new();
+    for rating in ratings {
+        header_row.push_str(&bbcode::th(&rating.source));
     }
+    ratings_table.push_str(&bbcode::tr(&header_row));
+    let mut values_row = String::new();
+    for rating in ratings {
+        values_row.push_str(&bbcode::td(&bbcode::center(
+            &bbcode::colored_rating(rating.value, rating.max),
+        )));
+    }
+    ratings_table.push_str(&bbcode::tr(&values_row));
+    out.push_str(&bbcode::table(&ratings_table));
 
     out
 }
 
 pub fn render_movie_tech_block(
     tech: Option<&crate::models::MediaTechInfo>,
-    tracker: Tracker,
     title_color: &str,
 ) -> String {
     let mut out = String::new();
-    out.push_str(&bbcode::sub_heading_for(
-        tracker,
+    out.push_str(&bbcode::sub_heading(
         "Informations techniques",
         title_color,
     ));
@@ -715,40 +688,28 @@ pub fn render_movie_tech_block(
         values.push(s);
     }
 
-    match tracker {
-        Tracker::C411 => {
-            let mut tech_table = String::new();
-            let mut header_row = String::new();
-            for h in &headers {
-                header_row.push_str(&bbcode::th(h));
-            }
-            tech_table.push_str(&bbcode::tr(&header_row));
-            let mut val_row = String::new();
-            for v in &values {
-                val_row.push_str(&bbcode::td(&bbcode::center(v)));
-            }
-            tech_table.push_str(&bbcode::tr(&val_row));
-            out.push_str(&bbcode::table(&tech_table));
-        }
-        Tracker::TorrXyz => {
-            for (h, v) in headers.iter().zip(values.iter()) {
-                out.push_str(&bbcode::center(&bbcode::field_for(tracker, h, v)));
-                out.push('\n');
-            }
-        }
+    let mut tech_table = String::new();
+    let mut header_row = String::new();
+    for h in &headers {
+        header_row.push_str(&bbcode::th(h));
     }
+    tech_table.push_str(&bbcode::tr(&header_row));
+    let mut val_row = String::new();
+    for v in &values {
+        val_row.push_str(&bbcode::td(&bbcode::center(v)));
+    }
+    tech_table.push_str(&bbcode::tr(&val_row));
+    out.push_str(&bbcode::table(&tech_table));
 
     out
 }
 
 pub fn render_game_tech_block(
     tech: Option<&crate::models::TechInfo>,
-    tracker: Tracker,
     title_color: &str,
 ) -> String {
     let mut out = String::new();
-    out.push_str(&bbcode::sub_heading_for(
-        tracker,
+    out.push_str(&bbcode::sub_heading(
         "Informations techniques",
         title_color,
     ));
@@ -760,58 +721,35 @@ pub fn render_game_tech_block(
         tech_headers.push("Taille installee");
     }
 
-    match tracker {
-        Tracker::C411 => {
-            let mut tech_table = String::new();
-            let mut header_row = String::new();
-            for h in &tech_headers {
-                header_row.push_str(&bbcode::th(h));
-            }
-            tech_table.push_str(&bbcode::tr(&header_row));
-            let mut values_row = String::new();
-            if let Some(t) = tech {
-                let mut values: Vec<&str> = vec![&t.platform, &t.languages, &t.size];
-                if has_install_size {
-                    values.push(&t.install_size);
-                }
-                for val in &values {
-                    let display = if val.is_empty() { " " } else { val };
-                    values_row.push_str(&bbcode::td(&bbcode::center(display)));
-                }
-            } else {
-                for _ in &tech_headers {
-                    values_row.push_str(&bbcode::td(&bbcode::center(" ")));
-                }
-            }
-            tech_table.push_str(&bbcode::tr(&values_row));
-            out.push_str(&bbcode::table(&tech_table));
+    let mut tech_table = String::new();
+    let mut header_row = String::new();
+    for h in &tech_headers {
+        header_row.push_str(&bbcode::th(h));
+    }
+    tech_table.push_str(&bbcode::tr(&header_row));
+    let mut values_row = String::new();
+    if let Some(t) = tech {
+        let mut values: Vec<&str> = vec![&t.platform, &t.languages, &t.size];
+        if has_install_size {
+            values.push(&t.install_size);
         }
-        Tracker::TorrXyz => {
-            if let Some(t) = tech {
-                let mut values: Vec<&str> = vec![&t.platform, &t.languages, &t.size];
-                if has_install_size {
-                    values.push(&t.install_size);
-                }
-                for (h, val) in tech_headers.iter().zip(values.iter()) {
-                    let display = if val.is_empty() { " " } else { val };
-                    out.push_str(&bbcode::center(&bbcode::field_for(tracker, h, display)));
-                    out.push('\n');
-                }
-            } else {
-                for h in &tech_headers {
-                    out.push_str(&bbcode::center(&bbcode::field_for(tracker, h, " ")));
-                    out.push('\n');
-                }
-            }
+        for val in &values {
+            let display = if val.is_empty() { " " } else { val };
+            values_row.push_str(&bbcode::td(&bbcode::center(display)));
+        }
+    } else {
+        for _ in &tech_headers {
+            values_row.push_str(&bbcode::td(&bbcode::center(" ")));
         }
     }
+    tech_table.push_str(&bbcode::tr(&values_row));
+    out.push_str(&bbcode::table(&tech_table));
 
     out
 }
 
 pub fn render_screenshots_block(
     screenshots: &[String],
-    tracker: Tracker,
     title_color: &str,
 ) -> String {
     if screenshots.is_empty() {
@@ -819,8 +757,7 @@ pub fn render_screenshots_block(
     }
 
     let mut out = String::new();
-    out.push_str(&bbcode::section_heading_for(
-        tracker,
+    out.push_str(&bbcode::section_heading(
         "Screenshots",
         title_color,
     ));
@@ -847,75 +784,33 @@ pub fn render_screenshots_block(
 pub fn render_poster_info_block(
     poster_url: Option<&str>,
     info_bbcode: &str,
-    tracker: Tracker,
 ) -> String {
     let mut out = String::new();
-    match tracker {
-        Tracker::C411 => {
-            let mut table_content = String::new();
-            let mut row_content = String::new();
-            if let Some(poster) = poster_url {
-                row_content.push_str(&bbcode::td(&bbcode::center(&bbcode::img_width(poster, 300))));
-            }
-            row_content.push_str(&bbcode::td(info_bbcode));
-            table_content.push_str(&bbcode::tr(&row_content));
-            out.push_str(&bbcode::quote(&bbcode::table(&table_content)));
-        }
-        Tracker::TorrXyz => {
-            let mut row_content = String::new();
-            if let Some(poster) = poster_url {
-                row_content.push_str(&bbcode::td(&format!(
-                    "\n{}\n",
-                    bbcode::center(&bbcode::img_sized_for(tracker, poster, 300, 450))
-                )));
-                row_content.push_str(&bbcode::td(""));
-            }
-            row_content.push_str(&bbcode::td(&format!(
-                "\n{}\n",
-                bbcode::quote(info_bbcode)
-            )));
-            let table_content = bbcode::tr(&row_content);
-            out.push_str(&bbcode::center(&bbcode::table(&table_content)));
-        }
+    let mut table_content = String::new();
+    let mut row_content = String::new();
+    if let Some(poster) = poster_url {
+        row_content.push_str(&bbcode::td(&bbcode::center(&bbcode::img_width(poster, 300))));
     }
+    row_content.push_str(&bbcode::td(info_bbcode));
+    table_content.push_str(&bbcode::tr(&row_content));
+    out.push_str(&bbcode::quote(&bbcode::table(&table_content)));
     out
 }
 
 pub fn render_cover_info_block(
     cover_url: Option<&str>,
     info_bbcode: &str,
-    tracker: Tracker,
 ) -> String {
     let mut out = String::new();
-    match tracker {
-        Tracker::C411 => {
-            let mut table_content = String::new();
-            let mut row_content = String::new();
-            if let Some(cover) = cover_url {
-                row_content
-                    .push_str(&bbcode::td(&bbcode::center(&bbcode::img_width(cover, 264))));
-            }
-            row_content.push_str(&bbcode::td(info_bbcode));
-            table_content.push_str(&bbcode::tr(&row_content));
-            out.push_str(&bbcode::quote(&bbcode::table(&table_content)));
-        }
-        Tracker::TorrXyz => {
-            let mut row_content = String::new();
-            if let Some(cover) = cover_url {
-                row_content.push_str(&bbcode::td(&format!(
-                    "\n{}\n",
-                    bbcode::center(&bbcode::img_sized_for(tracker, cover, 264, 352))
-                )));
-                row_content.push_str(&bbcode::td(""));
-            }
-            row_content.push_str(&bbcode::td(&format!(
-                "\n{}\n",
-                bbcode::quote(info_bbcode)
-            )));
-            let table_content = bbcode::tr(&row_content);
-            out.push_str(&bbcode::center(&bbcode::table(&table_content)));
-        }
+    let mut table_content = String::new();
+    let mut row_content = String::new();
+    if let Some(cover) = cover_url {
+        row_content
+            .push_str(&bbcode::td(&bbcode::center(&bbcode::img_width(cover, 264))));
     }
+    row_content.push_str(&bbcode::td(info_bbcode));
+    table_content.push_str(&bbcode::tr(&row_content));
+    out.push_str(&bbcode::quote(&bbcode::table(&table_content)));
     out
 }
 
@@ -924,29 +819,27 @@ pub fn render_cover_info_block(
 pub fn preview_template(
     template_body: &str,
     content_type: &str,
-    tracker: Tracker,
     title_color: &str,
     pseudo: &str,
 ) -> String {
-    let (data, ctx) = build_sample_data(content_type, tracker, title_color);
-    render(template_body, &data, &ctx, tracker, title_color, pseudo)
+    let (data, ctx) = build_sample_data(content_type, title_color);
+    render(template_body, &data, &ctx, title_color, pseudo)
 }
 
 fn build_sample_data(
     content_type: &str,
-    tracker: Tracker,
     title_color: &str,
 ) -> (HashMap<String, String>, RenderContext) {
     match content_type {
-        "film" => build_sample_movie(tracker, title_color),
-        "serie" => build_sample_series(tracker, title_color),
-        "jeu" => build_sample_game(tracker, title_color),
-        "app" => build_sample_app(tracker, title_color),
+        "film" => build_sample_movie(title_color),
+        "serie" => build_sample_series(title_color),
+        "jeu" => build_sample_game(title_color),
+        "app" => build_sample_app(),
         _ => (HashMap::new(), RenderContext::default()),
     }
 }
 
-fn build_sample_movie(tracker: Tracker, title_color: &str) -> (HashMap<String, String>, RenderContext) {
+fn build_sample_movie(title_color: &str) -> (HashMap<String, String>, RenderContext) {
     use crate::models::{Movie, MediaTechInfo, Rating, Genre, Country, Person};
 
     let movie = Movie {
@@ -990,7 +883,7 @@ fn build_sample_movie(tracker: Tracker, title_color: &str) -> (HashMap<String, S
     };
 
     let data = build_movie_data(&movie, Some(&tech));
-    let info_bbcode = build_sample_movie_info(&movie, tracker, title_color);
+    let info_bbcode = build_sample_movie_info(&movie, title_color);
     let ctx = RenderContext {
         ratings: movie.ratings.clone(),
         poster_url: movie.poster_url.clone(),
@@ -1001,31 +894,31 @@ fn build_sample_movie(tracker: Tracker, title_color: &str) -> (HashMap<String, S
     (data, ctx)
 }
 
-fn build_sample_movie_info(movie: &crate::models::Movie, t: Tracker, title_color: &str) -> String {
+fn build_sample_movie_info(movie: &crate::models::Movie, title_color: &str) -> String {
     let mut info = String::new();
-    info.push_str(&bbcode::field_for(t, "Origine", &movie.countries_display()));
+    info.push_str(&bbcode::field("Origine", &movie.countries_display()));
     info.push('\n');
     if let Some(ref d) = movie.release_date {
-        info.push_str(&bbcode::field_for(t, "Sortie", &format_date_fr(d)));
+        info.push_str(&bbcode::field("Sortie", &format_date_fr(d)));
         info.push('\n');
     }
     if let Some(ref dur) = movie.duration_formatted() {
-        info.push_str(&bbcode::field_for(t, "Duree", dur));
+        info.push_str(&bbcode::field("Duree", dur));
         info.push('\n');
     }
-    info.push_str(&bbcode::field_for(t, "Realisateur", &movie.directors_display()));
+    info.push_str(&bbcode::field("Realisateur", &movie.directors_display()));
     info.push('\n');
-    info.push_str(&bbcode::field_for(t, "Genres", &movie.genres_display()));
+    info.push_str(&bbcode::field("Genres", &movie.genres_display()));
     info.push('\n');
     info.push('\n');
-    info.push_str(&bbcode::inline_heading_for(t, "Casting", title_color));
+    info.push_str(&bbcode::inline_heading("Casting", title_color));
     info.push_str("\n\n");
-    info.push_str(&bbcode::field_for(t, "Acteurs", &movie.cast_display(6)));
+    info.push_str(&bbcode::field("Acteurs", &movie.cast_display(6)));
     info.push('\n');
     info
 }
 
-fn build_sample_series(tracker: Tracker, title_color: &str) -> (HashMap<String, String>, RenderContext) {
+fn build_sample_series(title_color: &str) -> (HashMap<String, String>, RenderContext) {
     use crate::models::{Series, MediaTechInfo, Rating, Genre, Country, Person};
 
     let series = Series {
@@ -1072,7 +965,7 @@ fn build_sample_series(tracker: Tracker, title_color: &str) -> (HashMap<String, 
     };
 
     let data = build_series_data(&series, Some(&tech));
-    let info_bbcode = build_sample_series_info(&series, tracker, title_color);
+    let info_bbcode = build_sample_series_info(&series, title_color);
     let ctx = RenderContext {
         ratings: series.ratings.clone(),
         poster_url: series.poster_url.clone(),
@@ -1083,45 +976,45 @@ fn build_sample_series(tracker: Tracker, title_color: &str) -> (HashMap<String, 
     (data, ctx)
 }
 
-fn build_sample_series_info(series: &crate::models::Series, t: Tracker, title_color: &str) -> String {
+fn build_sample_series_info(series: &crate::models::Series, title_color: &str) -> String {
     let mut info = String::new();
-    info.push_str(&bbcode::field_for(t, "Origine", &series.countries_display()));
+    info.push_str(&bbcode::field("Origine", &series.countries_display()));
     info.push('\n');
     if let Some(ref d) = series.first_air_date {
-        info.push_str(&bbcode::field_for(t, "Premiere diffusion", &format_date_fr(d)));
+        info.push_str(&bbcode::field("Premiere diffusion", &format_date_fr(d)));
         info.push('\n');
     }
     if let Some(ref s) = series.status {
-        info.push_str(&bbcode::field_for(t, "Statut", &translate_status(s)));
+        info.push_str(&bbcode::field("Statut", &translate_status(s)));
         info.push('\n');
     }
     if let Some(s) = series.seasons_count {
-        info.push_str(&bbcode::field_for(t, "Saisons", &s.to_string()));
+        info.push_str(&bbcode::field("Saisons", &s.to_string()));
         info.push('\n');
     }
     if let Some(e) = series.episodes_count {
-        info.push_str(&bbcode::field_for(t, "Episodes", &e.to_string()));
+        info.push_str(&bbcode::field("Episodes", &e.to_string()));
         info.push('\n');
     }
     if let Some(ref rt) = series.runtime_formatted() {
-        info.push_str(&bbcode::field_for(t, "Duree par episode", rt));
+        info.push_str(&bbcode::field("Duree par episode", rt));
         info.push('\n');
     }
-    info.push_str(&bbcode::field_for(t, "Createur(s)", &series.creators_display()));
+    info.push_str(&bbcode::field("Createur(s)", &series.creators_display()));
     info.push('\n');
-    info.push_str(&bbcode::field_for(t, "Chaine / Plateforme", &series.networks_display()));
+    info.push_str(&bbcode::field("Chaine / Plateforme", &series.networks_display()));
     info.push('\n');
-    info.push_str(&bbcode::field_for(t, "Genres", &series.genres_display()));
+    info.push_str(&bbcode::field("Genres", &series.genres_display()));
     info.push('\n');
     info.push('\n');
-    info.push_str(&bbcode::inline_heading_for(t, "Casting", title_color));
+    info.push_str(&bbcode::inline_heading("Casting", title_color));
     info.push_str("\n\n");
-    info.push_str(&bbcode::field_for(t, "Acteurs", &series.cast_display(8)));
+    info.push_str(&bbcode::field("Acteurs", &series.cast_display(8)));
     info.push('\n');
     info
 }
 
-fn build_sample_game(tracker: Tracker, title_color: &str) -> (HashMap<String, String>, RenderContext) {
+fn build_sample_game(_title_color: &str) -> (HashMap<String, String>, RenderContext) {
     use crate::models::{Game, TechInfo, Rating, Genre};
 
     let tech_info = TechInfo {
@@ -1157,7 +1050,7 @@ fn build_sample_game(tracker: Tracker, title_color: &str) -> (HashMap<String, St
     };
 
     let data = build_game_data(&game);
-    let info_bbcode = build_sample_game_info(&game, tracker, title_color);
+    let info_bbcode = build_sample_game_info(&game);
     let ctx = RenderContext {
         ratings: game.ratings.clone(),
         cover_url: game.cover_url.clone(),
@@ -1169,24 +1062,24 @@ fn build_sample_game(tracker: Tracker, title_color: &str) -> (HashMap<String, St
     (data, ctx)
 }
 
-fn build_sample_game_info(game: &crate::models::Game, t: Tracker, _title_color: &str) -> String {
+fn build_sample_game_info(game: &crate::models::Game) -> String {
     let mut info = String::new();
     if let Some(ref d) = game.release_date {
-        info.push_str(&bbcode::field_for(t, "Date de sortie", d));
+        info.push_str(&bbcode::field("Date de sortie", d));
         info.push('\n');
     }
-    info.push_str(&bbcode::field_for(t, "Developpeur(s)", &game.developers_display()));
+    info.push_str(&bbcode::field("Developpeur(s)", &game.developers_display()));
     info.push('\n');
-    info.push_str(&bbcode::field_for(t, "Editeur(s)", &game.publishers_display()));
+    info.push_str(&bbcode::field("Editeur(s)", &game.publishers_display()));
     info.push('\n');
-    info.push_str(&bbcode::field_for(t, "Genres", &game.genres_display()));
+    info.push_str(&bbcode::field("Genres", &game.genres_display()));
     info.push('\n');
-    info.push_str(&bbcode::field_for(t, "Plateformes", &game.platforms_display()));
+    info.push_str(&bbcode::field("Plateformes", &game.platforms_display()));
     info.push('\n');
     info
 }
 
-fn build_sample_app(_tracker: Tracker, _title_color: &str) -> (HashMap<String, String>, RenderContext) {
+fn build_sample_app() -> (HashMap<String, String>, RenderContext) {
     use crate::models::Application;
 
     let app = Application {
@@ -1201,7 +1094,7 @@ fn build_sample_app(_tracker: Tracker, _title_color: &str) -> (HashMap<String, S
     };
 
     let data = build_app_data(&app);
-    let info_bbcode = build_sample_app_info(&app, _tracker);
+    let info_bbcode = build_sample_app_info(&app);
     let ctx = RenderContext {
         logo_url: app.logo_url.clone(),
         info_bbcode: Some(info_bbcode),
@@ -1210,27 +1103,27 @@ fn build_sample_app(_tracker: Tracker, _title_color: &str) -> (HashMap<String, S
     (data, ctx)
 }
 
-fn build_sample_app_info(app: &crate::models::Application, t: Tracker) -> String {
+fn build_sample_app_info(app: &crate::models::Application) -> String {
     let mut info = String::new();
-    info.push_str(&bbcode::field_for(t, "Nom", &app.name));
+    info.push_str(&bbcode::field("Nom", &app.name));
     info.push('\n');
     if let Some(ref v) = app.version {
-        info.push_str(&bbcode::field_for(t, "Version", v));
+        info.push_str(&bbcode::field("Version", v));
         info.push('\n');
     }
     if let Some(ref d) = app.developer {
-        info.push_str(&bbcode::field_for(t, "Developpeur", d));
+        info.push_str(&bbcode::field("Developpeur", d));
         info.push('\n');
     }
     if let Some(ref l) = app.license {
-        info.push_str(&bbcode::field_for(t, "Licence", l));
+        info.push_str(&bbcode::field("Licence", l));
         info.push('\n');
     }
     if let Some(ref w) = app.website {
-        info.push_str(&bbcode::field_for(t, "Site web", &bbcode::url(w, w)));
+        info.push_str(&bbcode::field("Site web", &bbcode::url(w, w)));
         info.push('\n');
     }
-    info.push_str(&bbcode::field_for(t, "Plateformes", &app.platforms_display()));
+    info.push_str(&bbcode::field("Plateformes", &app.platforms_display()));
     info.push('\n');
     info
 }
@@ -1240,7 +1133,7 @@ fn build_sample_app_info(app: &crate::models::Application, t: Tracker) -> String
 pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
     let mut tags = vec![
         // Layout tags (all types)
-        tag("heading:texte", "Titre principal (adapté au tracker)"),
+        tag("heading:texte", "Titre principal"),
         tag("section:texte", "Titre de section"),
         tag("sub_section:texte", "Sous-titre de section"),
         tag("inline_heading:texte", "Titre inline (dans un bloc)"),
@@ -1462,7 +1355,6 @@ mod tests {
         let result = render_layout_tags(
             "{{heading:TEST}}",
             &ctx,
-            Tracker::C411,
             "c0392b",
             "",
         );
@@ -1476,7 +1368,6 @@ mod tests {
         let result = render_layout_tags(
             "{{field:Genre:Action}}",
             &ctx,
-            Tracker::C411,
             "c0392b",
             "",
         );
@@ -1488,7 +1379,7 @@ mod tests {
         let mut data = HashMap::new();
         data.insert("titre".into(), "Test".into());
         let ctx = RenderContext::default();
-        let result = render("{{titre}}\n{{footer}}", &data, &ctx, Tracker::C411, "c0392b", "MonPseudo");
+        let result = render("{{titre}}\n{{footer}}", &data, &ctx, "c0392b", "MonPseudo");
         assert!(result.contains("Upload"));
         assert!(result.contains("MonPseudo"));
     }
@@ -1498,7 +1389,7 @@ mod tests {
         let mut data = HashMap::new();
         data.insert("titre".into(), "Test".into());
         let ctx = RenderContext::default();
-        let result = render("{{titre}}\n{{footer}}", &data, &ctx, Tracker::C411, "c0392b", "");
+        let result = render("{{titre}}\n{{footer}}", &data, &ctx, "c0392b", "");
         assert!(!result.contains("Upload"));
     }
 }

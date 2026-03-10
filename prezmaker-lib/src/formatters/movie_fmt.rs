@@ -1,126 +1,89 @@
 use crate::formatters::bbcode::*;
-use crate::models::{MediaTechInfo, Movie, Tracker};
+use crate::models::{MediaTechInfo, Movie};
 
-pub fn format_movie(movie: &Movie, title_color: &str, tracker: Tracker, pseudo: &str) -> String {
-    format_movie_with_tech(movie, title_color, tracker, None, pseudo)
+pub fn format_movie(movie: &Movie, title_color: &str, pseudo: &str) -> String {
+    format_movie_with_tech(movie, title_color, None, pseudo)
 }
 
-pub fn format_movie_with_tech(movie: &Movie, title_color: &str, tracker: Tracker, tech: Option<&MediaTechInfo>, pseudo: &str) -> String {
+pub fn format_movie_with_tech(movie: &Movie, title_color: &str, tech: Option<&MediaTechInfo>, pseudo: &str) -> String {
     let mut out = String::new();
 
     // Header
     let title_upper = format!("\u{1F3AC} {} \u{1F3AC}", movie.title.to_uppercase());
-    out.push_str(&heading_title_for(tracker, &title_upper, title_color));
-    out.push('\n');
-    out.push('\n');
-    out.push_str(&hr_for(tracker));
+    out.push_str(&heading_title(&title_upper, title_color));
     out.push('\n');
     out.push('\n');
 
     // Section Informations
-    out.push_str(&section_heading_for(tracker, "Informations", title_color));
+    out.push_str(&section_heading("Informations", title_color));
     out.push('\n');
     out.push('\n');
 
     let mut info = String::new();
     if !movie.countries.is_empty() {
-        info.push_str(&field_for(tracker, "Origine", &movie.countries_display()));
+        info.push_str(&field("Origine", &movie.countries_display()));
         info.push('\n');
     }
     if let Some(ref date) = movie.release_date {
-        info.push_str(&field_for(tracker, "Sortie", &format_release_date(date)));
+        info.push_str(&field("Sortie", &format_release_date(date)));
         info.push('\n');
     }
     if let Some(ref dur) = movie.duration_formatted() {
-        info.push_str(&field_for(tracker, "Duree", dur));
+        info.push_str(&field("Duree", dur));
         info.push('\n');
     }
     if !movie.directors.is_empty() {
-        info.push_str(&field_for(tracker, "Realisateur", &movie.directors_display()));
+        info.push_str(&field("Realisateur", &movie.directors_display()));
         info.push('\n');
     }
     if !movie.genres.is_empty() {
-        info.push_str(&field_for(tracker, "Genres", &movie.genres_display()));
+        info.push_str(&field("Genres", &movie.genres_display()));
         info.push('\n');
     }
 
     // Casting
     if !movie.cast.is_empty() {
         info.push('\n');
-        info.push_str(&inline_heading_for(tracker, "Casting", title_color));
+        info.push_str(&inline_heading("Casting", title_color));
         info.push('\n');
         info.push('\n');
-        info.push_str(&field_for(tracker, "Acteurs", &movie.cast_display(6)));
+        info.push_str(&field("Acteurs", &movie.cast_display(6)));
         info.push('\n');
     }
 
-    match tracker {
-        Tracker::C411 => {
-            let mut table_content = String::new();
-            let mut row_content = String::new();
-            if let Some(ref poster) = movie.poster_url {
-                row_content.push_str(&td(&center(&img_width(poster, 300))));
-            }
-            row_content.push_str(&td(&info));
-            table_content.push_str(&tr(&row_content));
-            out.push_str(&quote(&table(&table_content)));
+    {
+        let mut table_content = String::new();
+        let mut row_content = String::new();
+        if let Some(ref poster) = movie.poster_url {
+            row_content.push_str(&td(&center(&img_width(poster, 300))));
         }
-        Tracker::TorrXyz => {
-            let mut row_content = String::new();
-            if let Some(ref poster) = movie.poster_url {
-                row_content.push_str(&td(&format!("\n{}\n", center(&img_sized_for(tracker, poster, 300, 450)))));
-                row_content.push_str(&td(""));
-            }
-            row_content.push_str(&td(&format!("\n{}\n", quote(&info))));
-            let table_content = tr(&row_content);
-            out.push_str(&center(&table(&table_content)));
-        }
+        row_content.push_str(&td(&info));
+        table_content.push_str(&tr(&row_content));
+        out.push_str(&quote(&table(&table_content)));
     }
 
-    out.push('\n');
-    out.push('\n');
-    out.push_str(&hr_for(tracker));
     out.push('\n');
     out.push('\n');
 
     // Ratings
     if !movie.ratings.is_empty() {
-        out.push_str(&section_heading_for(tracker, "Notes", title_color));
+        out.push_str(&section_heading("Notes", title_color));
         out.push('\n');
         out.push('\n');
 
-        match tracker {
-            Tracker::C411 => {
-                let mut ratings_table = String::new();
-                let mut header_row = String::new();
-                for rating in &movie.ratings {
-                    header_row.push_str(&th(&rating.source));
-                }
-                ratings_table.push_str(&tr(&header_row));
-                let mut values_row = String::new();
-                for rating in &movie.ratings {
-                    values_row.push_str(&td(&center(&colored_rating_for(tracker, rating.value, rating.max))));
-                }
-                ratings_table.push_str(&tr(&values_row));
-                out.push_str(&table(&ratings_table));
-            }
-            Tracker::TorrXyz => {
-                let mut header_row = String::new();
-                let mut values_row = String::new();
-                for (i, rating) in movie.ratings.iter().enumerate() {
-                    if i > 0 {
-                        header_row.push_str(&th("        "));
-                        values_row.push_str(&td(""));
-                    }
-                    header_row.push_str(&rating_header_torrxyz(&rating.source));
-                    values_row.push_str(&td(&colored_rating_for(tracker, rating.value, rating.max)));
-                }
-                let ratings_table = format!("{}{}", tr(&header_row), tr(&values_row));
-                out.push_str(&center(&table(&ratings_table)));
-            }
+        let mut ratings_table = String::new();
+        let mut header_row = String::new();
+        for rating in &movie.ratings {
+            header_row.push_str(&th(&rating.source));
         }
-        out.push('\n');
-        out.push_str(&hr_for(tracker));
+        ratings_table.push_str(&tr(&header_row));
+        let mut values_row = String::new();
+        for rating in &movie.ratings {
+            values_row.push_str(&td(&center(&colored_rating(rating.value, rating.max))));
+        }
+        ratings_table.push_str(&tr(&values_row));
+        out.push_str(&table(&ratings_table));
+
         out.push('\n');
         out.push('\n');
     }
@@ -128,20 +91,17 @@ pub fn format_movie_with_tech(movie: &Movie, title_color: &str, tracker: Tracker
     // Synopsis
     if let Some(ref synopsis) = movie.synopsis {
         if !synopsis.is_empty() {
-            out.push_str(&section_heading_for(tracker, "Synopsis", title_color));
+            out.push_str(&section_heading("Synopsis", title_color));
             out.push('\n');
             out.push('\n');
-            out.push_str(&quote_for(tracker, synopsis));
-            out.push('\n');
-            out.push('\n');
-            out.push_str(&hr_for(tracker));
+            out.push_str(&quote(synopsis));
             out.push('\n');
             out.push('\n');
         }
     }
 
     // Technical info
-    out.push_str(&sub_heading_for(tracker, "Informations techniques", title_color));
+    out.push_str(&sub_heading("Informations techniques", title_color));
     out.push('\n');
     out.push('\n');
 
@@ -165,37 +125,24 @@ pub fn format_movie_with_tech(movie: &Movie, title_color: &str, tracker: Tracker
             values.push(s);
         }
 
-        match tracker {
-            Tracker::C411 => {
-                let mut tech_table = String::new();
-                let mut header_row = String::new();
-                for h in &headers {
-                    header_row.push_str(&th(h));
-                }
-                tech_table.push_str(&tr(&header_row));
-                let mut val_row = String::new();
-                for v in &values {
-                    val_row.push_str(&td(&center(v)));
-                }
-                tech_table.push_str(&tr(&val_row));
-                out.push_str(&table(&tech_table));
-            }
-            Tracker::TorrXyz => {
-                for (h, v) in headers.iter().zip(values.iter()) {
-                    out.push_str(&center(&field_for(tracker, h, v)));
-                    out.push('\n');
-                }
-            }
+        let mut tech_table = String::new();
+        let mut header_row = String::new();
+        for h in &headers {
+            header_row.push_str(&th(h));
         }
+        tech_table.push_str(&tr(&header_row));
+        let mut val_row = String::new();
+        for v in &values {
+            val_row.push_str(&td(&center(v)));
+        }
+        tech_table.push_str(&tr(&val_row));
+        out.push_str(&table(&tech_table));
     }
-    out.push('\n');
-
-    out.push_str(&hr_for(tracker));
     out.push('\n');
     out.push('\n');
 
     // Footer
-    let footer = footer_for(tracker, pseudo);
+    let footer = footer(pseudo);
     if !footer.is_empty() {
         out.push_str(&footer);
         out.push('\n');
@@ -277,66 +224,30 @@ mod tests {
     }
 
     #[test]
-    fn test_format_movie_c411_contains_title() {
+    fn test_format_movie_contains_title() {
         let movie = sample_movie();
-        let bbcode = format_movie(&movie, "c0392b", Tracker::C411, "TestUser");
+        let bbcode = format_movie(&movie, "c0392b", "TestUser");
         assert!(bbcode.contains("INTOUCHABLES"));
         assert!(bbcode.contains("[h1]"));
         assert!(bbcode.contains("[color=#c0392b]"));
     }
 
     #[test]
-    fn test_format_movie_torrxyz_format() {
+    fn test_format_movie_ratings_colors() {
         let movie = sample_movie();
-        let bbcode = format_movie(&movie, "c0392b", Tracker::TorrXyz, "TestUser");
-        // Title: [b][color][size=6]
-        assert!(bbcode.contains("[size=6]\u{1F3AC} INTOUCHABLES \u{1F3AC}[/size]"));
-        assert!(!bbcode.contains("[h1]"));
-        assert!(!bbcode.contains("[h2]"));
-        // Colored fields
-        assert!(bbcode.contains("[color=#ff857a]"));
-        assert!(bbcode.contains("[color=#aaaaaa]"));
-        // Image with dimensions
-        assert!(bbcode.contains("[img=300x450]"));
-        // Synopsis in gray
-        assert!(bbcode.contains("[quote][color=#aaaaaa]Philippe"));
-        // Footer without small
-        assert!(bbcode.contains("[center][color=#e74c3c]Upload"));
-        assert!(!bbcode.contains("[size=12]"));
-    }
-
-    #[test]
-    fn test_format_movie_c411_ratings_colors() {
-        let movie = sample_movie();
-        let bbcode = format_movie(&movie, "c0392b", Tracker::C411, "TestUser");
+        let bbcode = format_movie(&movie, "c0392b", "TestUser");
         assert!(bbcode.contains("8.2"));
         assert!(bbcode.contains("[color=#27ae60]"));
     }
 
     #[test]
-    fn test_format_movie_torrxyz_ratings() {
-        let movie = sample_movie();
-        let bbcode = format_movie(&movie, "c0392b", Tracker::TorrXyz, "TestUser");
-        assert!(bbcode.contains("[color=#55efc4]"));
-        assert!(bbcode.contains("[size=5]8.2[/size]"));
-        assert!(bbcode.contains("[color=#aaaaaa] / 10[/color]"));
-    }
-
-    #[test]
     fn test_format_movie_contains_info() {
         let movie = sample_movie();
-        let bbcode = format_movie(&movie, "c0392b", Tracker::C411, "TestUser");
+        let bbcode = format_movie(&movie, "c0392b", "TestUser");
         assert!(bbcode.contains("France"));
         assert!(bbcode.contains("2 novembre 2011"));
         assert!(bbcode.contains("1h et 52min"));
         assert!(bbcode.contains("Olivier Nakache"));
         assert!(bbcode.contains("Comedie, Drame"));
-    }
-
-    #[test]
-    fn test_format_movie_torrxyz_sub_heading_for_tech() {
-        let movie = sample_movie();
-        let bbcode = format_movie(&movie, "c0392b", Tracker::TorrXyz, "TestUser");
-        assert!(bbcode.contains("[b][color=#c0392b][size=6]Informations techniques"));
     }
 }

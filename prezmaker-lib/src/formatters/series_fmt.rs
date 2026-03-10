@@ -1,142 +1,105 @@
 use crate::formatters::bbcode::*;
-use crate::models::{MediaTechInfo, Series, Tracker};
+use crate::models::{MediaTechInfo, Series};
 
-pub fn format_series(series: &Series, title_color: &str, tracker: Tracker, pseudo: &str) -> String {
-    format_series_with_tech(series, title_color, tracker, None, pseudo)
+pub fn format_series(series: &Series, title_color: &str, pseudo: &str) -> String {
+    format_series_with_tech(series, title_color, None, pseudo)
 }
 
-pub fn format_series_with_tech(series: &Series, title_color: &str, tracker: Tracker, tech: Option<&MediaTechInfo>, pseudo: &str) -> String {
+pub fn format_series_with_tech(series: &Series, title_color: &str, tech: Option<&MediaTechInfo>, pseudo: &str) -> String {
     let mut out = String::new();
 
     // Header
     let title_upper = format!("\u{1F4FA} {} \u{1F4FA}", series.title.to_uppercase());
-    out.push_str(&heading_title_for(tracker, &title_upper, title_color));
-    out.push('\n');
-    out.push('\n');
-    out.push_str(&hr_for(tracker));
+    out.push_str(&heading_title(&title_upper, title_color));
     out.push('\n');
     out.push('\n');
 
     // Section Informations
-    out.push_str(&section_heading_for(tracker, "Informations", title_color));
+    out.push_str(&section_heading("Informations", title_color));
     out.push('\n');
     out.push('\n');
 
     let mut info = String::new();
     if !series.countries.is_empty() {
-        info.push_str(&field_for(tracker, "Origine", &series.countries_display()));
+        info.push_str(&field("Origine", &series.countries_display()));
         info.push('\n');
     }
     if let Some(ref date) = series.first_air_date {
-        info.push_str(&field_for(tracker, "Premiere diffusion", &format_date(date)));
+        info.push_str(&field("Premiere diffusion", &format_date(date)));
         info.push('\n');
     }
     if let Some(ref status) = series.status {
-        info.push_str(&field_for(tracker, "Statut", &translate_status(status)));
+        info.push_str(&field("Statut", &translate_status(status)));
         info.push('\n');
     }
     if let Some(seasons) = series.seasons_count {
-        info.push_str(&field_for(tracker, "Saisons", &seasons.to_string()));
+        info.push_str(&field("Saisons", &seasons.to_string()));
         info.push('\n');
     }
     if let Some(episodes) = series.episodes_count {
-        info.push_str(&field_for(tracker, "Episodes", &episodes.to_string()));
+        info.push_str(&field("Episodes", &episodes.to_string()));
         info.push('\n');
     }
     if let Some(ref runtime) = series.runtime_formatted() {
-        info.push_str(&field_for(tracker, "Duree par episode", runtime));
+        info.push_str(&field("Duree par episode", runtime));
         info.push('\n');
     }
     if !series.creators.is_empty() {
-        info.push_str(&field_for(tracker, "Createur(s)", &series.creators_display()));
+        info.push_str(&field("Createur(s)", &series.creators_display()));
         info.push('\n');
     }
     if !series.networks.is_empty() {
-        info.push_str(&field_for(tracker, "Chaine / Plateforme", &series.networks_display()));
+        info.push_str(&field("Chaine / Plateforme", &series.networks_display()));
         info.push('\n');
     }
     if !series.genres.is_empty() {
-        info.push_str(&field_for(tracker, "Genres", &series.genres_display()));
+        info.push_str(&field("Genres", &series.genres_display()));
         info.push('\n');
     }
 
     // Casting
     if !series.cast.is_empty() {
         info.push('\n');
-        info.push_str(&inline_heading_for(tracker, "Casting", title_color));
+        info.push_str(&inline_heading("Casting", title_color));
         info.push('\n');
         info.push('\n');
-        info.push_str(&field_for(tracker, "Acteurs", &series.cast_display(8)));
+        info.push_str(&field("Acteurs", &series.cast_display(8)));
         info.push('\n');
     }
 
-    match tracker {
-        Tracker::C411 => {
-            let mut table_content = String::new();
-            let mut row_content = String::new();
-            if let Some(ref poster) = series.poster_url {
-                row_content.push_str(&td(&center(&img_width(poster, 300))));
-            }
-            row_content.push_str(&td(&info));
-            table_content.push_str(&tr(&row_content));
-            out.push_str(&quote(&table(&table_content)));
+    {
+        let mut table_content = String::new();
+        let mut row_content = String::new();
+        if let Some(ref poster) = series.poster_url {
+            row_content.push_str(&td(&center(&img_width(poster, 300))));
         }
-        Tracker::TorrXyz => {
-            let mut row_content = String::new();
-            if let Some(ref poster) = series.poster_url {
-                row_content.push_str(&td(&format!("\n{}\n", center(&img_sized_for(tracker, poster, 300, 450)))));
-                row_content.push_str(&td(""));
-            }
-            row_content.push_str(&td(&format!("\n{}\n", quote(&info))));
-            let table_content = tr(&row_content);
-            out.push_str(&center(&table(&table_content)));
-        }
+        row_content.push_str(&td(&info));
+        table_content.push_str(&tr(&row_content));
+        out.push_str(&quote(&table(&table_content)));
     }
 
-    out.push('\n');
-    out.push('\n');
-    out.push_str(&hr_for(tracker));
     out.push('\n');
     out.push('\n');
 
     // Ratings
     if !series.ratings.is_empty() {
-        out.push_str(&section_heading_for(tracker, "Notes", title_color));
+        out.push_str(&section_heading("Notes", title_color));
         out.push('\n');
         out.push('\n');
 
-        match tracker {
-            Tracker::C411 => {
-                let mut ratings_table = String::new();
-                let mut header_row = String::new();
-                for rating in &series.ratings {
-                    header_row.push_str(&th(&rating.source));
-                }
-                ratings_table.push_str(&tr(&header_row));
-                let mut values_row = String::new();
-                for rating in &series.ratings {
-                    values_row.push_str(&td(&center(&colored_rating_for(tracker, rating.value, rating.max))));
-                }
-                ratings_table.push_str(&tr(&values_row));
-                out.push_str(&table(&ratings_table));
-            }
-            Tracker::TorrXyz => {
-                let mut header_row = String::new();
-                let mut values_row = String::new();
-                for (i, rating) in series.ratings.iter().enumerate() {
-                    if i > 0 {
-                        header_row.push_str(&th("        "));
-                        values_row.push_str(&td(""));
-                    }
-                    header_row.push_str(&rating_header_torrxyz(&rating.source));
-                    values_row.push_str(&td(&colored_rating_for(tracker, rating.value, rating.max)));
-                }
-                let ratings_table = format!("{}{}", tr(&header_row), tr(&values_row));
-                out.push_str(&center(&table(&ratings_table)));
-            }
+        let mut ratings_table = String::new();
+        let mut header_row = String::new();
+        for rating in &series.ratings {
+            header_row.push_str(&th(&rating.source));
         }
-        out.push('\n');
-        out.push_str(&hr_for(tracker));
+        ratings_table.push_str(&tr(&header_row));
+        let mut values_row = String::new();
+        for rating in &series.ratings {
+            values_row.push_str(&td(&center(&colored_rating(rating.value, rating.max))));
+        }
+        ratings_table.push_str(&tr(&values_row));
+        out.push_str(&table(&ratings_table));
+
         out.push('\n');
         out.push('\n');
     }
@@ -144,20 +107,17 @@ pub fn format_series_with_tech(series: &Series, title_color: &str, tracker: Trac
     // Synopsis
     if let Some(ref synopsis) = series.synopsis {
         if !synopsis.is_empty() {
-            out.push_str(&section_heading_for(tracker, "Synopsis", title_color));
+            out.push_str(&section_heading("Synopsis", title_color));
             out.push('\n');
             out.push('\n');
-            out.push_str(&quote_for(tracker, synopsis));
-            out.push('\n');
-            out.push('\n');
-            out.push_str(&hr_for(tracker));
+            out.push_str(&quote(synopsis));
             out.push('\n');
             out.push('\n');
         }
     }
 
     // Technical info
-    out.push_str(&sub_heading_for(tracker, "Informations techniques", title_color));
+    out.push_str(&sub_heading("Informations techniques", title_color));
     out.push('\n');
     out.push('\n');
 
@@ -181,36 +141,22 @@ pub fn format_series_with_tech(series: &Series, title_color: &str, tracker: Trac
             values.push(s);
         }
 
-        match tracker {
-            Tracker::C411 => {
-                let mut tech_table = String::new();
-                let mut header_row = String::new();
-                for h in &headers {
-                    header_row.push_str(&th(h));
-                }
-                tech_table.push_str(&tr(&header_row));
-                let mut val_row = String::new();
-                for v in &values {
-                    val_row.push_str(&td(&center(v)));
-                }
-                tech_table.push_str(&tr(&val_row));
-                out.push_str(&table(&tech_table));
-            }
-            Tracker::TorrXyz => {
-                for (h, v) in headers.iter().zip(values.iter()) {
-                    out.push_str(&center(&field_for(tracker, h, v)));
-                    out.push('\n');
-                }
-            }
+        let mut tech_table = String::new();
+        let mut header_row = String::new();
+        for h in &headers {
+            header_row.push_str(&th(h));
         }
+        tech_table.push_str(&tr(&header_row));
+        let mut val_row = String::new();
+        for v in &values {
+            val_row.push_str(&td(&center(v)));
+        }
+        tech_table.push_str(&tr(&val_row));
+        out.push_str(&table(&tech_table));
     }
     out.push('\n');
 
-    out.push_str(&hr_for(tracker));
-    out.push('\n');
-    out.push('\n');
-
-    let footer = footer_for(tracker, pseudo);
+    let footer = footer(pseudo);
     if !footer.is_empty() {
         out.push_str(&footer);
         out.push('\n');

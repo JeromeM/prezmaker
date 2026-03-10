@@ -10,7 +10,6 @@ use prezmaker_lib::providers::steam::SteamClient;
 use prezmaker_lib::providers::tmdb::TmdbClient;
 use prezmaker_lib::providers::translator::ClaudeClient;
 use prezmaker_lib::providers::wikipedia::WikipediaClient;
-use prezmaker_lib::models::Tracker;
 use prezmaker_lib::providers::{GameProvider, MovieProvider, SeriesProvider};
 use prezmaker_lib::models::TechInfo;
 use dialoguer::{Input, Select};
@@ -21,11 +20,10 @@ pub struct Orchestrator {
     language: String,
     title_color: String,
     pseudo: String,
-    tracker: Tracker,
 }
 
 impl Orchestrator {
-    pub fn new(config: Config, language: Option<String>, title_color: Option<String>, tracker: Tracker) -> Self {
+    pub fn new(config: Config, language: Option<String>, title_color: Option<String>) -> Self {
         let lang = language.unwrap_or_else(|| config.preferences.language.clone());
         let color = title_color.unwrap_or_else(|| config.preferences.title_color.clone());
         let pseudo = config.preferences.pseudo.clone();
@@ -34,7 +32,6 @@ impl Orchestrator {
             language: lang,
             title_color: color,
             pseudo,
-            tracker,
         }
     }
 
@@ -90,7 +87,7 @@ impl Orchestrator {
             }
         }
 
-        let bbcode = movie_fmt::format_movie(&movie, &self.title_color, self.tracker, &self.pseudo);
+        let bbcode = movie_fmt::format_movie(&movie, &self.title_color, &self.pseudo);
         Ok(bbcode)
     }
 
@@ -133,7 +130,7 @@ impl Orchestrator {
             }
         }
 
-        let bbcode = series_fmt::format_series(&series, &self.title_color, self.tracker, &self.pseudo);
+        let bbcode = series_fmt::format_series(&series, &self.title_color, &self.pseudo);
         Ok(bbcode)
     }
 
@@ -216,7 +213,7 @@ impl Orchestrator {
         // Saisie interactive des informations techniques
         game.tech_info = Some(self.prompt_tech_info()?);
 
-        let bbcode = game_fmt::format_game(&game, &self.title_color, self.tracker, &self.pseudo);
+        let bbcode = game_fmt::format_game(&game, &self.title_color, &self.pseudo);
         Ok(bbcode)
     }
 
@@ -249,7 +246,7 @@ impl Orchestrator {
             logo_url: logo.clone(),
         };
 
-        let bbcode = app_fmt::format_application(&app, &self.title_color, self.tracker, &self.pseudo);
+        let bbcode = app_fmt::format_application(&app, &self.title_color, &self.pseudo);
         Ok(bbcode)
     }
 
