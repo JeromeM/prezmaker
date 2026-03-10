@@ -1,27 +1,27 @@
 # PrezMaker
 
-Génerateur de présentations BBCode pour les trackers. Recherchez un film, une serie, un jeu ou une application, et obtenez une presentation complète formatée en BBCode, prête a être collée sur un tracker.
+Générateur de présentations BBCode pour les trackers. Recherchez un film, une série, un jeu ou une application, et obtenez une présentation complète formatée en BBCode, prête à être collée sur un tracker.
 
 ## Fonctionnalités
 
-- **Recherche automatique** : interroge TMDB (films/series), IGDB (jeux) pour recuperer les metadonnees
-- **Enrichissement Allocine** : recupere les notes Allocine en plus de TMDB
-- **Import torrent** : glissez un `.torrent`, le titre est parse automatiquement, le type de contenu detecte (film, serie, jeu), et les infos techniques pre-remplies
-- **Editeur de templates** : creez et personnalisez vos templates BBCode avec des balises `{{titre}}`, `{{synopsis}}`, etc. Apercu en temps reel
-- **Multi-templates** : plusieurs templates par type de contenu (film, serie, jeu, app)
-- **Generation NFO** : generez un NFO via LLM a partir du BBCode produit
-- **Applications** : creez des presentations pour des logiciels avec infos techniques
-- **Description IA** : generation automatique de descriptions en francais via LLM (OpenAI, Mistral)
+- **Recherche automatique** : interroge TMDB (films/séries), IGDB (jeux) pour récupérer les métadonnées
+- **Enrichissement Allocine** : récupère les notes Allocine en plus de TMDB
+- **Import torrent** : glissez un `.torrent`, le titre est parsé automatiquement, le type de contenu détecté (film, série, jeu), et les infos techniques pré-remplies
+- **Éditeur de templates** : créez et personnalisez vos templates BBCode avec des balises `{{titre}}`, `{{synopsis}}`, etc. Aperçu en temps réel
+- **Multi-templates** : plusieurs templates par type de contenu (film, série, jeu, app)
+- **Génération NFO** : générez un NFO via LLM à partir du BBCode produit
+- **Applications** : créez des présentations pour des logiciels avec infos techniques
+- **Description IA** : génération automatique de descriptions en français via LLM (OpenAI, Mistral)
 
 ## Screenshots
 
-<!-- Ajoutez vos captures d'ecran ici -->
+<!-- Ajoutez vos captures d'écran ici -->
 
 | Vue principale | Résultats de recherche |
 |:-:|:-:|
 | ![Main](screenshots/main.png) | ![Search](screenshots/search.png) |
 
-| Présentation génerée | Editeur de templates |
+| Présentation générée | Éditeur de templates |
 |:-:|:-:|
 | ![Preview](screenshots/preview.png) | ![Templates](screenshots/templates.png) |
 
@@ -31,7 +31,7 @@ Génerateur de présentations BBCode pour les trackers. Recherchez un film, une 
 
 ## Installation
 
-Telechargez la derniere version depuis la page [Releases](../../releases) :
+Téléchargez la dernière version depuis la page [Releases](../../releases) :
 
 | Plateforme | Fichier |
 |---|---|
@@ -42,30 +42,30 @@ Telechargez la derniere version depuis la page [Releases](../../releases) :
 
 ## Configuration
 
-Au premier lancement, allez dans les parametres (icone engrenage) pour configurer :
+Au premier lancement, allez dans les paramètres (icône engrenage) pour configurer :
 
-| Cle | Description | Obligatoire |
+| Clé | Description | Obligatoire |
 |---|---|:-:|
-| **TMDB API Key** | Pour rechercher films et series | Oui |
+| **TMDB API Key** | Pour rechercher films et séries | Oui |
 | **IGDB Client ID / Secret** | Pour rechercher des jeux | Oui (jeux) |
-| **LLM Provider + API Key** | Pour les descriptions IA et la generation NFO | Non |
+| **LLM Provider + API Key** | Pour les descriptions IA et la génération NFO | Non |
 | **Couleur du titre** | Code couleur hex pour les titres BBCode | Non |
 
 ## Utilisation
 
-1. Selectionnez le type de contenu (Film, Serie, Jeu, Application)
+1. Sélectionnez le type de contenu (Film, Série, Jeu, Application)
 2. Tapez votre recherche ou importez un fichier `.torrent`
-3. Selectionnez le bon resultat
-4. La presentation BBCode est generee avec apercu HTML en temps reel
-5. Copiez le BBCode (`Ctrl+C`) ou editez-le directement
+3. Sélectionnez le bon résultat
+4. La présentation BBCode est générée avec aperçu HTML en temps réel
+5. Copiez le BBCode (`Ctrl+C`) ou éditez-le directement
 
 ### Templates
 
-Ouvrez l'editeur de templates (icone document dans la barre) pour :
+Ouvrez l'éditeur de templates (icône document dans la barre) pour :
 - Visualiser et modifier les templates par type de contenu
-- Creer de nouveaux templates a partir du template par defaut
+- Créer de nouveaux templates à partir du template par défaut
 - Utiliser des balises comme `{{titre}}`, `{{synopsis}}`, `{{ratings_table}}`
-- Voir l'apercu en temps reel avec des donnees fictives
+- Voir l'aperçu en temps réel avec des données fictives
 
 ## Stack technique
 
@@ -78,20 +78,20 @@ Ouvrez l'editeur de templates (icone document dans la barre) pour :
 
 ## Build depuis les sources
 
-### Prerequis
+### Prérequis
 
 - [Rust](https://rustup.rs/) (stable)
 - [Node.js](https://nodejs.org/) >= 20
-- Dependances systeme Tauri ([voir la doc](https://v2.tauri.app/start/prerequisites/))
+- Dépendances système Tauri ([voir la doc](https://v2.tauri.app/start/prerequisites/))
 
-### Etapes
+### Étapes
 
 ```bash
 # Cloner le repo
 git clone https://github.com/JeromeM/prezmaker.git
 cd prezmaker
 
-# Installer les dependances frontend
+# Installer les dépendances frontend
 cd ui && npm install && cd ..
 
 # Lancer en mode dev
@@ -103,7 +103,7 @@ cargo tauri build
 
 ## Licence
 
-Ce projet est distribue sous licence MIT.
+Ce projet est distribué sous licence MIT.
 
 ---
 
