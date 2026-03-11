@@ -1,8 +1,16 @@
+import { useState, useEffect } from "react";
+import { getVersion } from "@tauri-apps/api/app";
+
 interface Props {
   onClose: () => void;
 }
 
 export default function AboutModal({ onClose }: Props) {
+  const [version, setVersion] = useState("");
+
+  useEffect(() => {
+    getVersion().then(setVersion).catch(() => setVersion("?"));
+  }, []);
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
@@ -22,7 +30,7 @@ export default function AboutModal({ onClose }: Props) {
         <div className="px-6 py-6 space-y-5">
           <div className="text-center">
             <h3 className="text-2xl font-bold text-white mb-1">PrezMaker</h3>
-            <p className="text-gray-400 text-sm">v1.1.0</p>
+            <p className="text-gray-400 text-sm">v{version}</p>
             <p className="text-gray-500 text-xs mt-2">
               Generateur de presentations BBCode pour films, series, jeux et applications.
             </p>

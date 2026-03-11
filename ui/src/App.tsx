@@ -10,6 +10,7 @@ import TemplateEditor from "./components/TemplateEditor";
 import AboutModal from "./components/AboutModal";
 import TorrentContentTypePicker from "./components/TorrentContentTypePicker";
 import Onboarding, { isOnboardingDone } from "./components/Onboarding";
+import UpdateChecker from "./components/UpdateChecker";
 
 function App() {
   const [showSettings, setShowSettings] = useState(false);
@@ -37,6 +38,7 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen bg-[#0f0f23]">
+      <UpdateChecker />
       <TopBar
         onSearch={search}
         loading={isLoading}
