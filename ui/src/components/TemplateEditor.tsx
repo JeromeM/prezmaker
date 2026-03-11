@@ -101,6 +101,14 @@ interface HighlightSpan {
   className: string;
 }
 
+/** Find last index in array matching predicate (ES2020-compatible) */
+function findLastIdx<T>(arr: T[], pred: (item: T) => boolean): number {
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (pred(arr[i])) return i;
+  }
+  return -1;
+}
+
 function findUnmatchedTags(body: string): Set<number> {
   const unmatched = new Set<number>();
   // Match block pair tags AND #if/{{/if}} pairs
@@ -113,8 +121,7 @@ function findUnmatchedTags(body: string): Set<number> {
     const hasArgs = !!match[2];
 
     if (fullTag === "/if") {
-      // Close a #if block
-      const idx = stack.findLastIndex(s => s.name === "#if");
+      const idx = findLastIdx(stack, (e) => e.name === "#if");
       if (idx >= 0) {
         stack.splice(idx, 1);
       } else {
@@ -124,15 +131,13 @@ function findUnmatchedTags(body: string): Set<number> {
       stack.push({ name: "#if", pos: match.index });
     } else if (fullTag.startsWith("/")) {
       const name = fullTag.slice(1);
-      const idx = stack.findLastIndex(s => s.name === name);
+      const idx = findLastIdx(stack, (e) => e.name === name);
       if (idx >= 0) {
         stack.splice(idx, 1);
       } else {
         unmatched.add(match.index);
       }
     } else if (!hasArgs && fullTag in BLOCK_PAIRS) {
-      // Only tags without arguments are block openers
-      // {{center}} is a block opener, {{center:texte}} is inline
       stack.push({ name: fullTag, pos: match.index });
     }
   }
