@@ -66,6 +66,8 @@ impl AllocineClient {
             .ok_or_else(|| anyhow::anyhow!("No Allocine series results found"))?;
         debug!("Allocine series detail page: {}", detail_url);
 
-        self.scrape_ratings(&detail_url).await
+        let mut ratings = self.scrape_ratings(&detail_url).await?;
+        ratings.page_url = Some(detail_url);
+        Ok(ratings)
     }
 }

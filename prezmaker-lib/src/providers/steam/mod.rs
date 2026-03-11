@@ -99,7 +99,9 @@ impl GameProvider for SteamClient {
                     developers: vec![],
                     publishers: vec![],
                     ratings: metacritic_rating,
-                    igdb_id: Some(item.id), // Steam app ID stored here
+                    igdb_id: Some(item.id), // Steam uses igdb_id for lookups
+                    igdb_slug: None,
+                    steam_appid: Some(item.id),
                     tech_info: None,
                     installation: None,
                 }
@@ -201,7 +203,9 @@ impl GameProvider for SteamClient {
             developers: data.developers,
             publishers: data.publishers,
             ratings,
-            igdb_id: Some(data.steam_appid),
+            igdb_id: Some(data.steam_appid), // Steam uses igdb_id for lookups
+            igdb_slug: None,
+            steam_appid: Some(data.steam_appid),
             tech_info: None,
             installation: None,
         })

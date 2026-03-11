@@ -576,6 +576,19 @@ pub fn build_movie_data(
         data.insert("poster_url".into(), url.clone());
     }
 
+    // Links
+    if let Some(id) = movie.tmdb_id {
+        let tmdb_link = format!("https://www.themoviedb.org/movie/{}", id);
+        data.insert("tmdb_link".into(), tmdb_link.clone());
+        data.insert("link".into(), tmdb_link);
+    }
+    if let Some(ref id) = movie.imdb_id {
+        data.insert("imdb_link".into(), format!("https://www.imdb.com/title/{}/", id));
+    }
+    if let Some(ref url) = movie.allocine_url {
+        data.insert("allocine_link".into(), url.clone());
+    }
+
     // Ratings as individual tags
     build_ratings_data(&mut data, &movie.ratings);
 
@@ -640,6 +653,19 @@ pub fn build_series_data(
         data.insert("poster_url".into(), url.clone());
     }
 
+    // Links
+    if let Some(id) = series.tmdb_id {
+        let tmdb_link = format!("https://www.themoviedb.org/tv/{}", id);
+        data.insert("tmdb_link".into(), tmdb_link.clone());
+        data.insert("link".into(), tmdb_link);
+    }
+    if let Some(ref id) = series.imdb_id {
+        data.insert("imdb_link".into(), format!("https://www.imdb.com/title/{}/", id));
+    }
+    if let Some(ref url) = series.allocine_url {
+        data.insert("allocine_link".into(), url.clone());
+    }
+
     build_ratings_data(&mut data, &series.ratings);
 
     if let Some(t) = tech {
@@ -699,6 +725,21 @@ pub fn build_game_data(game: &crate::models::Game) -> HashMap<String, String> {
         }
     }
 
+    // Links
+    if let Some(ref slug) = game.igdb_slug {
+        let igdb_link = format!("https://www.igdb.com/games/{}", slug);
+        data.insert("igdb_link".into(), igdb_link.clone());
+        data.insert("link".into(), igdb_link);
+    }
+    if let Some(appid) = game.steam_appid {
+        let steam_link = format!("https://store.steampowered.com/app/{}/", appid);
+        data.insert("steam_link".into(), steam_link.clone());
+        // If no IGDB link, use Steam as primary
+        if !data.contains_key("link") {
+            data.insert("link".into(), steam_link);
+        }
+    }
+
     build_ratings_data(&mut data, &game.ratings);
 
     data
@@ -722,6 +763,7 @@ pub fn build_app_data(app: &crate::models::Application) -> HashMap<String, Strin
     }
     if let Some(ref w) = app.website {
         data.insert("site_web".into(), w.clone());
+        data.insert("link".into(), w.clone());
     }
     if let Some(ref l) = app.license {
         data.insert("licence".into(), l.clone());
@@ -1155,6 +1197,8 @@ fn build_sample_game(_title_color: &str) -> (HashMap<String, String>, RenderCont
             Rating { source: "IGDB".into(), value: 78.0, max: 100.0 },
         ],
         igdb_id: Some(1877),
+        igdb_slug: Some("cyberpunk-2077".into()),
+        steam_appid: Some(1091500),
         tech_info: Some(tech_info.clone()),
         installation: Some("1. Extraire l'archive\n2. Lancer le setup\n3. Jouer".into()),
     };
@@ -1248,6 +1292,7 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
     let shortcuts = "Raccourcis";
     let data_cat = "Donnees";
     let tech_cat = "Donnees techniques";
+    let links_cat = "Liens";
     let notes_cat = "Notes";
     let cond_cat = "Conditionnel";
 
@@ -1329,6 +1374,11 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tech_langue", "Langue(s)", tech_cat),
                 tag("tech_soustitres", "Sous-titres", tech_cat),
                 tag("tech_taille", "Taille du fichier", tech_cat),
+                // Liens
+                tag_ex("link", "Lien principal (TMDB)", links_cat, "{{#if link}}{{field:Lien:{{link}}}}{{/if}}"),
+                tag("tmdb_link", "Lien vers la page TMDB", links_cat),
+                tag("imdb_link", "Lien vers la page IMDb", links_cat),
+                tag("allocine_link", "Lien vers la page Allocine", links_cat),
             ]);
         }
         "serie" => {
@@ -1357,6 +1407,11 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tech_langue", "Langue(s)", tech_cat),
                 tag("tech_soustitres", "Sous-titres", tech_cat),
                 tag("tech_taille", "Taille du fichier", tech_cat),
+                // Liens
+                tag_ex("link", "Lien principal (TMDB)", links_cat, "{{#if link}}{{field:Lien:{{link}}}}{{/if}}"),
+                tag("tmdb_link", "Lien vers la page TMDB", links_cat),
+                tag("imdb_link", "Lien vers la page IMDb", links_cat),
+                tag("allocine_link", "Lien vers la page Allocine", links_cat),
             ]);
         }
         "jeu" => {
@@ -1378,6 +1433,10 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tech_langues", "Langue(s)", tech_cat),
                 tag("tech_taille", "Taille", tech_cat),
                 tag("tech_taille_installee", "Taille d'installation", tech_cat),
+                // Liens
+                tag_ex("link", "Lien principal (IGDB ou Steam)", links_cat, "{{#if link}}{{field:Lien:{{link}}}}{{/if}}"),
+                tag("igdb_link", "Lien vers la page IGDB", links_cat),
+                tag("steam_link", "Lien vers la page Steam", links_cat),
             ]);
         }
         "app" => {
@@ -1392,6 +1451,8 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("plateformes", "Plateformes", data_cat),
                 tag("logo_url", "URL du logo", data_cat),
                 tag("info_bbcode", "Contenu info auto-généré (nom, version, licence...)", data_cat),
+                // Liens
+                tag_ex("link", "Lien principal (site web)", links_cat, "{{#if link}}{{field:Lien:{{link}}}}{{/if}}"),
             ]);
         }
         _ => {}

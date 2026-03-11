@@ -4,6 +4,7 @@ use serde::Deserialize;
 pub struct IgdbGame {
     pub id: u64,
     pub name: String,
+    pub slug: Option<String>,
     pub summary: Option<String>,
     pub first_release_date: Option<i64>,
     pub genres: Option<Vec<IgdbGenre>>,

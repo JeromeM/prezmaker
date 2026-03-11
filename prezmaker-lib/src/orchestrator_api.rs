@@ -594,32 +594,40 @@ impl OrchestratorApi {
     async fn enrich_movie_allocine(movie: &mut Movie) -> anyhow::Result<()> {
         let title = movie.title.clone();
         let year = movie.year;
-        let extra_ratings = tokio::task::spawn_blocking(move || {
+        let (extra_ratings, page_url) = tokio::task::spawn_blocking(move || {
             let rt = tokio::runtime::Handle::current();
             rt.block_on(async {
                 let allocine = AllocineClient::new();
                 let ratings = allocine.search_movie_ratings(&title, year).await?;
-                Ok::<_, anyhow::Error>(AllocineClient::ratings_to_vec(&ratings))
+                let url = ratings.page_url.clone();
+                Ok::<_, anyhow::Error>((AllocineClient::ratings_to_vec(&ratings), url))
             })
         })
         .await??;
         movie.ratings.extend(extra_ratings);
+        if movie.allocine_url.is_none() {
+            movie.allocine_url = page_url;
+        }
         Ok(())
     }
 
     async fn enrich_series_allocine(series: &mut Series) -> anyhow::Result<()> {
         let title = series.title.clone();
         let year = series.year;
-        let extra_ratings = tokio::task::spawn_blocking(move || {
+        let (extra_ratings, page_url) = tokio::task::spawn_blocking(move || {
             let rt = tokio::runtime::Handle::current();
             rt.block_on(async {
                 let allocine = AllocineClient::new();
                 let ratings = allocine.search_series_ratings(&title, year).await?;
-                Ok::<_, anyhow::Error>(AllocineClient::ratings_to_vec(&ratings))
+                let url = ratings.page_url.clone();
+                Ok::<_, anyhow::Error>((AllocineClient::ratings_to_vec(&ratings), url))
             })
         })
         .await??;
         series.ratings.extend(extra_ratings);
+        if series.allocine_url.is_none() {
+            series.allocine_url = page_url;
+        }
         Ok(())
     }
 

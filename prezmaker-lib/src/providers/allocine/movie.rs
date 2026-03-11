@@ -9,6 +9,7 @@ use tracing::{debug, warn};
 pub struct AllocineRatings {
     pub press: Option<f64>,
     pub spectators: Option<f64>,
+    pub page_url: Option<String>,
 }
 
 impl AllocineClient {
@@ -77,7 +78,9 @@ impl AllocineClient {
             best_url.context("No Allocine results found")?;
         debug!("Allocine detail page: {}", detail_url);
 
-        self.scrape_ratings(&detail_url).await
+        let mut ratings = self.scrape_ratings(&detail_url).await?;
+        ratings.page_url = Some(detail_url);
+        Ok(ratings)
     }
 
     pub async fn scrape_ratings(&self, url: &str) -> anyhow::Result<AllocineRatings> {
@@ -91,7 +94,7 @@ impl AllocineClient {
             warn!("No ratings found on Allocine page: {}", url);
         }
 
-        Ok(AllocineRatings { press, spectators })
+        Ok(AllocineRatings { press, spectators, page_url: None })
     }
 
     fn extract_rating(document: &Html, selector_str: &str) -> Option<f64> {

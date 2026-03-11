@@ -30,7 +30,7 @@ impl IgdbClient {
 impl GameProvider for IgdbClient {
     async fn search_games(&self, query: &str) -> anyhow::Result<Vec<Game>> {
         let body = format!(
-            r#"search "{}"; fields name,summary,first_release_date,cover.image_id,total_rating; limit 10;"#,
+            r#"search "{}"; fields name,slug,summary,first_release_date,cover.image_id,total_rating; limit 10;"#,
             query.replace('"', "\\\"")
         );
 
@@ -66,6 +66,8 @@ impl GameProvider for IgdbClient {
                         })
                         .unwrap_or_default(),
                     igdb_id: Some(g.id),
+                    igdb_slug: g.slug,
+                    steam_appid: None,
                     tech_info: None,
                     installation: None,
                 }
@@ -77,7 +79,7 @@ impl GameProvider for IgdbClient {
 
     async fn get_game_details(&self, id: u64) -> anyhow::Result<Game> {
         let body = format!(
-            r#"where id = {}; fields name,summary,first_release_date,genres.name,platforms.name,involved_companies.company.name,involved_companies.developer,involved_companies.publisher,cover.image_id,screenshots.image_id,total_rating,aggregated_rating;"#,
+            r#"where id = {}; fields name,slug,summary,first_release_date,genres.name,platforms.name,involved_companies.company.name,involved_companies.developer,involved_companies.publisher,cover.image_id,screenshots.image_id,total_rating,aggregated_rating;"#,
             id
         );
 
@@ -154,6 +156,8 @@ impl GameProvider for IgdbClient {
             publishers,
             ratings,
             igdb_id: Some(id),
+            igdb_slug: g.slug,
+            steam_appid: None,
             tech_info: None,
             installation: None,
         })

@@ -25,6 +25,7 @@ const CATEGORY_ORDER = [
   "Raccourcis",
   "Donnees",
   "Donnees techniques",
+  "Liens",
   "Notes",
   "Conditionnel",
 ];

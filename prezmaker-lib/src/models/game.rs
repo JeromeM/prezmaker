@@ -24,6 +24,8 @@ pub struct Game {
     pub publishers: Vec<String>,
     pub ratings: Vec<Rating>,
     pub igdb_id: Option<u64>,
+    pub igdb_slug: Option<String>,
+    pub steam_appid: Option<u64>,
     pub tech_info: Option<TechInfo>,
     pub installation: Option<String>,
 }
