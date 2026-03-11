@@ -190,7 +190,13 @@ pub fn render(
     title_color: &str,
     pseudo: &str,
 ) -> String {
-    let mut output = template_body.to_string();
+    // Pass 0: Strip template indentation (leading whitespace per line)
+    // This allows users to indent inside {{#if}} blocks without affecting output
+    let mut output = template_body
+        .lines()
+        .map(|line| line.trim_start())
+        .collect::<Vec<_>>()
+        .join("\n");
 
     // Inject info_bbcode into data if available
     let mut augmented_data;
@@ -228,40 +234,115 @@ pub fn render(
 fn process_conditionals(template: &str, data: &HashMap<String, String>) -> String {
     let mut result = template.to_string();
 
-    // Simple regex-free parser for {{#if tag}}...{{/if}}
+    // Process from innermost to outermost: find the first {{#if ...}} whose matching
+    // {{/if}} contains no nested {{#if}}.
     loop {
         let start_marker = "{{#if ";
-        let Some(start_pos) = result.find(start_marker) else {
+        let end_marker = "{{/if}}";
+
+        // Find the innermost {{#if ...}} by finding the last one before any {{/if}}
+        let Some(first_end) = result.find(end_marker) else {
             break;
         };
+
+        // Search backwards from first_end to find the nearest {{#if ...}} before it
+        let search_region = &result[..first_end];
+        let Some(start_pos) = search_region.rfind(start_marker) else {
+            break;
+        };
+
         let after_start = start_pos + start_marker.len();
         let Some(tag_end) = result[after_start..].find("}}") else {
             break;
         };
-        let tag = result[after_start..after_start + tag_end].trim().to_lowercase();
+        let condition_str = result[after_start..after_start + tag_end].trim();
         let block_start = after_start + tag_end + 2;
 
-        let end_marker = format!("{{{{/if}}}}");
-        let Some(end_pos) = result[block_start..].find(&end_marker) else {
-            break;
-        };
-        let block_end = block_start + end_pos;
+        let block_end = first_end;
         let full_end = block_end + end_marker.len();
 
-        let has_value = data
-            .get(&tag)
-            .map(|v| !v.is_empty())
-            .unwrap_or(false);
+        // Evaluate condition
+        let condition_met = evaluate_condition(condition_str, data);
 
-        if has_value {
-            let block_content = result[block_start..block_end].to_string();
-            result = format!("{}{}{}", &result[..start_pos], block_content, &result[full_end..]);
+        // Extract block content: skip the newline right after {{#if ...}} opening
+        let mut content_start = block_start;
+        let content_end = block_end;
+        if result.as_bytes().get(content_start) == Some(&b'\n') {
+            content_start += 1;
+        }
+
+        // Consume the newline after {{/if}} if present
+        let mut consume_end = full_end;
+        if result.as_bytes().get(consume_end) == Some(&b'\n') {
+            consume_end += 1;
+        }
+
+        // If {{#if ...}} is at the start of a line, also consume leading whitespace on that line
+        let mut consume_start = start_pos;
+        if consume_start > 0 && result.as_bytes().get(consume_start - 1) == Some(&b'\n') {
+            // Already at line start, nothing extra to consume
         } else {
-            result = format!("{}{}", &result[..start_pos], &result[full_end..]);
+            // Check if everything before on this line is whitespace
+            let line_start = result[..consume_start].rfind('\n').map_or(0, |p| p + 1);
+            if result[line_start..consume_start].chars().all(|c| c == ' ' || c == '\t') {
+                consume_start = line_start;
+            }
+        }
+
+        if condition_met {
+            let block_content = result[content_start..content_end].to_string();
+            result = format!("{}{}{}", &result[..consume_start], block_content, &result[consume_end..]);
+        } else {
+            result = format!("{}{}", &result[..consume_start], &result[consume_end..]);
         }
     }
 
     result
+}
+
+/// Evaluate a conditional expression.
+/// Supports:
+///   - `tag` → true if tag exists and is non-empty
+///   - `tag > value`, `tag >= value`, `tag < value`, `tag <= value` → numeric comparison
+///   - `tag == value`, `tag != value` → string or numeric comparison
+fn evaluate_condition(condition: &str, data: &HashMap<String, String>) -> bool {
+    // Try to parse as comparison
+    let operators = [">=", "<=", "!=", "==", ">", "<"];
+    for op in &operators {
+        if let Some(pos) = condition.find(op) {
+            let key = condition[..pos].trim().to_lowercase();
+            let compare_val = condition[pos + op.len()..].trim();
+
+            let data_val = match data.get(&key) {
+                Some(v) => v.as_str(),
+                None => return false,
+            };
+
+            // Try numeric comparison first
+            if let (Ok(lhs), Ok(rhs)) = (data_val.parse::<f64>(), compare_val.parse::<f64>()) {
+                return match *op {
+                    ">=" => lhs >= rhs,
+                    "<=" => lhs <= rhs,
+                    "!=" => (lhs - rhs).abs() > f64::EPSILON,
+                    "==" => (lhs - rhs).abs() < f64::EPSILON,
+                    ">" => lhs > rhs,
+                    "<" => lhs < rhs,
+                    _ => false,
+                };
+            }
+
+            // Fall back to string comparison for == and !=
+            return match *op {
+                "==" => data_val == compare_val,
+                "!=" => data_val != compare_val,
+                _ => false, // Can't do > < on non-numeric
+            };
+        }
+    }
+
+    // Simple existence check
+    let tag = condition.to_lowercase();
+    data.get(&tag).map(|v| !v.is_empty()).unwrap_or(false)
 }
 
 fn replace_data_tags(template: &str, data: &HashMap<String, String>) -> String {
@@ -375,7 +456,7 @@ fn render_single_layout_tag(
         }
 
         // --- Separator ---
-        "hr" => Some(String::new()),
+        "hr" => Some(bbcode::hr()),
 
         // --- Block pairs: opening/closing tags ---
         // Closing tags
@@ -1347,6 +1428,7 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
 
         // --- Conditionnel ---
         tag_ex("#if tag", "Affiche le bloc si la balise a une valeur", cond_cat, "{{#if synopsis}}...{{/if}}"),
+        tag_ex("#if tag > valeur", "Condition avec comparaison (>, >=, <, <=, ==, !=)", cond_cat, "{{#if ratings_count > 0}}...{{/if}}"),
         tag("/if", "Fin du bloc conditionnel", cond_cat),
     ];
 
@@ -1811,5 +1893,95 @@ mod tests {
         // Check a specific category
         let heading = tags.iter().find(|t| t.name.starts_with("heading")).unwrap();
         assert_eq!(heading.category, "Mise en page");
+    }
+
+    #[test]
+    fn test_nested_conditionals() {
+        let mut data = HashMap::new();
+        data.insert("outer".into(), "yes".into());
+        data.insert("inner".into(), "yes".into());
+        let template = "{{#if outer}}A{{#if inner}}B{{/if}}C{{/if}}";
+        let result = process_conditionals(template, &data);
+        assert_eq!(result, "ABC");
+    }
+
+    #[test]
+    fn test_nested_conditionals_inner_false() {
+        let mut data = HashMap::new();
+        data.insert("outer".into(), "yes".into());
+        let template = "{{#if outer}}A{{#if inner}}B{{/if}}C{{/if}}";
+        let result = process_conditionals(template, &data);
+        assert_eq!(result, "AC");
+    }
+
+    #[test]
+    fn test_nested_conditionals_outer_false() {
+        let mut data = HashMap::new();
+        data.insert("inner".into(), "yes".into());
+        let template = "Before{{#if outer}}A{{#if inner}}B{{/if}}C{{/if}}After";
+        let result = process_conditionals(template, &data);
+        assert_eq!(result, "BeforeAfter");
+    }
+
+    #[test]
+    fn test_conditional_comparison_greater() {
+        let mut data = HashMap::new();
+        data.insert("ratings_count".into(), "2".into());
+        let result = process_conditionals("{{#if ratings_count > 0}}YES{{/if}}", &data);
+        assert_eq!(result, "YES");
+    }
+
+    #[test]
+    fn test_conditional_comparison_equal() {
+        let mut data = HashMap::new();
+        data.insert("ratings_count".into(), "0".into());
+        let result = process_conditionals("{{#if ratings_count == 0}}ZERO{{/if}}", &data);
+        assert_eq!(result, "ZERO");
+    }
+
+    #[test]
+    fn test_conditional_comparison_fail() {
+        let mut data = HashMap::new();
+        data.insert("ratings_count".into(), "0".into());
+        let result = process_conditionals("{{#if ratings_count > 0}}YES{{/if}}", &data);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_conditional_newline_cleanup() {
+        let mut data = HashMap::new();
+        data.insert("key".into(), "val".into());
+        // Newlines around #if should be consumed
+        let template = "Before\n{{#if key}}\nContent\n{{/if}}\nAfter";
+        let result = process_conditionals(template, &data);
+        assert_eq!(result, "Before\nContent\nAfter");
+    }
+
+    #[test]
+    fn test_conditional_newline_cleanup_false() {
+        let data = HashMap::new();
+        let template = "Before\n{{#if key}}\nContent\n{{/if}}\nAfter";
+        let result = process_conditionals(template, &data);
+        assert_eq!(result, "Before\nAfter");
+    }
+
+    #[test]
+    fn test_indentation_stripped() {
+        let mut data = HashMap::new();
+        data.insert("key".into(), "val".into());
+        let ctx = RenderContext::default();
+        let template = "  {{#if key}}\n    {{bold:test}}\n  {{/if}}";
+        let result = render(template, &data, &ctx, "c0392b", "");
+        assert!(result.contains("[b]test[/b]"));
+        // Should not contain leading spaces
+        assert!(!result.starts_with("  "));
+    }
+
+    #[test]
+    fn test_evaluate_condition_string_not_equal() {
+        let mut data = HashMap::new();
+        data.insert("statut".into(), "Ended".into());
+        assert!(evaluate_condition("statut != En cours", &data));
+        assert!(!evaluate_condition("statut != Ended", &data));
     }
 }

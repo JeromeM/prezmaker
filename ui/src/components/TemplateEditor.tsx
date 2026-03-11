@@ -16,6 +16,62 @@ const BLOCK_PAIRS: Record<string, string> = {
   "tr": "/tr",
 };
 
+const CLOSING_TAGS = new Set(Object.values(BLOCK_PAIRS));
+
+// Tags that increase indent level (block openers + #if)
+const INDENT_OPEN = /^\{\{(#if\s|table|tr|center|quote|bold|italic|underline)(?:[^}]*)?\}\}$/i;
+// Tags that decrease indent level (block closers + /if)
+const INDENT_CLOSE = /^\{\{(\/if|\/table|\/tr|\/center|\/quote|\/bold|\/italic|\/underline)\}\}$/i;
+
+/** Auto-indent a template body based on block nesting */
+function autoIndent(body: string): string {
+  const lines = body.split("\n");
+  const result: string[] = [];
+  let depth = 0;
+  const INDENT = "    "; // 4 spaces
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      result.push("");
+      continue;
+    }
+
+    // Check if this line contains only closing tags (decrease before printing)
+    // Split into tags on this line
+    const tags = line.match(/\{\{[^}]*\}\}/g) || [];
+    const textWithoutTags = line.replace(/\{\{[^}]*\}\}/g, "").trim();
+
+    // Count opens and closes on this line
+    let lineOpens = 0;
+    let lineCloses = 0;
+    for (const tag of tags) {
+      if (INDENT_CLOSE.test(tag)) lineCloses++;
+      if (INDENT_OPEN.test(tag)) lineOpens++;
+    }
+
+    // If line is ONLY closing tags (no other content, no opens), dedent before
+    // If line has mixed content, dedent only by the closes that come first
+    const isOnlyClose = textWithoutTags === "" && lineOpens === 0 && lineCloses > 0;
+    const isOnlyOpen = textWithoutTags === "" && lineCloses === 0 && lineOpens > 0;
+
+    if (isOnlyClose) {
+      depth = Math.max(0, depth - lineCloses);
+      result.push(INDENT.repeat(depth) + line);
+    } else if (isOnlyOpen) {
+      result.push(INDENT.repeat(depth) + line);
+      depth += lineOpens;
+    } else {
+      // Mixed line or content line: dedent for leading closes, then re-indent for opens
+      depth = Math.max(0, depth - lineCloses);
+      result.push(INDENT.repeat(depth) + line);
+      depth += lineOpens;
+    }
+  }
+
+  return result.join("\n");
+}
+
 // Category display order
 const CATEGORY_ORDER = [
   "Mise en page",
@@ -30,8 +86,156 @@ const CATEGORY_ORDER = [
   "Conditionnel",
 ];
 
-// Categories collapsed by default
-const DEFAULT_COLLAPSED = new Set(["Images", "Tableaux", "Donnees techniques", "Notes"]);
+// Only "Mise en page" is open by default
+const DEFAULT_COLLAPSED = new Set(
+  CATEGORY_ORDER.filter(c => c !== "Mise en page")
+);
+
+// Tags that accept a color as last arg
+const COLOR_TAGS = new Set(["heading", "section", "sub_section", "inline_heading"]);
+
+// --- Syntax highlighting ---
+
+interface HighlightSpan {
+  text: string;
+  className: string;
+}
+
+function findUnmatchedTags(body: string): Set<number> {
+  const unmatched = new Set<number>();
+  // Match block pair tags AND #if/{{/if}} pairs
+  const tagRegex = /\{\{(#if\s[^}]+|\/if|\/?\w+)(:[^}]*)?\}\}/g;
+  const stack: { name: string; pos: number }[] = [];
+  let match;
+
+  while ((match = tagRegex.exec(body)) !== null) {
+    const fullTag = match[1].toLowerCase().trim();
+    const hasArgs = !!match[2];
+
+    if (fullTag === "/if") {
+      // Close a #if block
+      const idx = stack.findLastIndex(s => s.name === "#if");
+      if (idx >= 0) {
+        stack.splice(idx, 1);
+      } else {
+        unmatched.add(match.index);
+      }
+    } else if (fullTag.startsWith("#if ")) {
+      stack.push({ name: "#if", pos: match.index });
+    } else if (fullTag.startsWith("/")) {
+      const name = fullTag.slice(1);
+      const idx = stack.findLastIndex(s => s.name === name);
+      if (idx >= 0) {
+        stack.splice(idx, 1);
+      } else {
+        unmatched.add(match.index);
+      }
+    } else if (!hasArgs && fullTag in BLOCK_PAIRS) {
+      // Only tags without arguments are block openers
+      // {{center}} is a block opener, {{center:texte}} is inline
+      stack.push({ name: fullTag, pos: match.index });
+    }
+  }
+  for (const s of stack) {
+    unmatched.add(s.pos);
+  }
+  return unmatched;
+}
+
+function highlightTemplate(body: string): HighlightSpan[] {
+  const spans: HighlightSpan[] = [];
+  const unmatchedPositions = findUnmatchedTags(body);
+  const tagRegex = /\{\{([^}]*)\}\}/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = tagRegex.exec(body)) !== null) {
+    // Text before this tag
+    if (match.index > lastIndex) {
+      spans.push({ text: body.slice(lastIndex, match.index), className: "hl-text" });
+    }
+
+    const inner = match[1];
+    const isUnmatched = unmatchedPositions.has(match.index);
+    const lowerInner = inner.toLowerCase();
+
+    let cls: string;
+    if (lowerInner.startsWith("#if ") || lowerInner === "/if") {
+      cls = "hl-cond";
+    } else if (lowerInner.startsWith("/") && CLOSING_TAGS.has(lowerInner)) {
+      cls = "hl-closing";
+    } else {
+      // Check if it looks like a layout/format tag (has : or is a known tag name)
+      const tagName = inner.split(":")[0].toLowerCase();
+      if (tagName in BLOCK_PAIRS || COLOR_TAGS.has(tagName) ||
+          ["hr", "br", "footer", "field", "color", "size", "img", "img_poster",
+           "img_cover", "img_logo", "spoiler", "td", "th", "table", "tr",
+           "bold", "italic", "underline", "center", "quote",
+           "poster_info", "cover_info", "logo_info", "ratings_table",
+           "tech_table", "game_tech_table", "app_tech_table", "screenshots_grid"].includes(tagName)) {
+        cls = "hl-layout";
+      } else {
+        cls = "hl-data";
+      }
+    }
+
+    if (isUnmatched) {
+      cls += " hl-unmatched";
+    }
+
+    spans.push({ text: match[0], className: cls });
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Trailing text
+  if (lastIndex < body.length) {
+    spans.push({ text: body.slice(lastIndex), className: "hl-text" });
+  }
+
+  return spans;
+}
+
+// --- Color picker popup ---
+
+function ColorPickerPopup({ value, onChange, onClose }: {
+  value: string;
+  onChange: (hex: string) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  return (
+    <div ref={ref} className="absolute top-full left-0 mt-1 z-50 bg-[#1a1a2e] border border-[#2a2a4a] rounded p-2 shadow-lg">
+      <input
+        type="color"
+        value={`#${value}`}
+        onChange={(e) => onChange(e.target.value.replace("#", ""))}
+        className="w-8 h-8 cursor-pointer border-0 bg-transparent"
+      />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => {
+          const v = e.target.value.replace("#", "").slice(0, 6);
+          if (/^[0-9a-fA-F]*$/.test(v)) onChange(v);
+        }}
+        className="ml-1 w-20 bg-[#16213e] text-white border border-[#2a2a4a] rounded px-1 py-0.5 text-xs font-mono"
+        maxLength={6}
+        placeholder="hex"
+      />
+    </div>
+  );
+}
+
+// --- Main component ---
 
 export default function TemplateEditor({ onClose }: Props) {
   const [contentType, setContentType] = useState<ContentType>("film");
@@ -45,14 +249,20 @@ export default function TemplateEditor({ onClose }: Props) {
   const [newName, setNewName] = useState("");
   const [previewHtml, setPreviewHtml] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set(DEFAULT_COLLAPSED));
+  const [titleColor, setTitleColor] = useState("c0392b");
+  const [showTitleColorPicker, setShowTitleColorPicker] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [pickedColor, setPickedColor] = useState("e74c3c");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const highlightRef = useRef<HTMLDivElement>(null);
 
-  const updatePreview = useCallback(async (templateBody: string, ct: string) => {
+  const updatePreview = useCallback(async (templateBody: string, ct: string, color: string) => {
     try {
       const bbcode = await invoke<string>("preview_template", {
         body: templateBody,
         contentType: ct,
-        titleColor: null,
+        titleColor: color,
       });
       const html = await invoke<string>("convert_bbcode", { bbcode });
       setPreviewHtml(html);
@@ -61,9 +271,9 @@ export default function TemplateEditor({ onClose }: Props) {
     }
   }, []);
 
-  const debouncedPreview = useCallback((templateBody: string, ct: string) => {
+  const debouncedPreview = useCallback((templateBody: string, ct: string, color: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => updatePreview(templateBody, ct), 400);
+    debounceRef.current = setTimeout(() => updatePreview(templateBody, ct, color), 400);
   }, [updatePreview]);
 
   useEffect(() => {
@@ -77,7 +287,7 @@ export default function TemplateEditor({ onClose }: Props) {
       const current = list.find((t) => t.name === selected) || list[0];
       if (current) {
         setSelected(current.name);
-        setBody(current.body);
+        setBody(autoIndent(current.body));
       }
       setDirty(false);
     } catch (e) {
@@ -95,10 +305,21 @@ export default function TemplateEditor({ onClose }: Props) {
     loadTags(contentType);
   }, [contentType]);
 
-  // Update preview when body or contentType changes
+  // Update preview when body, contentType or titleColor changes
   useEffect(() => {
-    if (body) debouncedPreview(body, contentType);
-  }, [body, contentType, debouncedPreview]);
+    if (body) debouncedPreview(body, contentType, titleColor);
+  }, [body, contentType, titleColor, debouncedPreview]);
+
+  // Sync scroll between textarea and highlight overlay
+  const syncScroll = useCallback(() => {
+    if (textareaRef.current && highlightRef.current) {
+      highlightRef.current.scrollTop = textareaRef.current.scrollTop;
+      highlightRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
+  }, []);
+
+  // Compute highlighted spans
+  const highlightedSpans = useMemo(() => highlightTemplate(body), [body]);
 
   // Group tags by category
   const tagsByCategory = useMemo(() => {
@@ -108,13 +329,11 @@ export default function TemplateEditor({ onClose }: Props) {
       list.push(t);
       map.set(t.category, list);
     }
-    // Sort by CATEGORY_ORDER
     const sorted: [string, TemplateTag[]][] = [];
     for (const cat of CATEGORY_ORDER) {
       const list = map.get(cat);
       if (list) sorted.push([cat, list]);
     }
-    // Any remaining categories not in the order
     for (const [cat, list] of map) {
       if (!CATEGORY_ORDER.includes(cat)) {
         sorted.push([cat, list]);
@@ -131,7 +350,7 @@ export default function TemplateEditor({ onClose }: Props) {
         name,
       });
       setSelected(tpl.name);
-      setBody(tpl.body);
+      setBody(autoIndent(tpl.body));
       setDirty(false);
     } catch (e) {
       console.error(e);
@@ -167,7 +386,7 @@ export default function TemplateEditor({ onClose }: Props) {
         contentType,
         name: safe,
       });
-      setBody(tpl.body);
+      setBody(autoIndent(tpl.body));
       setDirty(false);
     } catch (e) {
       alert("Erreur: " + e);
@@ -187,7 +406,7 @@ export default function TemplateEditor({ onClose }: Props) {
   };
 
   const insertTag = (tagName: string) => {
-    const textarea = document.getElementById("template-body") as HTMLTextAreaElement | null;
+    const textarea = textareaRef.current;
     if (!textarea) return;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
@@ -204,11 +423,8 @@ export default function TemplateEditor({ onClose }: Props) {
       setDirty(true);
       setTimeout(() => {
         textarea.focus();
-        if (selectedText) {
-          textarea.setSelectionRange(start, start + open.length + selectedText.length + close.length);
-        } else {
-          textarea.setSelectionRange(start + open.length, start + open.length);
-        }
+        const cursor = selectedText ? start + open.length + selectedText.length + close.length : start + open.length;
+        textarea.setSelectionRange(selectedText ? start : cursor, cursor);
       }, 0);
       return;
     }
@@ -222,11 +438,8 @@ export default function TemplateEditor({ onClose }: Props) {
       setDirty(true);
       setTimeout(() => {
         textarea.focus();
-        if (selectedText) {
-          textarea.setSelectionRange(start, start + open.length + selectedText.length + close.length);
-        } else {
-          textarea.setSelectionRange(start + open.length, start + open.length);
-        }
+        const cursor = selectedText ? start + open.length + selectedText.length + close.length : start + open.length;
+        textarea.setSelectionRange(selectedText ? start : cursor, cursor);
       }, 0);
       return;
     }
@@ -236,6 +449,23 @@ export default function TemplateEditor({ onClose }: Props) {
     const newBody = body.substring(0, start) + tag + body.substring(end);
     setBody(newBody);
     setDirty(true);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + tag.length, start + tag.length);
+    }, 0);
+  };
+
+  const insertColorTag = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = body.substring(start, end) || "texte";
+    const tag = `{{color:${pickedColor}:${selectedText}}}`;
+    const newBody = body.substring(0, start) + tag + body.substring(end);
+    setBody(newBody);
+    setDirty(true);
+    setShowColorPicker(false);
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(start + tag.length, start + tag.length);
@@ -276,6 +506,23 @@ export default function TemplateEditor({ onClose }: Props) {
               <option value="jeu">Jeu</option>
               <option value="app">Application</option>
             </select>
+            {/* Title color picker */}
+            <div className="relative flex items-center gap-1">
+              <span className="text-xs text-gray-400">Couleur titre</span>
+              <button
+                onClick={() => setShowTitleColorPicker(!showTitleColorPicker)}
+                className="w-6 h-6 rounded border border-[#2a2a4a] cursor-pointer"
+                style={{ backgroundColor: `#${titleColor}` }}
+                title={`Couleur des titres : #${titleColor}`}
+              />
+              {showTitleColorPicker && (
+                <ColorPickerPopup
+                  value={titleColor}
+                  onChange={setTitleColor}
+                  onClose={() => setShowTitleColorPicker(false)}
+                />
+              )}
+            </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
         </div>
@@ -362,38 +609,106 @@ export default function TemplateEditor({ onClose }: Props) {
                     <span className="text-[10px]">{collapsed.has(category) ? "\u25B6" : "\u25BC"}</span>
                     {category}
                   </button>
-                  {!collapsed.has(category) && categoryTags.map((t) => (
-                    <button
-                      key={t.name}
-                      onClick={() => insertTag(t.name)}
-                      title={`${t.description}${t.example ? '\nExemple : ' + t.example : ''}`}
-                      className="w-full text-left px-3 py-1 hover:bg-[#2a2a4a] transition-colors group"
-                    >
-                      <div className="text-xs font-mono text-blue-400 group-hover:text-blue-300">
-                        {"{{" + t.name + "}}"}
+                  {!collapsed.has(category) && categoryTags.map((t) => {
+                    const tagName = t.name.split(":")[0].toLowerCase();
+                    const isColorTag = tagName === "color";
+                    return (
+                      <div key={t.name} className="flex items-center">
+                        <button
+                          onClick={() => {
+                            if (isColorTag) {
+                              setShowColorPicker(true);
+                            } else {
+                              insertTag(t.name);
+                            }
+                          }}
+                          title={`${t.description}${t.example ? '\nExemple : ' + t.example : ''}`}
+                          className="flex-1 text-left px-3 py-1 hover:bg-[#2a2a4a] transition-colors group min-w-0"
+                        >
+                          <div className="text-xs font-mono text-blue-400 group-hover:text-blue-300 truncate">
+                            {"{{" + t.name + "}}"}
+                          </div>
+                          <div className="text-[11px] text-gray-500 group-hover:text-gray-400 leading-tight">
+                            {t.description}
+                          </div>
+                        </button>
+                        {isColorTag && (
+                          <div className="relative pr-2">
+                            <button
+                              onClick={() => setShowColorPicker(!showColorPicker)}
+                              className="w-4 h-4 rounded border border-[#2a2a4a] cursor-pointer"
+                              style={{ backgroundColor: `#${pickedColor}` }}
+                              title="Choisir une couleur"
+                            />
+                            {showColorPicker && (
+                              <div className="absolute right-0 top-full mt-1 z-50 bg-[#1a1a2e] border border-[#2a2a4a] rounded p-2 shadow-lg flex flex-col gap-1">
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="color"
+                                    value={`#${pickedColor}`}
+                                    onChange={(e) => setPickedColor(e.target.value.replace("#", ""))}
+                                    className="w-8 h-8 cursor-pointer border-0 bg-transparent"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={pickedColor}
+                                    onChange={(e) => {
+                                      const v = e.target.value.replace("#", "").slice(0, 6);
+                                      if (/^[0-9a-fA-F]*$/.test(v)) setPickedColor(v);
+                                    }}
+                                    className="w-16 bg-[#16213e] text-white border border-[#2a2a4a] rounded px-1 py-0.5 text-xs font-mono"
+                                    maxLength={6}
+                                  />
+                                </div>
+                                <button
+                                  onClick={insertColorTag}
+                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1 rounded"
+                                >
+                                  Insérer
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-[11px] text-gray-500 group-hover:text-gray-400 leading-tight">
-                        {t.description}
-                      </div>
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Editor */}
+          {/* Editor with syntax highlighting */}
           <div className="flex-1 flex flex-col min-w-0 border-r border-[#2a2a4a]">
             <div className="px-3 py-2 border-b border-[#2a2a4a] bg-[#16213e]">
               <span className="text-sm font-medium text-gray-300">Template</span>
             </div>
-            <textarea
-              id="template-body"
-              value={body}
-              onChange={(e) => { setBody(e.target.value); setDirty(true); }}
-              className="flex-1 bg-[#0f0f23] text-gray-200 font-mono text-sm p-4 resize-none outline-none border-none"
-              spellCheck={false}
-            />
+            <div className="flex-1 relative overflow-hidden">
+              {/* Highlight underlay */}
+              <div
+                ref={highlightRef}
+                className="absolute inset-0 overflow-hidden pointer-events-none p-4 font-mono text-sm whitespace-pre-wrap break-words"
+                style={{ wordBreak: "break-all" }}
+                aria-hidden="true"
+              >
+                {highlightedSpans.map((span, i) => (
+                  <span key={i} className={span.className}>{span.text}</span>
+                ))}
+                {/* Extra line to match textarea scrollable area */}
+                {"\n"}
+              </div>
+              {/* Transparent textarea on top */}
+              <textarea
+                ref={textareaRef}
+                id="template-body"
+                value={body}
+                onChange={(e) => { setBody(e.target.value); setDirty(true); }}
+                onScroll={syncScroll}
+                className="absolute inset-0 w-full h-full bg-transparent text-transparent caret-gray-200 font-mono text-sm p-4 resize-none outline-none border-none"
+                style={{ caretColor: "#e0e0e0", WebkitTextFillColor: "transparent" }}
+                spellCheck={false}
+              />
+            </div>
           </div>
 
           {/* Preview */}
@@ -412,6 +727,16 @@ export default function TemplateEditor({ onClose }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Syntax highlighting styles */}
+      <style>{`
+        .hl-text { color: #c8c8d8; }
+        .hl-layout { color: #5dade2; }
+        .hl-data { color: #58d68d; }
+        .hl-cond { color: #bb8fce; font-weight: 600; }
+        .hl-closing { color: #5dade2; opacity: 0.7; }
+        .hl-unmatched { text-decoration: wavy underline #e74c3c; text-underline-offset: 3px; }
+      `}</style>
     </div>
   );
 }
