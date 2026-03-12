@@ -623,9 +623,12 @@ fn render_single_layout_tag(
         // --- URL ---
         "url" => {
             let text = arg.unwrap_or("");
-            if let Some(sep) = text.find(':') {
-                let href = &text[..sep];
-                let label = &text[sep + 1..];
+            // Find the label separator (:) AFTER the protocol (://)
+            let search_start = text.find("://").map(|p| p + 3).unwrap_or(0);
+            if let Some(sep) = text[search_start..].rfind(':') {
+                let actual_sep = search_start + sep;
+                let href = &text[..actual_sep];
+                let label = &text[actual_sep + 1..];
                 Some(bbcode::url(href, label))
             } else if !text.is_empty() {
                 Some(bbcode::url(text, text))
@@ -1918,6 +1921,27 @@ mod tests {
         let ctx = RenderContext::default();
         let result = render_layout_tags("A{{br}}B", &ctx, "c0392b", "");
         assert_eq!(result, "A\n\nB");
+    }
+
+    #[test]
+    fn test_url_tag_with_https() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{url:https://example.com:Mon lien}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[url=https://example.com]Mon lien[/url]");
+    }
+
+    #[test]
+    fn test_url_tag_no_label() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{url:https://example.com}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[url=https://example.com]https://example.com[/url]");
+    }
+
+    #[test]
+    fn test_url_tag_with_port() {
+        let ctx = RenderContext::default();
+        let result = render_layout_tags("{{url:https://example.com:8080/path:Lien}}", &ctx, "c0392b", "");
+        assert_eq!(result, "[url=https://example.com:8080/path]Lien[/url]");
     }
 
     #[test]

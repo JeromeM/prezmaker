@@ -94,37 +94,20 @@ pub fn convert_bbcode_to_html(bbcode: &str) -> String {
     html = html.replace('\n', "<br>");
 
     // Remove <br> adjacent to block-level elements to prevent excessive spacing.
-    // Loop until stable because removing one <br> can expose another.
-    let close_tags: &[&str] = &[
-        "</div>", "</table>", "</tr>", "</blockquote>", "</details>",
-        "</h1>", "</h2>", "</h3>", "</h4>", "</h5>", "</h6>",
-    ];
-    let open_tags: &[&str] = &[
-        "<div ", "<div>", "<table ", "<tr>", "<blockquote ", "<details ", "<hr ",
-        "<h1 ", "<h1>", "<h2 ", "<h2>", "<h3 ", "<h3>", "<h4 ", "<h4>", "<h5 ", "<h5>", "<h6 ", "<h6>",
-    ];
+    // Use regex for comprehensive matching of all block elements.
+    let block_els = r"div|table|tr|td|th|blockquote|details|h[1-6]|hr";
+    // <br> before any block tag (open or close): <br><div..., <br></div>, <br><table..., etc.
+    let re_br_before = Regex::new(&format!(r"<br>(</?(?:{})[\s>/])", block_els)).unwrap();
+    // <br> after a closing block tag: </div><br>, </table><br>, </td><br>, etc.
+    let re_br_after_close = Regex::new(&format!(r"(</(?:{})>)<br>", block_els)).unwrap();
+    // <br> after an opening block tag: <table style="..."><br>, <tr><br>, etc.
+    let re_br_after_open = Regex::new(&format!(r"(<(?:{})\b[^>]*>)<br>", block_els)).unwrap();
+
     loop {
         let prev = html.clone();
-        for close_tag in close_tags {
-            html = html.replace(&format!("{}<br>", close_tag), close_tag);
-        }
-        for open_tag in open_tags {
-            html = html.replace(&format!("<br>{}", open_tag), open_tag);
-        }
-        // Also collapse consecutive <br> between block boundaries
-        while html.contains("<br><br>") {
-            // Only collapse <br><br> that sit between two block elements
-            let before = html.clone();
-            for close_tag in close_tags {
-                html = html.replace(&format!("{}<br><br>", close_tag), &format!("{}", close_tag));
-            }
-            for open_tag in open_tags {
-                html = html.replace(&format!("<br><br>{}", open_tag), &format!("{}", open_tag));
-            }
-            if html == before {
-                break;
-            }
-        }
+        html = re_br_before.replace_all(&html, "$1").to_string();
+        html = re_br_after_close.replace_all(&html, "$1").to_string();
+        html = re_br_after_open.replace_all(&html, "$1").to_string();
         if html == prev {
             break;
         }
@@ -331,12 +314,39 @@ mod tests {
         // Simulates composite blocks: heading followed by table with newlines between
         let bbcode = "[center][h2][color=#c0392b]Notes[/color][/h2][/center]\n\n[table][tr][td]Content[/td][/tr][/table]\n\n[center][h2][color=#c0392b]Config[/color][/h2][/center]";
         let html = convert_bbcode_to_html(bbcode);
-        // There should be no <br> between </div> and <table>, or between </table> and <div>
-        assert!(!html.contains("</div><br>"), "Found <br> after </div>: {}", html);
-        assert!(!html.contains("<br><table"), "Found <br> before <table>: {}", html);
-        assert!(!html.contains("</table><br>"), "Found <br> after </table>: {}", html);
-        assert!(!html.contains("<br><div"), "Found <br> before <div>: {}", html);
-        assert!(!html.contains("</h2><br>"), "Found <br> after </h2>: {}", html);
+        assert!(!html.contains("</div><br>"), "Found <br> after </div>");
+        assert!(!html.contains("<br><table"), "Found <br> before <table>");
+        assert!(!html.contains("</table><br>"), "Found <br> after </table>");
+        assert!(!html.contains("<br><div"), "Found <br> before <div>");
+        assert!(!html.contains("</h2><br>"), "Found <br> after </h2>");
+    }
+
+    #[test]
+    fn test_no_br_inside_table() {
+        // Tables with \n (as produced by bbcode::table/tr/td/th helpers)
+        let bbcode = "[table]\n[tr]\n[th]Header[/th]\n[/tr]\n[tr]\n[td]Value[/td]\n[/tr]\n[/table]";
+        let html = convert_bbcode_to_html(bbcode);
+        // No <br> should survive inside the table structure
+        assert!(!html.contains("<br><tr>"), "Found <br> before <tr>");
+        assert!(!html.contains("</tr><br>"), "Found <br> after </tr>");
+        assert!(!html.contains("</th><br>"), "Found <br> after </th>");
+        assert!(!html.contains("</td><br>"), "Found <br> after </td>");
+        assert!(!html.contains("<br></tr>"), "Found <br> before </tr>");
+        assert!(!html.contains("<br></table>"), "Found <br> before </table>");
+        // Verify the table itself renders
+        assert!(html.contains("<table"));
+        assert!(html.contains("Header"));
+        assert!(html.contains("Value"));
+    }
+
+    #[test]
+    fn test_composite_block_no_gaps() {
+        // Simulates the exact pattern: heading + \n + table with \n inside
+        let bbcode = "[center][h2][color=#c0392b]Notes[/color][/h2][/center]\n[table]\n[tr]\n[th]NOM[/th]\n[/tr]\n[tr]\n[td]76[/td]\n[/tr]\n[/table]\n\n[center][h2][color=#c0392b]Config[/color][/h2][/center]\n[table]\n[tr]\n[th]Min[/th]\n[th]Rec[/th]\n[/tr]\n[tr]\n[td]i5[/td]\n[td]i7[/td]\n[/tr]\n[/table]";
+        let html = convert_bbcode_to_html(bbcode);
+        // Count remaining <br> tags — should be zero between/inside block elements
+        let br_count = html.matches("<br>").count();
+        assert_eq!(br_count, 0, "Expected 0 <br> tags but found {}. HTML:\n{}", br_count, html);
     }
 
     #[test]
