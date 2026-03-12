@@ -5,12 +5,12 @@
 <h1 align="center">PrezMaker</h1>
 
 <p align="center">
-  Generateur de presentations BBCode pour les trackers
+  Générateur de présentations BBCode pour les trackers
 </p>
 
 <p align="center">
   <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/JeromeM/prezmaker?style=flat-square&color=blue" alt="Latest Release" /></a>
-  <a href="../../actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/JeromeM/prezmaker/release.yml?style=flat-square&label=build" alt="Build Status" /></a>
+  <a href="../../actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/JeromeM/prezmaker/release.yml?branch=main&event=push&style=flat-square&label=build" alt="Build Status" /></a>
   <a href="../../releases"><img src="https://img.shields.io/github/downloads/JeromeM/prezmaker/total?style=flat-square&color=green" alt="Downloads" /></a>
 </p>
 
@@ -21,36 +21,38 @@
 
 ---
 
-Recherchez un film, une serie, un jeu ou une application, et obtenez une presentation complete formatee en BBCode, prete a etre collee sur un tracker.
+Recherchez un film, une série, un jeu ou une application, et obtenez une présentation complète formatée en BBCode, prête à être collée sur un tracker.
 
-## Fonctionnalites
+## Fonctionnalités
 
-- **Recherche automatique** — interroge TMDB (films/series), IGDB et Steam (jeux) pour recuperer les metadonnees
-- **Enrichissement Allocine** — recupere les notes Allocine en complement de TMDB
-- **Import torrent** — glissez un `.torrent`, le titre est parse automatiquement, le type de contenu detecte, les infos techniques pre-remplies
-- **Editeur de templates** — creez et personnalisez vos templates BBCode avec balises, conditionnels et apercu en temps reel
-- **Configuration requise** — tableau min/recommandee pour les jeux, directement integre aux templates
-- **Generation NFO** — generez un NFO via LLM a partir du BBCode produit
-- **Description IA** — generation automatique de descriptions en francais via LLM (OpenAI, Mistral)
-- **Mise a jour automatique** — verification et installation des nouvelles versions au lancement
+- **Recherche automatique** — interroge TMDB (films/séries), IGDB et Steam (jeux) pour récupérer les métadonnées
+- **Enrichissement Allociné** — récupère les notes Allociné en complément de TMDB
+- **Import torrent** — glissez un `.torrent`, le titre est parsé automatiquement, le type de contenu détecté, les infos techniques pré-remplies
+- **Éditeur de templates** — créez et personnalisez vos templates BBCode avec balises, conditionnels et aperçu en temps réel
+- **Configuration requise** — tableau min/recommandée pour les jeux, récupéré automatiquement depuis Steam
+- **Génération NFO** — générez un NFO via LLM à partir du BBCode produit
+- **Description IA** — génération automatique de descriptions en français via LLM (Groq, Mistral, Gemini)
+- **Mise à jour automatique** — vérification et installation des nouvelles versions au lancement
+- **Couleur par template** — chaque template peut avoir sa propre couleur de titre
+- **Paramètres organisés** — interface à onglets (Général, Clés API, IA/LLM)
 
 ## Screenshots
 
-| Vue principale | Resultats de recherche |
+| Vue principale | Résultats de recherche |
 |:-:|:-:|
 | ![Main](screenshots/main.png) | ![Search](screenshots/search.png) |
 
-| Presentation generee | Editeur de templates |
+| Présentation générée | Éditeur de templates |
 |:-:|:-:|
 | ![Preview](screenshots/preview.png) | ![Templates](screenshots/templates.png) |
 
-| Formulaire jeu | Settings |
+| Formulaire jeu | Paramètres |
 |:-:|:-:|
 | ![Game](screenshots/game.png) | ![Settings](screenshots/settings.png) |
 
 ## Installation
 
-Telechargez la derniere version depuis la page [Releases](../../releases/latest) :
+Téléchargez la dernière version depuis la page [Releases](../../releases/latest) :
 
 | Plateforme | Fichier |
 |---|---|
@@ -59,36 +61,37 @@ Telechargez la derniere version depuis la page [Releases](../../releases/latest)
 | macOS (Intel) | `.dmg` |
 | Linux | `.deb`, `.AppImage` ou `.rpm` |
 
-L'application se met a jour automatiquement au lancement lorsqu'une nouvelle version est disponible.
+L'application se met à jour automatiquement au lancement lorsqu'une nouvelle version est disponible.
 
 ## Configuration
 
-Au premier lancement, allez dans les parametres (icone engrenage) :
+Au premier lancement, allez dans les paramètres (icône engrenage) :
 
-| Cle | Description | Obligatoire |
+| Clé | Description | Obligatoire |
 |---|---|:-:|
-| **TMDB API Key** | Pour rechercher films et series | Oui |
+| **TMDB API Key** | Pour rechercher films et séries | Oui |
 | **IGDB Client ID / Secret** | Pour rechercher des jeux | Oui (jeux) |
-| **LLM Provider + API Key** | Pour les descriptions IA et la generation NFO | Non |
-| **Couleur du titre** | Code couleur hex pour les titres BBCode | Non |
+| **LLM Provider + API Key** | Pour les descriptions IA et la génération NFO | Non |
+| **Couleur du titre** | Code couleur hex par défaut pour les titres BBCode | Non |
 
 ## Utilisation
 
-1. Selectionnez le type de contenu (Film, Serie, Jeu, Application)
+1. Sélectionnez le type de contenu (Film, Série, Jeu, Application)
 2. Tapez votre recherche ou importez un fichier `.torrent`
-3. Selectionnez le bon resultat
-4. Completez les informations supplementaires si necessaire (description, config requise, installation...)
-5. La presentation BBCode est generee avec apercu HTML en temps reel
-6. Copiez le BBCode ou editez-le directement
+3. Sélectionnez le bon résultat
+4. Complétez les informations supplémentaires si nécessaire (description, config requise, installation...)
+5. La présentation BBCode est générée avec aperçu HTML en temps réel
+6. Copiez le BBCode ou éditez-le directement
 
 ### Templates
 
-Ouvrez l'editeur de templates pour :
+Ouvrez l'éditeur de templates pour :
 - Visualiser et modifier les templates par type de contenu
-- Creer de nouveaux templates avec duplication
+- Créer de nouveaux templates avec duplication
+- Définir une couleur de titre personnalisée par template
 - Utiliser des balises (`{{titre}}`, `{{synopsis}}`, `{{game_reqs_table}}`...)
 - Ajouter des conditionnels (`{{#if synopsis}}...{{/if}}`)
-- Voir l'apercu en temps reel avec des donnees fictives
+- Voir l'aperçu en temps réel avec des données fictives
 
 ## Stack technique
 
@@ -97,16 +100,16 @@ Ouvrez l'editeur de templates pour :
 | GUI | [Tauri v2](https://v2.tauri.app/) |
 | Frontend | React 19 + TypeScript + Tailwind CSS v4 + Vite |
 | Backend | Rust (workspace : `prezmaker-lib`, `prezmaker-cli`, `src-tauri`) |
-| APIs | TMDB, IGDB, Steam, Allocine (scraping), OpenAI/Mistral (LLM) |
+| APIs | TMDB, IGDB, Steam, Allociné (scraping), Groq/Mistral/Gemini (LLM) |
 
 ## Build depuis les sources
 
-### Prerequis
+### Prérequis
 
 - [Rust](https://rustup.rs/) (stable)
 - [Node.js](https://nodejs.org/) >= 20
 - [Tauri CLI](https://v2.tauri.app/start/prerequisites/) : `cargo install tauri-cli --version "^2"`
-- Dependances systeme selon la plateforme ([voir la doc Tauri](https://v2.tauri.app/start/prerequisites/))
+- Dépendances système selon la plateforme ([voir la doc Tauri](https://v2.tauri.app/start/prerequisites/))
 
 ### Build
 
@@ -114,10 +117,10 @@ Ouvrez l'editeur de templates pour :
 git clone https://github.com/JeromeM/prezmaker.git
 cd prezmaker
 
-# Installer les dependances frontend
+# Installer les dépendances frontend
 cd ui && npm install && cd ..
 
-# Mode developpement
+# Mode développement
 cargo tauri dev
 
 # Build production
@@ -127,7 +130,7 @@ cargo tauri build
 Un `Makefile` est disponible avec des cibles par plateforme :
 
 ```bash
-make deps-linux       # Installer les dependances systeme Linux
+make deps-linux       # Installer les dépendances système Linux
 make build-linux      # Build Linux
 make build-windows    # Build Windows
 make build-macos-arm  # Build macOS Apple Silicon
@@ -137,4 +140,4 @@ make dev              # Lancer en mode dev
 
 ## Licence
 
-Ce projet est distribue sous licence MIT.
+Ce projet est distribué sous licence MIT.

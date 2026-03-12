@@ -18,10 +18,62 @@ const BLOCK_PAIRS: Record<string, string> = {
 
 const CLOSING_TAGS = new Set(Object.values(BLOCK_PAIRS));
 
-// Tags that increase indent level (block openers + #if)
-const INDENT_OPEN = /^\{\{(#if\s|table|tr|center|quote|bold|italic|underline)(?:[^}]*)?\}\}$/i;
-// Tags that decrease indent level (block closers + /if)
-const INDENT_CLOSE = /^\{\{(\/if|\/table|\/tr|\/center|\/quote|\/bold|\/italic|\/underline)\}\}$/i;
+// --- Depth-aware tag extraction (handles nested {{...}}) ---
+
+/** Extract top-level {{...}} tag positions from text, handling nesting */
+function extractTagPositions(text: string): { start: number; end: number }[] {
+  const positions: { start: number; end: number }[] = [];
+  let i = 0;
+  while (i < text.length - 1) {
+    if (text[i] === '{' && text[i + 1] === '{') {
+      let depth = 1;
+      let j = i + 2;
+      while (j < text.length - 1 && depth > 0) {
+        if (text[j] === '{' && text[j + 1] === '{') {
+          depth++; j += 2;
+        } else if (text[j] === '}' && text[j + 1] === '}') {
+          depth--;
+          if (depth === 0) { positions.push({ start: i, end: j + 2 }); break; }
+          j += 2;
+        } else { j++; }
+      }
+      i = (depth === 0) ? j + 2 : i + 1;
+    } else { i++; }
+  }
+  return positions;
+}
+
+/** Get the tag name (first word before : or space) from a full tag string */
+function getTagName(tag: string): string {
+  const inner = tag.slice(2, -2);
+  const nameEnd = inner.search(/[\s:]/);
+  return (nameEnd >= 0 ? inner.substring(0, nameEnd) : inner).toLowerCase().trim();
+}
+
+/** Check if tag has args (contains : after the tag name) */
+function tagHasArgs(tag: string): boolean {
+  const inner = tag.slice(2, -2);
+  const nameEnd = inner.search(/[\s:]/);
+  if (nameEnd < 0) return false;
+  // #if always has "args" (condition) but that's via space not colon
+  if (inner[nameEnd] === ':') return true;
+  return false;
+}
+
+function isIndentOpen(tag: string): boolean {
+  const name = getTagName(tag);
+  if (name === '#if') return true;
+  // Block pairs open only without args (e.g. {{quote}} but NOT {{quote:content}})
+  if (name in BLOCK_PAIRS && !tagHasArgs(tag)) return true;
+  return false;
+}
+
+function isIndentClose(tag: string): boolean {
+  const name = getTagName(tag);
+  if (name === '/if') return true;
+  if (CLOSING_TAGS.has(name)) return true;
+  return false;
+}
 
 /** Auto-indent a template body based on block nesting */
 function autoIndent(body: string): string {
@@ -37,17 +89,21 @@ function autoIndent(body: string): string {
       continue;
     }
 
-    // Check if this line contains only closing tags (decrease before printing)
-    // Split into tags on this line
-    const tags = line.match(/\{\{[^}]*\}\}/g) || [];
-    const textWithoutTags = line.replace(/\{\{[^}]*\}\}/g, "").trim();
+    // Extract tags with proper nesting support
+    const tagPositions = extractTagPositions(line);
+    const tags = tagPositions.map(p => line.substring(p.start, p.end));
+
+    // Text without tags
+    let textOnly = line;
+    for (const tag of tags) textOnly = textOnly.replace(tag, "");
+    const textWithoutTags = textOnly.trim();
 
     // Count opens and closes on this line
     let lineOpens = 0;
     let lineCloses = 0;
     for (const tag of tags) {
-      if (INDENT_CLOSE.test(tag)) lineCloses++;
-      if (INDENT_OPEN.test(tag)) lineOpens++;
+      if (isIndentClose(tag)) lineCloses++;
+      if (isIndentOpen(tag)) lineOpens++;
     }
 
     // If line is ONLY closing tags (no other content, no opens), dedent before
@@ -111,85 +167,67 @@ function findLastIdx<T>(arr: T[], pred: (item: T) => boolean): number {
 
 function findUnmatchedTags(body: string): Set<number> {
   const unmatched = new Set<number>();
-  // Match block pair tags AND #if/{{/if}} pairs
-  const tagRegex = /\{\{(#if\s[^}]+|\/if|\/?\w+)(:[^}]*)?\}\}/g;
+  const positions = extractTagPositions(body);
   const stack: { name: string; pos: number }[] = [];
-  let match;
 
-  while ((match = tagRegex.exec(body)) !== null) {
-    const fullTag = match[1].toLowerCase().trim();
-    const hasArgs = !!match[2];
+  for (const p of positions) {
+    const tag = body.substring(p.start, p.end);
+    const name = getTagName(tag);
+    const hasArgs = tagHasArgs(tag);
 
-    if (fullTag === "/if") {
+    if (name === "/if") {
       const idx = findLastIdx(stack, (e) => e.name === "#if");
-      if (idx >= 0) {
-        stack.splice(idx, 1);
-      } else {
-        unmatched.add(match.index);
-      }
-    } else if (fullTag.startsWith("#if ")) {
-      stack.push({ name: "#if", pos: match.index });
-    } else if (fullTag.startsWith("/")) {
-      const name = fullTag.slice(1);
-      const idx = findLastIdx(stack, (e) => e.name === name);
-      if (idx >= 0) {
-        stack.splice(idx, 1);
-      } else {
-        unmatched.add(match.index);
-      }
-    } else if (!hasArgs && fullTag in BLOCK_PAIRS) {
-      stack.push({ name: fullTag, pos: match.index });
+      if (idx >= 0) { stack.splice(idx, 1); } else { unmatched.add(p.start); }
+    } else if (name === "#if") {
+      stack.push({ name: "#if", pos: p.start });
+    } else if (name.startsWith("/")) {
+      const base = name.slice(1);
+      const idx = findLastIdx(stack, (e) => e.name === base);
+      if (idx >= 0) { stack.splice(idx, 1); } else { unmatched.add(p.start); }
+    } else if (!hasArgs && name in BLOCK_PAIRS) {
+      stack.push({ name, pos: p.start });
     }
   }
-  for (const s of stack) {
-    unmatched.add(s.pos);
-  }
+  for (const s of stack) { unmatched.add(s.pos); }
   return unmatched;
+}
+
+const LAYOUT_TAGS = new Set([
+  ...Object.keys(BLOCK_PAIRS),
+  ...Object.values(BLOCK_PAIRS).map(v => v),
+  ...Array.from(COLOR_TAGS),
+  "hr", "br", "footer", "field", "color", "size", "img", "img_poster",
+  "img_cover", "img_logo", "spoiler", "td", "th",
+  "poster_info", "cover_info", "logo_info", "ratings_table",
+  "tech_table", "game_tech_table", "game_reqs_table", "app_tech_table", "screenshots_grid",
+]);
+
+function classifyTag(tag: string): string {
+  const name = getTagName(tag);
+  if (name === "#if" || name === "/if") return "hl-cond";
+  if (name.startsWith("/") && CLOSING_TAGS.has(name)) return "hl-closing";
+  if (LAYOUT_TAGS.has(name) || LAYOUT_TAGS.has("/" + name.replace("/", ""))) return "hl-layout";
+  return "hl-data";
 }
 
 function highlightTemplate(body: string): HighlightSpan[] {
   const spans: HighlightSpan[] = [];
   const unmatchedPositions = findUnmatchedTags(body);
-  const tagRegex = /\{\{([^}]*)\}\}/g;
+  const positions = extractTagPositions(body);
   let lastIndex = 0;
-  let match;
 
-  while ((match = tagRegex.exec(body)) !== null) {
+  for (const p of positions) {
     // Text before this tag
-    if (match.index > lastIndex) {
-      spans.push({ text: body.slice(lastIndex, match.index), className: "hl-text" });
+    if (p.start > lastIndex) {
+      spans.push({ text: body.slice(lastIndex, p.start), className: "hl-text" });
     }
 
-    const inner = match[1];
-    const isUnmatched = unmatchedPositions.has(match.index);
-    const lowerInner = inner.toLowerCase();
+    const tagText = body.substring(p.start, p.end);
+    let cls = classifyTag(tagText);
+    if (unmatchedPositions.has(p.start)) cls += " hl-unmatched";
 
-    let cls: string;
-    if (lowerInner.startsWith("#if ") || lowerInner === "/if") {
-      cls = "hl-cond";
-    } else if (lowerInner.startsWith("/") && CLOSING_TAGS.has(lowerInner)) {
-      cls = "hl-closing";
-    } else {
-      // Check if it looks like a layout/format tag (has : or is a known tag name)
-      const tagName = inner.split(":")[0].toLowerCase();
-      if (tagName in BLOCK_PAIRS || COLOR_TAGS.has(tagName) ||
-          ["hr", "br", "footer", "field", "color", "size", "img", "img_poster",
-           "img_cover", "img_logo", "spoiler", "td", "th", "table", "tr",
-           "bold", "italic", "underline", "center", "quote",
-           "poster_info", "cover_info", "logo_info", "ratings_table",
-           "tech_table", "game_tech_table", "game_reqs_table", "app_tech_table", "screenshots_grid"].includes(tagName)) {
-        cls = "hl-layout";
-      } else {
-        cls = "hl-data";
-      }
-    }
-
-    if (isUnmatched) {
-      cls += " hl-unmatched";
-    }
-
-    spans.push({ text: match[0], className: cls });
-    lastIndex = match.index + match[0].length;
+    spans.push({ text: tagText, className: cls });
+    lastIndex = p.end;
   }
 
   // Trailing text
