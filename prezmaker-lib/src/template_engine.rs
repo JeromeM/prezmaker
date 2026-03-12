@@ -488,7 +488,7 @@ fn render_single_layout_tag(
 
     match tag_name.to_lowercase().as_str() {
         // --- Line break ---
-        "br" => Some("\n".to_string()),
+        "br" => Some("\n\n".to_string()),
 
         // --- Headings with optional color ---
         "heading" => {
@@ -1917,7 +1917,7 @@ mod tests {
     fn test_br_tag() {
         let ctx = RenderContext::default();
         let result = render_layout_tags("A{{br}}B", &ctx, "c0392b", "");
-        assert_eq!(result, "A\nB");
+        assert_eq!(result, "A\n\nB");
     }
 
     #[test]
