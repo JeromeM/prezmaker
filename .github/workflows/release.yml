@@ -76,7 +76,6 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          projectPath: src-tauri
           tauriScript: tauri
           tagName: ${{ github.ref_name }}
           releaseName: "PrezMaker ${{ github.ref_name }}"
