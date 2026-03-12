@@ -249,8 +249,11 @@ fn parse_steam_requirements(html: &str) -> SystemReqs {
         let clean = strip_html_tags(segment)
             .replace('\u{00a0}', " ") // non-breaking space → normal space
             .replace('\n', " ")
+            .replace('*', "") // some labels have decorative * like "OS *:"
             .trim()
             .to_string();
+        // Collapse multiple spaces into one
+        let clean = clean.split_whitespace().collect::<Vec<&str>>().join(" ");
 
         if let Some(v) = extract_after_label(&clean, &[
             "Système d'exploitation :", "Système d'exploitation:", "OS :", "OS:",
@@ -340,6 +343,15 @@ mod tests {
         assert!(reqs.ram.contains("8"), "RAM should contain 8, got: {}", reqs.ram);
         assert!(reqs.gpu.contains("GTX960"), "GPU should contain GTX960, got: {}", reqs.gpu);
         assert!(reqs.storage.contains("13"), "Storage should contain 13, got: {}", reqs.storage);
+    }
+
+    #[test]
+    fn test_parse_steam_requirements_asterisk() {
+        // Real Steam HTML with decorative * and double nbsp in OS label
+        let html = "<strong>Minimale\u{00a0}:</strong><br><ul class=\"bb_ul\"><li><strong>Syst\u{00e8}me d'exploitation\u{00a0}\u{00a0}*:</strong> Windows 7<br></li><li><strong>Processeur\u{00a0}:</strong> 1.2 GHz Pentium 4<br></li><li><strong>M\u{00e9}moire vive\u{00a0}:</strong> 1 GB de m\u{00e9}moire<br></li><li><strong>Graphiques\u{00a0}:</strong> Integrated Graphics<br></li></ul>";
+        let reqs = parse_steam_requirements(html);
+        assert_eq!(reqs.os, "Windows 7", "OS should be parsed despite * in label");
+        assert_eq!(reqs.cpu, "1.2 GHz Pentium 4");
     }
 
     #[test]
