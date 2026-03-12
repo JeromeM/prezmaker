@@ -55,6 +55,16 @@ pub struct SteamAppData {
     pub supported_languages: Option<String>,
     #[serde(default)]
     pub categories: Vec<SteamCategory>,
+    #[serde(default)]
+    pub pc_requirements: Option<SteamRequirements>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SteamRequirements {
+    #[serde(default)]
+    pub minimum: Option<String>,
+    #[serde(default)]
+    pub recommended: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

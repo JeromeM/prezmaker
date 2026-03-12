@@ -187,9 +187,10 @@ export default function GameExtrasForm({
   );
   const [size, setSize] = useState(torrentInfo?.size_formatted || "");
   const [installSize, setInstallSize] = useState("");
-  const [showReqs, setShowReqs] = useState(false);
-  const [minReqs, setMinReqs] = useState<SystemReqs>({ ...EMPTY_REQS });
-  const [recReqs, setRecReqs] = useState<SystemReqs>({ ...EMPTY_REQS });
+  const hasPrefilledReqs = !!(game.min_reqs || game.rec_reqs);
+  const [showReqs, setShowReqs] = useState(hasPrefilledReqs);
+  const [minReqs, setMinReqs] = useState<SystemReqs>(game.min_reqs ?? { ...EMPTY_REQS });
+  const [recReqs, setRecReqs] = useState<SystemReqs>(game.rec_reqs ?? { ...EMPTY_REQS });
 
   const isReqsEmpty = (r: SystemReqs) =>
     !r.os && !r.cpu && !r.ram && !r.gpu && !r.storage;
