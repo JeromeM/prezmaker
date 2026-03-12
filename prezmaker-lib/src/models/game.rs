@@ -10,6 +10,30 @@ pub struct TechInfo {
     pub install_size: String,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SystemReqs {
+    #[serde(default)]
+    pub os: String,
+    #[serde(default)]
+    pub cpu: String,
+    #[serde(default)]
+    pub ram: String,
+    #[serde(default)]
+    pub gpu: String,
+    #[serde(default)]
+    pub storage: String,
+}
+
+impl SystemReqs {
+    pub fn is_empty(&self) -> bool {
+        self.os.is_empty()
+            && self.cpu.is_empty()
+            && self.ram.is_empty()
+            && self.gpu.is_empty()
+            && self.storage.is_empty()
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Game {
     pub title: String,
@@ -28,6 +52,10 @@ pub struct Game {
     pub steam_appid: Option<u64>,
     pub tech_info: Option<TechInfo>,
     pub installation: Option<String>,
+    #[serde(default)]
+    pub min_reqs: Option<SystemReqs>,
+    #[serde(default)]
+    pub rec_reqs: Option<SystemReqs>,
 }
 
 impl Game {

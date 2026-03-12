@@ -70,6 +70,8 @@ impl GameProvider for IgdbClient {
                     steam_appid: None,
                     tech_info: None,
                     installation: None,
+                    min_reqs: None,
+                    rec_reqs: None,
                 }
             })
             .collect();
@@ -160,6 +162,8 @@ impl GameProvider for IgdbClient {
             steam_appid: None,
             tech_info: None,
             installation: None,
+            min_reqs: None,
+            rec_reqs: None,
         })
     }
 }

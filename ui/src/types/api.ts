@@ -22,6 +22,14 @@ export interface MediaTechInfo {
   size: string | null;
 }
 
+export interface SystemReqs {
+  os: string;
+  cpu: string;
+  ram: string;
+  gpu: string;
+  storage: string;
+}
+
 export interface Game {
   title: string;
   release_date: string | null;
@@ -37,6 +45,8 @@ export interface Game {
   igdb_id: number | null;
   tech_info: TechInfo | null;
   installation: string | null;
+  min_reqs: SystemReqs | null;
+  rec_reqs: SystemReqs | null;
 }
 
 export interface GameDetailsResponse {

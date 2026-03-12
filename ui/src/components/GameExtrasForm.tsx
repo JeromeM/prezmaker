@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import type { Game, TechInfo, TorrentInfo } from "../types/api";
+import type { Game, TechInfo, SystemReqs, TorrentInfo } from "../types/api";
 
 const PLATFORMS = [
   "Windows",
@@ -32,6 +32,8 @@ const LANGUAGES = [
   "Suédois",
   "Turc",
 ];
+
+const EMPTY_REQS: SystemReqs = { os: "", cpu: "", ram: "", gpu: "", storage: "" };
 
 interface Props {
   game: Game;
@@ -105,6 +107,65 @@ function LanguageDropdown({
   );
 }
 
+const inputClass =
+  "w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500";
+
+function ReqsFields({
+  label,
+  reqs,
+  onChange,
+}: {
+  label: string;
+  reqs: SystemReqs;
+  onChange: (reqs: SystemReqs) => void;
+}) {
+  const set = (field: keyof SystemReqs, value: string) =>
+    onChange({ ...reqs, [field]: value });
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-gray-300 font-medium">{label}</p>
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          type="text"
+          value={reqs.os}
+          onChange={(e) => set("os", e.target.value)}
+          className={inputClass}
+          placeholder="OS (ex: Windows 10 64-bit)"
+        />
+        <input
+          type="text"
+          value={reqs.cpu}
+          onChange={(e) => set("cpu", e.target.value)}
+          className={inputClass}
+          placeholder="CPU (ex: Intel i5-3570K)"
+        />
+        <input
+          type="text"
+          value={reqs.ram}
+          onChange={(e) => set("ram", e.target.value)}
+          className={inputClass}
+          placeholder="RAM (ex: 8 Go)"
+        />
+        <input
+          type="text"
+          value={reqs.gpu}
+          onChange={(e) => set("gpu", e.target.value)}
+          className={inputClass}
+          placeholder="GPU (ex: GTX 970)"
+        />
+        <input
+          type="text"
+          value={reqs.storage}
+          onChange={(e) => set("storage", e.target.value)}
+          className={inputClass}
+          placeholder="Stockage (ex: 70 Go SSD)"
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function GameExtrasForm({
   game,
   claudeDescription,
@@ -126,12 +187,23 @@ export default function GameExtrasForm({
   );
   const [size, setSize] = useState(torrentInfo?.size_formatted || "");
   const [installSize, setInstallSize] = useState("");
+  const [showReqs, setShowReqs] = useState(false);
+  const [minReqs, setMinReqs] = useState<SystemReqs>({ ...EMPTY_REQS });
+  const [recReqs, setRecReqs] = useState<SystemReqs>({ ...EMPTY_REQS });
+
+  const isReqsEmpty = (r: SystemReqs) =>
+    !r.os && !r.cpu && !r.ram && !r.gpu && !r.storage;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const languages = selectedLanguages.join(", ");
+    const updatedGame = {
+      ...game,
+      min_reqs: isReqsEmpty(minReqs) ? null : minReqs,
+      rec_reqs: isReqsEmpty(recReqs) ? null : recReqs,
+    };
     onGenerate(
-      game,
+      updatedGame,
       description || null,
       installation || null,
       { platform, languages, size, install_size: installSize }
@@ -139,7 +211,7 @@ export default function GameExtrasForm({
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className="max-w-2xl mx-auto p-6 overflow-y-auto">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">{game.title}</h2>
         <button
@@ -155,7 +227,7 @@ export default function GameExtrasForm({
           <label className="block text-sm text-gray-400 mb-1">
             Description{" "}
             {claudeDescription && (
-              <span className="text-green-400">(pré-remplie par Claude)</span>
+              <span className="text-green-400">(pre-remplie par Claude)</span>
             )}
           </label>
           <textarea
@@ -169,7 +241,7 @@ export default function GameExtrasForm({
 
         <div>
           <label className="block text-sm text-gray-400 mb-1">
-            Installation (étapes numérotées, une par ligne)
+            Installation (etapes numerotees, une par ligne)
           </label>
           <textarea
             value={installation}
@@ -225,7 +297,7 @@ export default function GameExtrasForm({
               type="text"
               value={size}
               onChange={(e) => setSize(e.target.value)}
-              className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+              className={inputClass}
               placeholder="10 Go"
             />
           </div>
@@ -235,17 +307,42 @@ export default function GameExtrasForm({
               type="text"
               value={installSize}
               onChange={(e) => setInstallSize(e.target.value)}
-              className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+              className={inputClass}
               placeholder="20 Go"
             />
           </div>
+        </div>
+
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowReqs(!showReqs)}
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            <svg
+              className={`w-4 h-4 transition-transform ${showReqs ? "rotate-90" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            Configuration requise (min / recommandee)
+          </button>
+          {showReqs && (
+            <div className="mt-3 space-y-4 pl-2 border-l-2 border-[#2a2a4a]">
+              <ReqsFields label="Minimum" reqs={minReqs} onChange={setMinReqs} />
+              <ReqsFields label="Recommandee" reqs={recReqs} onChange={setRecReqs} />
+            </div>
+          )}
         </div>
 
         <button
           type="submit"
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded text-sm font-medium transition-colors"
         >
-          Générer le BBCode
+          Generer le BBCode
         </button>
       </form>
     </div>

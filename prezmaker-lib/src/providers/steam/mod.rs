@@ -104,6 +104,8 @@ impl GameProvider for SteamClient {
                     steam_appid: Some(item.id),
                     tech_info: None,
                     installation: None,
+                    min_reqs: None,
+                    rec_reqs: None,
                 }
             })
             .collect();
@@ -208,6 +210,8 @@ impl GameProvider for SteamClient {
             steam_appid: Some(data.steam_appid),
             tech_info: None,
             installation: None,
+            min_reqs: None,
+            rec_reqs: None,
         })
     }
 }

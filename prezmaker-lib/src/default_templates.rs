@@ -73,6 +73,8 @@ const DEFAULT_JEU: &str = r#"{{heading:🎮 {{titre_maj}} 🎮}}
 
 {{game_tech_table}}
 
+{{game_reqs_table}}
+
 {{#if installation}}
 {{hr}}
 

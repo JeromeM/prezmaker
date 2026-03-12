@@ -16,6 +16,8 @@ pub struct RenderContext {
     pub screenshots: Vec<String>,
     pub tech: Option<crate::models::MediaTechInfo>,
     pub game_tech: Option<crate::models::TechInfo>,
+    pub min_reqs: Option<crate::models::SystemReqs>,
+    pub rec_reqs: Option<crate::models::SystemReqs>,
     pub info_bbcode: Option<String>,
 }
 
@@ -592,6 +594,9 @@ fn render_single_layout_tag(
         "game_tech_table" => {
             Some(render_game_tech_block(ctx.game_tech.as_ref(), title_color))
         }
+        "game_reqs_table" => {
+            Some(render_game_reqs_block(ctx.min_reqs.as_ref(), ctx.rec_reqs.as_ref(), title_color))
+        }
         "app_tech_table" => {
             Some(render_game_tech_block(None, title_color))
         }
@@ -806,6 +811,28 @@ pub fn build_game_data(game: &crate::models::Game) -> HashMap<String, String> {
         }
     }
 
+    // System requirements
+    if let Some(ref reqs) = game.min_reqs {
+        if !reqs.is_empty() {
+            data.insert("has_min_reqs".into(), "true".into());
+            if !reqs.os.is_empty() { data.insert("req_min_os".into(), reqs.os.clone()); }
+            if !reqs.cpu.is_empty() { data.insert("req_min_cpu".into(), reqs.cpu.clone()); }
+            if !reqs.ram.is_empty() { data.insert("req_min_ram".into(), reqs.ram.clone()); }
+            if !reqs.gpu.is_empty() { data.insert("req_min_gpu".into(), reqs.gpu.clone()); }
+            if !reqs.storage.is_empty() { data.insert("req_min_stockage".into(), reqs.storage.clone()); }
+        }
+    }
+    if let Some(ref reqs) = game.rec_reqs {
+        if !reqs.is_empty() {
+            data.insert("has_rec_reqs".into(), "true".into());
+            if !reqs.os.is_empty() { data.insert("req_rec_os".into(), reqs.os.clone()); }
+            if !reqs.cpu.is_empty() { data.insert("req_rec_cpu".into(), reqs.cpu.clone()); }
+            if !reqs.ram.is_empty() { data.insert("req_rec_ram".into(), reqs.ram.clone()); }
+            if !reqs.gpu.is_empty() { data.insert("req_rec_gpu".into(), reqs.gpu.clone()); }
+            if !reqs.storage.is_empty() { data.insert("req_rec_stockage".into(), reqs.storage.clone()); }
+        }
+    }
+
     // Links
     if let Some(ref slug) = game.igdb_slug {
         let igdb_link = format!("https://www.igdb.com/games/{}", slug);
@@ -978,6 +1005,69 @@ pub fn render_game_tech_block(
     tech_table.push_str(&bbcode::tr(&values_row));
     out.push_str(&bbcode::table(&tech_table));
 
+    out
+}
+
+pub fn render_game_reqs_block(
+    min_reqs: Option<&crate::models::SystemReqs>,
+    rec_reqs: Option<&crate::models::SystemReqs>,
+    title_color: &str,
+) -> String {
+    let has_min = min_reqs.map_or(false, |r| !r.is_empty());
+    let has_rec = rec_reqs.map_or(false, |r| !r.is_empty());
+    if !has_min && !has_rec {
+        return String::new();
+    }
+
+    let mut out = String::new();
+    out.push_str(&bbcode::sub_heading("Configuration requise", title_color));
+    out.push_str("\n\n");
+
+    let labels = ["OS", "Processeur", "RAM", "Carte graphique", "Stockage"];
+
+    fn get_field(r: &crate::models::SystemReqs, i: usize) -> &str {
+        match i {
+            0 => &r.os,
+            1 => &r.cpu,
+            2 => &r.ram,
+            3 => &r.gpu,
+            4 => &r.storage,
+            _ => "",
+        }
+    }
+
+    let mut tech_table = String::new();
+
+    let mut header_row = String::new();
+    header_row.push_str(&bbcode::th(" "));
+    if has_min {
+        header_row.push_str(&bbcode::th("Minimum"));
+    }
+    if has_rec {
+        header_row.push_str(&bbcode::th("Recommandee"));
+    }
+    tech_table.push_str(&bbcode::tr(&header_row));
+
+    for (i, label) in labels.iter().enumerate() {
+        let min_val = min_reqs.map(|r| get_field(r, i)).unwrap_or("");
+        let rec_val = rec_reqs.map(|r| get_field(r, i)).unwrap_or("");
+        if min_val.is_empty() && rec_val.is_empty() {
+            continue;
+        }
+        let mut row = String::new();
+        row.push_str(&bbcode::th(label));
+        if has_min {
+            let display = if min_val.is_empty() { " " } else { min_val };
+            row.push_str(&bbcode::td(&bbcode::center(display)));
+        }
+        if has_rec {
+            let display = if rec_val.is_empty() { " " } else { rec_val };
+            row.push_str(&bbcode::td(&bbcode::center(display)));
+        }
+        tech_table.push_str(&bbcode::tr(&row));
+    }
+
+    out.push_str(&bbcode::table(&tech_table));
     out
 }
 
@@ -1248,13 +1338,29 @@ fn build_sample_series_info(series: &crate::models::Series, title_color: &str) -
 }
 
 fn build_sample_game(_title_color: &str) -> (HashMap<String, String>, RenderContext) {
-    use crate::models::{Game, TechInfo, Rating, Genre};
+    use crate::models::{Game, TechInfo, SystemReqs, Rating, Genre};
 
     let tech_info = TechInfo {
         platform: "PC (Windows)".into(),
         languages: "FR, EN, DE, ES".into(),
         size: "85.3 Go".into(),
         install_size: "120 Go".into(),
+    };
+
+    let min_reqs = SystemReqs {
+        os: "Windows 10 64-bit".into(),
+        cpu: "Intel Core i5-3570K / AMD FX-8310".into(),
+        ram: "8 Go".into(),
+        gpu: "NVIDIA GTX 970 / AMD RX 470".into(),
+        storage: "70 Go SSD".into(),
+    };
+
+    let rec_reqs = SystemReqs {
+        os: "Windows 10/11 64-bit".into(),
+        cpu: "Intel Core i7-4790 / AMD Ryzen 3 3200G".into(),
+        ram: "12 Go".into(),
+        gpu: "NVIDIA GTX 1060 6Go / AMD RX 590".into(),
+        storage: "70 Go SSD".into(),
     };
 
     let game = Game {
@@ -1282,6 +1388,8 @@ fn build_sample_game(_title_color: &str) -> (HashMap<String, String>, RenderCont
         steam_appid: Some(1091500),
         tech_info: Some(tech_info.clone()),
         installation: Some("1. Extraire l'archive\n2. Lancer le setup\n3. Jouer".into()),
+        min_reqs: Some(min_reqs.clone()),
+        rec_reqs: Some(rec_reqs.clone()),
     };
 
     let data = build_game_data(&game);
@@ -1291,6 +1399,8 @@ fn build_sample_game(_title_color: &str) -> (HashMap<String, String>, RenderCont
         cover_url: game.cover_url.clone(),
         screenshots: game.screenshots.clone(),
         game_tech: Some(tech_info),
+        min_reqs: Some(min_reqs),
+        rec_reqs: Some(rec_reqs),
         info_bbcode: Some(info_bbcode),
         ..Default::default()
     };
@@ -1424,6 +1534,7 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
         tag("ratings_table", "Tableau des notes formaté", shortcuts),
         tag("tech_table", "Tableau infos techniques (film/série)", shortcuts),
         tag("game_tech_table", "Tableau infos techniques (jeu)", shortcuts),
+        tag("game_reqs_table", "Tableau configuration requise min/rec (jeu)", shortcuts),
         tag("screenshots_grid", "Grille de screenshots (jeu)", shortcuts),
 
         // --- Conditionnel ---
@@ -1515,6 +1626,17 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tech_langues", "Langue(s)", tech_cat),
                 tag("tech_taille", "Taille", tech_cat),
                 tag("tech_taille_installee", "Taille d'installation", tech_cat),
+                // Config requise
+                tag("req_min_os", "Config min : OS", tech_cat),
+                tag("req_min_cpu", "Config min : Processeur", tech_cat),
+                tag("req_min_ram", "Config min : RAM", tech_cat),
+                tag("req_min_gpu", "Config min : Carte graphique", tech_cat),
+                tag("req_min_stockage", "Config min : Stockage", tech_cat),
+                tag("req_rec_os", "Config rec : OS", tech_cat),
+                tag("req_rec_cpu", "Config rec : Processeur", tech_cat),
+                tag("req_rec_ram", "Config rec : RAM", tech_cat),
+                tag("req_rec_gpu", "Config rec : Carte graphique", tech_cat),
+                tag("req_rec_stockage", "Config rec : Stockage", tech_cat),
                 // Liens
                 tag_ex("link", "Lien principal (IGDB ou Steam)", links_cat, "{{#if link}}{{field:Lien:{{link}}}}{{/if}}"),
                 tag("igdb_link", "Lien vers la page IGDB", links_cat),

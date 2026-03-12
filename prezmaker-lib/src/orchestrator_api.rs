@@ -435,6 +435,8 @@ impl OrchestratorApi {
             cover_url: game.cover_url.clone(),
             screenshots: game.screenshots.clone(),
             game_tech: game.tech_info.clone(),
+            min_reqs: game.min_reqs.clone(),
+            rec_reqs: game.rec_reqs.clone(),
             info_bbcode: Some(info_bbcode),
             ..Default::default()
         };
