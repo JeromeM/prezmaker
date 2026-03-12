@@ -93,19 +93,41 @@ pub fn convert_bbcode_to_html(bbcode: &str) -> String {
     // Newlines to <br> (after all tag replacements)
     html = html.replace('\n', "<br>");
 
-    // Remove <br> adjacent to block-level elements to prevent excessive spacing
-    for close_tag in &["</div>", "</table>", "</tr>", "</blockquote>", "</details>"] {
-        html = html.replace(&format!("{}<br>", close_tag), close_tag);
-    }
-    for open_tag in &["<div ", "<table ", "<tr>", "<blockquote ", "<details ", "<hr "] {
-        html = html.replace(&format!("<br>{}", open_tag), open_tag);
-    }
-    // Also handle <br><br> before/after block elements
-    for close_tag in &["</div>", "</table>", "</blockquote>"] {
-        html = html.replace(&format!("{}<br>", close_tag), close_tag);
-    }
-    for open_tag in &["<div ", "<table ", "<blockquote "] {
-        html = html.replace(&format!("<br>{}", open_tag), open_tag);
+    // Remove <br> adjacent to block-level elements to prevent excessive spacing.
+    // Loop until stable because removing one <br> can expose another.
+    let close_tags: &[&str] = &[
+        "</div>", "</table>", "</tr>", "</blockquote>", "</details>",
+        "</h1>", "</h2>", "</h3>", "</h4>", "</h5>", "</h6>",
+    ];
+    let open_tags: &[&str] = &[
+        "<div ", "<div>", "<table ", "<tr>", "<blockquote ", "<details ", "<hr ",
+        "<h1 ", "<h1>", "<h2 ", "<h2>", "<h3 ", "<h3>", "<h4 ", "<h4>", "<h5 ", "<h5>", "<h6 ", "<h6>",
+    ];
+    loop {
+        let prev = html.clone();
+        for close_tag in close_tags {
+            html = html.replace(&format!("{}<br>", close_tag), close_tag);
+        }
+        for open_tag in open_tags {
+            html = html.replace(&format!("<br>{}", open_tag), open_tag);
+        }
+        // Also collapse consecutive <br> between block boundaries
+        while html.contains("<br><br>") {
+            // Only collapse <br><br> that sit between two block elements
+            let before = html.clone();
+            for close_tag in close_tags {
+                html = html.replace(&format!("{}<br><br>", close_tag), &format!("{}", close_tag));
+            }
+            for open_tag in open_tags {
+                html = html.replace(&format!("<br><br>{}", open_tag), &format!("{}", open_tag));
+            }
+            if html == before {
+                break;
+            }
+        }
+        if html == prev {
+            break;
+        }
     }
 
     wrap_in_document(&html)
@@ -302,6 +324,19 @@ mod tests {
         assert!(result.contains("<strong>"));
         assert!(result.contains("color:#c0392b"));
         assert!(result.contains("Title"));
+    }
+
+    #[test]
+    fn test_no_br_between_block_elements() {
+        // Simulates composite blocks: heading followed by table with newlines between
+        let bbcode = "[center][h2][color=#c0392b]Notes[/color][/h2][/center]\n\n[table][tr][td]Content[/td][/tr][/table]\n\n[center][h2][color=#c0392b]Config[/color][/h2][/center]";
+        let html = convert_bbcode_to_html(bbcode);
+        // There should be no <br> between </div> and <table>, or between </table> and <div>
+        assert!(!html.contains("</div><br>"), "Found <br> after </div>: {}", html);
+        assert!(!html.contains("<br><table"), "Found <br> before <table>: {}", html);
+        assert!(!html.contains("</table><br>"), "Found <br> after </table>: {}", html);
+        assert!(!html.contains("<br><div"), "Found <br> before <div>: {}", html);
+        assert!(!html.contains("</h2><br>"), "Found <br> after </h2>: {}", html);
     }
 
     #[test]
