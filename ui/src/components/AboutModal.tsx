@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { check, Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 interface Props {
   onClose: () => void;
@@ -93,9 +94,8 @@ export default function AboutModal({ onClose }: Props) {
 
           <div className="flex flex-col gap-2">
             <a
-              href="https://paypal.me/grommey"
-              target="_blank"
-              rel="noreferrer"
+              href="#"
+              onClick={(e) => { e.preventDefault(); openUrl("https://paypal.me/grommey"); }}
               className="flex items-center justify-center gap-2 bg-[#0070ba] hover:bg-[#005ea6] text-white rounded px-4 py-2.5 text-sm font-medium transition-colors"
             >
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -105,9 +105,8 @@ export default function AboutModal({ onClose }: Props) {
             </a>
 
             <a
-              href="https://www.buymeacoffee.com/grommey"
-              target="_blank"
-              rel="noreferrer"
+              href="#"
+              onClick={(e) => { e.preventDefault(); openUrl("https://www.buymeacoffee.com/grommey"); }}
               className="flex items-center justify-center gap-2 bg-[#ffdd00] hover:bg-[#e6c800] text-[#000000] rounded px-4 py-2.5 text-sm font-medium transition-colors"
             >
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">

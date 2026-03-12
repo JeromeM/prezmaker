@@ -189,10 +189,20 @@ fn wrap_in_document(body: &str) -> String {
   th {{ background: #333; }}
   blockquote {{ border-left: 3px solid #555; padding: 8px 16px; margin: 8px 0; background: #2a2a2a; }}
   hr {{ border: 1px solid #555; margin: 1em 0; }}
+  a {{ cursor: pointer; }}
 </style>
 </head>
 <body>
 {}
+<script>
+document.addEventListener('click', function(e) {{
+  var link = e.target.closest('a');
+  if (link && link.href) {{
+    e.preventDefault();
+    window.parent.postMessage({{ type: 'open-url', url: link.getAttribute('href') }}, '*');
+  }}
+}});
+</script>
 </body>
 </html>"#,
         body
@@ -289,8 +299,9 @@ mod tests {
     #[test]
     fn test_html_escaping() {
         let result = convert_bbcode_to_html("<script>alert('xss')</script>");
-        assert!(!result.contains("<script>"));
+        // The user-supplied <script> must be escaped (not executable)
         assert!(result.contains("&lt;script&gt;"));
+        assert!(result.contains("&lt;/script&gt;"));
     }
 
     #[test]

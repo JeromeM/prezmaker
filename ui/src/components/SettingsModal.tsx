@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import type { SettingsPayload } from "../types/api";
 import { resetOnboarding } from "./Onboarding";
 
@@ -252,13 +253,13 @@ export default function SettingsModal({ onClose }: Props) {
                     {secretInput("Cle API LLM", "llm_api_key", "llm")}
                     <p className="text-xs text-gray-500">
                       {settings.llm_provider === "groq" && (
-                        <>Cle gratuite sur <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">console.groq.com</a></>
+                        <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.groq.com/keys"); }} className="text-blue-400 hover:underline">console.groq.com</a></>
                       )}
                       {settings.llm_provider === "mistral" && (
-                        <>Cle gratuite sur <a href="https://console.mistral.ai/api-keys" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">console.mistral.ai</a></>
+                        <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.mistral.ai/api-keys"); }} className="text-blue-400 hover:underline">console.mistral.ai</a></>
                       )}
                       {settings.llm_provider === "gemini" && (
-                        <>Cle gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">aistudio.google.com</a></>
+                        <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://aistudio.google.com/apikey"); }} className="text-blue-400 hover:underline">aistudio.google.com</a></>
                       )}
                     </p>
                   </>

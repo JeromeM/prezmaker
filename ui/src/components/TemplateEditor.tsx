@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import type { ContentType, ContentTemplate, TemplateTag, SettingsPayload } from "../types/api";
 
 interface Props {
@@ -337,6 +338,17 @@ export default function TemplateEditor({ onClose }: Props) {
 
   useEffect(() => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, []);
+
+  // Open links from iframe preview in system browser
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "open-url" && typeof e.data.url === "string") {
+        openUrl(e.data.url);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
   }, []);
 
   const loadTemplates = useCallback(async (ct: string) => {
@@ -883,7 +895,7 @@ export default function TemplateEditor({ onClose }: Props) {
               <iframe
                 srcDoc={previewHtml}
                 className="w-full h-full border-none"
-                sandbox="allow-same-origin"
+                sandbox="allow-same-origin allow-scripts"
                 title="Aperçu template"
               />
             </div>

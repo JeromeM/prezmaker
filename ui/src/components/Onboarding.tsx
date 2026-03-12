@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import type { SettingsPayload } from "../types/api";
 
 const ONBOARDING_KEY = "prezmaker_onboarding_done";
@@ -212,7 +213,7 @@ export default function Onboarding({ onComplete }: Props) {
               <div className="bg-[#0f0f23] rounded-lg p-4 mb-4 text-sm text-gray-400">
                 <p className="mb-2 font-medium text-gray-300">Comment obtenir une cle :</p>
                 <ol className="list-decimal list-inside space-y-1">
-                  <li>Creez un compte sur <a href="https://www.themoviedb.org/signup" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">themoviedb.org</a></li>
+                  <li>Creez un compte sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://www.themoviedb.org/signup"); }} className="text-blue-400 hover:underline">themoviedb.org</a></li>
                   <li>Allez dans Parametres &gt; API</li>
                   <li>Demandez une cle API (usage personnel)</li>
                   <li>Copiez la cle "API Key (v3 auth)"</li>
@@ -238,7 +239,7 @@ export default function Onboarding({ onComplete }: Props) {
               <div className="bg-[#0f0f23] rounded-lg p-4 mb-4 text-sm text-gray-400">
                 <p className="mb-2 font-medium text-gray-300">Comment obtenir les cles :</p>
                 <ol className="list-decimal list-inside space-y-1">
-                  <li>Connectez-vous sur <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">dev.twitch.tv</a></li>
+                  <li>Connectez-vous sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://dev.twitch.tv/console/apps"); }} className="text-blue-400 hover:underline">dev.twitch.tv</a></li>
                   <li>Creez une application (nom libre, URL: <code className="text-xs bg-[#16213e] px-1 rounded">http://localhost</code>)</li>
                   <li>Copiez le Client ID et generez un Client Secret</li>
                 </ol>
@@ -290,13 +291,13 @@ export default function Onboarding({ onComplete }: Props) {
                     {secretInput("Cle API", "llm_api_key", "llm")}
                     <p className="text-xs text-gray-500 mt-1">
                       {settings.llm_provider === "groq" && (
-                        <>Cle gratuite sur <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">console.groq.com</a></>
+                        <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.groq.com/keys"); }} className="text-blue-400 hover:underline">console.groq.com</a></>
                       )}
                       {settings.llm_provider === "mistral" && (
-                        <>Cle gratuite sur <a href="https://console.mistral.ai/api-keys" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">console.mistral.ai</a></>
+                        <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.mistral.ai/api-keys"); }} className="text-blue-400 hover:underline">console.mistral.ai</a></>
                       )}
                       {settings.llm_provider === "gemini" && (
-                        <>Cle gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">aistudio.google.com</a></>
+                        <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://aistudio.google.com/apikey"); }} className="text-blue-400 hover:underline">aistudio.google.com</a></>
                       )}
                     </p>
                   </>
