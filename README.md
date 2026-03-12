@@ -12,7 +12,6 @@
   <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/JeromeM/prezmaker?style=flat-square&color=blue" alt="Latest Release" /></a>
   <a href="../../actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/JeromeM/prezmaker/release.yml?style=flat-square&label=build" alt="Build Status" /></a>
   <a href="../../releases"><img src="https://img.shields.io/github/downloads/JeromeM/prezmaker/total?style=flat-square&color=green" alt="Downloads" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/JeromeM/prezmaker?style=flat-square" alt="License" /></a>
 </p>
 
 <p align="center">
