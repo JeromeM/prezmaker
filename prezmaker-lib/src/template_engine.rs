@@ -968,7 +968,7 @@ pub fn render_ratings_block(
 
     let mut out = String::new();
     out.push_str(&bbcode::section_heading("Notes", title_color));
-    out.push_str("\n\n");
+    out.push('\n');
 
     let mut ratings_table = String::new();
     let mut header_row = String::new();
@@ -997,7 +997,7 @@ pub fn render_movie_tech_block(
         "Informations techniques",
         title_color,
     ));
-    out.push_str("\n\n");
+    out.push('\n');
 
     let quality_val = tech.and_then(|t| t.quality.as_deref()).unwrap_or(" ");
     let codec_val = tech.and_then(|t| t.video_codec.as_deref()).unwrap_or(" ");
@@ -1043,7 +1043,7 @@ pub fn render_game_tech_block(
         "Informations techniques",
         title_color,
     ));
-    out.push_str("\n\n");
+    out.push('\n');
 
     let mut tech_headers: Vec<&str> = vec!["Plateforme", "Langue(s)", "Taille"];
     let has_install_size = tech.map_or(false, |t| !t.install_size.is_empty());
@@ -1107,7 +1107,7 @@ pub fn render_game_reqs_block(
 
     let mut out = String::new();
     out.push_str(&bbcode::sub_heading("Configuration requise", title_color));
-    out.push_str("\n\n");
+    out.push('\n');
 
     let mut tech_table = String::new();
 
@@ -1148,7 +1148,7 @@ pub fn render_screenshots_block(
         "Screenshots",
         title_color,
     ));
-    out.push_str("\n\n");
+    out.push('\n');
 
     let taken: Vec<_> = screenshots.iter().take(4).collect();
     let mut inner = String::new();
