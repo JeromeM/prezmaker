@@ -814,22 +814,12 @@ pub fn build_game_data(game: &crate::models::Game) -> HashMap<String, String> {
     // System requirements
     if let Some(ref reqs) = game.min_reqs {
         if !reqs.is_empty() {
-            data.insert("has_min_reqs".into(), "true".into());
-            if !reqs.os.is_empty() { data.insert("req_min_os".into(), reqs.os.clone()); }
-            if !reqs.cpu.is_empty() { data.insert("req_min_cpu".into(), reqs.cpu.clone()); }
-            if !reqs.ram.is_empty() { data.insert("req_min_ram".into(), reqs.ram.clone()); }
-            if !reqs.gpu.is_empty() { data.insert("req_min_gpu".into(), reqs.gpu.clone()); }
-            if !reqs.storage.is_empty() { data.insert("req_min_stockage".into(), reqs.storage.clone()); }
+            data.insert("config_mini".into(), format_system_reqs(reqs));
         }
     }
     if let Some(ref reqs) = game.rec_reqs {
         if !reqs.is_empty() {
-            data.insert("has_rec_reqs".into(), "true".into());
-            if !reqs.os.is_empty() { data.insert("req_rec_os".into(), reqs.os.clone()); }
-            if !reqs.cpu.is_empty() { data.insert("req_rec_cpu".into(), reqs.cpu.clone()); }
-            if !reqs.ram.is_empty() { data.insert("req_rec_ram".into(), reqs.ram.clone()); }
-            if !reqs.gpu.is_empty() { data.insert("req_rec_gpu".into(), reqs.gpu.clone()); }
-            if !reqs.storage.is_empty() { data.insert("req_rec_stockage".into(), reqs.storage.clone()); }
+            data.insert("config_reco".into(), format_system_reqs(reqs));
         }
     }
 
@@ -1008,6 +998,22 @@ pub fn render_game_tech_block(
     out
 }
 
+fn format_system_reqs(reqs: &crate::models::SystemReqs) -> String {
+    let fields: [(&str, &str); 5] = [
+        ("OS", &reqs.os),
+        ("Processeur", &reqs.cpu),
+        ("RAM", &reqs.ram),
+        ("Carte graphique", &reqs.gpu),
+        ("Stockage", &reqs.storage),
+    ];
+    fields
+        .iter()
+        .filter(|(_, v)| !v.is_empty())
+        .map(|(label, value)| bbcode::field(label, value))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 pub fn render_game_reqs_block(
     min_reqs: Option<&crate::models::SystemReqs>,
     rec_reqs: Option<&crate::models::SystemReqs>,
@@ -1023,49 +1029,27 @@ pub fn render_game_reqs_block(
     out.push_str(&bbcode::sub_heading("Configuration requise", title_color));
     out.push_str("\n\n");
 
-    let labels = ["OS", "Processeur", "RAM", "Carte graphique", "Stockage"];
-
-    fn get_field(r: &crate::models::SystemReqs, i: usize) -> &str {
-        match i {
-            0 => &r.os,
-            1 => &r.cpu,
-            2 => &r.ram,
-            3 => &r.gpu,
-            4 => &r.storage,
-            _ => "",
-        }
-    }
-
     let mut tech_table = String::new();
 
+    // Header row
     let mut header_row = String::new();
-    header_row.push_str(&bbcode::th(" "));
     if has_min {
-        header_row.push_str(&bbcode::th("Minimum"));
+        header_row.push_str(&bbcode::th("Configuration minimale"));
     }
     if has_rec {
-        header_row.push_str(&bbcode::th("Recommandee"));
+        header_row.push_str(&bbcode::th("Configuration recommandee"));
     }
     tech_table.push_str(&bbcode::tr(&header_row));
 
-    for (i, label) in labels.iter().enumerate() {
-        let min_val = min_reqs.map(|r| get_field(r, i)).unwrap_or("");
-        let rec_val = rec_reqs.map(|r| get_field(r, i)).unwrap_or("");
-        if min_val.is_empty() && rec_val.is_empty() {
-            continue;
-        }
-        let mut row = String::new();
-        row.push_str(&bbcode::th(label));
-        if has_min {
-            let display = if min_val.is_empty() { " " } else { min_val };
-            row.push_str(&bbcode::td(&bbcode::center(display)));
-        }
-        if has_rec {
-            let display = if rec_val.is_empty() { " " } else { rec_val };
-            row.push_str(&bbcode::td(&bbcode::center(display)));
-        }
-        tech_table.push_str(&bbcode::tr(&row));
+    // Content row
+    let mut content_row = String::new();
+    if has_min {
+        content_row.push_str(&bbcode::td(&format_system_reqs(min_reqs.unwrap())));
     }
+    if has_rec {
+        content_row.push_str(&bbcode::td(&format_system_reqs(rec_reqs.unwrap())));
+    }
+    tech_table.push_str(&bbcode::tr(&content_row));
 
     out.push_str(&bbcode::table(&tech_table));
     out
@@ -1627,16 +1611,8 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tech_taille", "Taille", tech_cat),
                 tag("tech_taille_installee", "Taille d'installation", tech_cat),
                 // Config requise
-                tag("req_min_os", "Config min : OS", tech_cat),
-                tag("req_min_cpu", "Config min : Processeur", tech_cat),
-                tag("req_min_ram", "Config min : RAM", tech_cat),
-                tag("req_min_gpu", "Config min : Carte graphique", tech_cat),
-                tag("req_min_stockage", "Config min : Stockage", tech_cat),
-                tag("req_rec_os", "Config rec : OS", tech_cat),
-                tag("req_rec_cpu", "Config rec : Processeur", tech_cat),
-                tag("req_rec_ram", "Config rec : RAM", tech_cat),
-                tag("req_rec_gpu", "Config rec : Carte graphique", tech_cat),
-                tag("req_rec_stockage", "Config rec : Stockage", tech_cat),
+                tag("config_mini", "Configuration minimale formatee", tech_cat),
+                tag("config_reco", "Configuration recommandee formatee", tech_cat),
                 // Liens
                 tag_ex("link", "Lien principal (IGDB ou Steam)", links_cat, "{{#if link}}{{field:Lien:{{link}}}}{{/if}}"),
                 tag("igdb_link", "Lien vers la page IGDB", links_cat),
