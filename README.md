@@ -9,12 +9,6 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/JeromeM/prezmaker?style=flat-square&color=blue" alt="Latest Release" /></a>
-  <a href="../../actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/JeromeM/prezmaker/release.yml?branch=main&event=push&style=flat-square&label=build" alt="Build Status" /></a>
-  <a href="../../releases"><img src="https://img.shields.io/github/downloads/JeromeM/prezmaker/total?style=flat-square&color=green" alt="Downloads" /></a>
-</p>
-
-<p align="center">
   <a href="https://paypal.me/grommey"><img src="https://img.shields.io/badge/PayPal-Donation-0070ba?style=flat-square&logo=paypal&logoColor=white" alt="PayPal" /></a>
   <a href="https://www.buymeacoffee.com/grommey"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donation-ffdd00?style=flat-square&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
 </p>

@@ -33,6 +33,7 @@ pub fn run() {
             commands::generate_film_with_tech,
             commands::generate_serie_with_tech,
             commands::fetch_game_details,
+            commands::fetch_steam_requirements,
             commands::generate_jeu,
             commands::generate_app,
             commands::preview_template,

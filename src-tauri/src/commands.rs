@@ -1,6 +1,6 @@
 use crate::bbcode_to_html;
 use prezmaker_lib::config::Config;
-use prezmaker_lib::models::{Application, Game, MediaTechInfo, TechInfo};
+use prezmaker_lib::models::{Application, Game, MediaTechInfo, SystemReqs, TechInfo};
 use prezmaker_lib::providers::llm::LlmClient;
 use prezmaker_lib::orchestrator_api::{GameDetailsResponse, OrchestratorApi, SearchResult};
 use prezmaker_lib::torrent::{self, TorrentInfo};
@@ -79,6 +79,45 @@ pub async fn fetch_game_details(
     api.fetch_game_details(game_id, source.as_deref())
         .await
         .map_err(|e| e.to_string())
+}
+
+#[derive(Serialize)]
+pub struct SteamReqsResponse {
+    pub min_reqs: Option<SystemReqs>,
+    pub rec_reqs: Option<SystemReqs>,
+}
+
+#[tauri::command]
+pub async fn fetch_steam_requirements(
+    game_title: String,
+) -> Result<SteamReqsResponse, String> {
+    use prezmaker_lib::providers::steam::SteamClient;
+    use prezmaker_lib::providers::GameProvider;
+
+    let steam = SteamClient::new("fr".to_string());
+    let results = steam
+        .search_games(&game_title)
+        .await
+        .map_err(|e| format!("Recherche Steam échouée: {}", e))?;
+
+    let first = results
+        .into_iter()
+        .next()
+        .ok_or_else(|| format!("Aucun jeu trouvé sur Steam pour: {}", game_title))?;
+
+    let appid = first
+        .steam_appid
+        .ok_or("Pas d'App ID Steam")?;
+
+    let details = steam
+        .get_game_details(appid)
+        .await
+        .map_err(|e| format!("Détails Steam échoués: {}", e))?;
+
+    Ok(SteamReqsResponse {
+        min_reqs: details.min_reqs,
+        rec_reqs: details.rec_reqs,
+    })
 }
 
 #[derive(Deserialize)]

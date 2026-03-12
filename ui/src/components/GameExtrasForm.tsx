@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import type { Game, TechInfo, SystemReqs, TorrentInfo } from "../types/api";
 
 const PLATFORMS = [
@@ -191,6 +192,29 @@ export default function GameExtrasForm({
   const [showReqs, setShowReqs] = useState(hasPrefilledReqs);
   const [minReqs, setMinReqs] = useState<SystemReqs>(game.min_reqs ?? { ...EMPTY_REQS });
   const [recReqs, setRecReqs] = useState<SystemReqs>(game.rec_reqs ?? { ...EMPTY_REQS });
+  const [loadingReqs, setLoadingReqs] = useState(false);
+
+  // Auto-fetch configs from Steam if not already provided
+  useEffect(() => {
+    if (game.min_reqs || game.rec_reqs) return;
+    setLoadingReqs(true);
+    invoke<{ min_reqs: SystemReqs | null; rec_reqs: SystemReqs | null }>(
+      "fetch_steam_requirements",
+      { gameTitle: game.title }
+    )
+      .then((res) => {
+        if (res.min_reqs) {
+          setMinReqs(res.min_reqs);
+          setShowReqs(true);
+        }
+        if (res.rec_reqs) {
+          setRecReqs(res.rec_reqs);
+          setShowReqs(true);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingReqs(false));
+  }, [game.title]);
 
   const isReqsEmpty = (r: SystemReqs) =>
     !r.os && !r.cpu && !r.ram && !r.gpu && !r.storage;
@@ -326,7 +350,13 @@ export default function GameExtrasForm({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
-            Configuration requise (min / recommandee)
+            Configuration requise (min / recommandée)
+            {loadingReqs && (
+              <svg className="animate-spin h-4 w-4 text-blue-400" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            )}
           </button>
           {showReqs && (
             <div className="mt-3 space-y-4 pl-2 border-l-2 border-[#2a2a4a]">
