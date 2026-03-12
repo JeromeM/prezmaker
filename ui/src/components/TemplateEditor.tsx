@@ -295,6 +295,7 @@ export default function TemplateEditor({ onClose }: Props) {
   const [globalColor, setGlobalColor] = useState("c0392b");
   const [customColor, setCustomColor] = useState<string | null>(null); // null = use global
   const [showTitleColorPicker, setShowTitleColorPicker] = useState(false);
+  const [favoriteName, setFavoriteName] = useState<string | null>(null);
   const titleColor = customColor ?? globalColor;
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pickedColor, setPickedColor] = useState("e74c3c");
@@ -356,6 +357,7 @@ export default function TemplateEditor({ onClose }: Props) {
   useEffect(() => {
     loadTemplates(contentType);
     loadTags(contentType);
+    invoke<string | null>("get_default_template", { contentType }).then(setFavoriteName);
   }, [contentType]);
 
   // Update preview when body, contentType or titleColor changes
@@ -578,6 +580,33 @@ export default function TemplateEditor({ onClose }: Props) {
               </option>
             ))}
           </select>
+
+          <button
+            onClick={async () => {
+              const newFav = selected === favoriteName ? "" : selected;
+              await invoke("set_default_template", { contentType, templateName: newFav });
+              setFavoriteName(newFav || null);
+            }}
+            title={selected === favoriteName ? "Retirer des favoris" : "Définir comme template par défaut"}
+            className={`p-1.5 rounded transition-colors ${
+              selected === favoriteName
+                ? "text-yellow-400 hover:text-yellow-300"
+                : "text-gray-600 hover:text-gray-400"
+            }`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill={selected === favoriteName ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4"
+            >
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+          </button>
 
           <button
             onClick={() => setShowNewDialog(true)}
