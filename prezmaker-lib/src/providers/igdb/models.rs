@@ -14,6 +14,7 @@ pub struct IgdbGame {
     pub screenshots: Option<Vec<IgdbScreenshot>>,
     pub total_rating: Option<f64>,
     pub aggregated_rating: Option<f64>,
+    #[serde(default, deserialize_with = "deserialize_external_games")]
     pub external_games: Option<Vec<IgdbExternalGame>>,
 }
 
@@ -21,6 +22,31 @@ pub struct IgdbGame {
 pub struct IgdbExternalGame {
     pub category: u32,
     pub uid: Option<String>,
+}
+
+/// IGDB peut retourner external_games comme des objets expandés OU des IDs bruts (u64).
+/// Ce désérialiseur gère les deux cas sans crasher.
+fn deserialize_external_games<'de, D>(
+    deserializer: D,
+) -> Result<Option<Vec<IgdbExternalGame>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let val = Option::<Vec<serde_json::Value>>::deserialize(deserializer)?;
+    match val {
+        Some(arr) => {
+            let games: Vec<IgdbExternalGame> = arr
+                .into_iter()
+                .filter_map(|item| serde_json::from_value::<IgdbExternalGame>(item).ok())
+                .collect();
+            if games.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(games))
+            }
+        }
+        None => Ok(None),
+    }
 }
 
 #[derive(Debug, Deserialize)]
