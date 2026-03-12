@@ -90,6 +90,7 @@ export interface ContentTemplate {
   content_type: string;
   body: string;
   is_default: boolean;
+  title_color?: string | null;
 }
 
 export interface TemplateTag {
@@ -133,12 +134,21 @@ export interface TorrentInfo {
   size_formatted: string;
 }
 
+export interface PendingGeneration {
+  contentType: ContentType;
+  tmdbId?: number;
+  tech?: MediaTechInfo | null;
+  gamePayload?: { game: Game; description: string | null; installation: string | null; tech_info: TechInfo };
+  appPayload?: AppPayload;
+}
+
 export type AppState =
   | { step: "idle" }
   | { step: "searching" }
   | { step: "selecting"; results: SearchResult[]; contentType: ContentType }
   | { step: "game_extras"; game: Game; claudeDescription: string | null; torrentInfo?: TorrentInfo }
   | { step: "app_form" }
+  | { step: "template_pick"; pending: PendingGeneration }
   | { step: "generating" }
   | { step: "done"; bbcode: string; html: string }
   | { step: "error"; message: string }

@@ -7,6 +7,7 @@ import AppForm from "./components/AppForm";
 import SplitPreview from "./components/SplitPreview";
 import SettingsModal from "./components/SettingsModal";
 import TemplateEditor from "./components/TemplateEditor";
+import TemplatePicker from "./components/TemplatePicker";
 import AboutModal from "./components/AboutModal";
 import TorrentContentTypePicker from "./components/TorrentContentTypePicker";
 import Onboarding, { isOnboardingDone } from "./components/Onboarding";
@@ -26,6 +27,7 @@ function App() {
     confirmTorrentContentType,
     generateGame,
     generateApp,
+    confirmTemplate,
     convertBBCode,
     reset,
   } = usePrezMaker();
@@ -142,6 +144,15 @@ function App() {
             onGenerate={generateGame}
             onCancel={reset}
             torrentInfo={state.torrentInfo}
+          />
+        )}
+
+        {state.step === "template_pick" && (
+          <TemplatePicker
+            contentType={state.pending.contentType}
+            onSelect={(templateName) => confirmTemplate(templateName, state.pending)}
+            onCancel={reset}
+            onEditTemplates={() => setShowTemplateEditor(true)}
           />
         )}
 

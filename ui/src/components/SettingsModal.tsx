@@ -7,7 +7,19 @@ interface Props {
   onClose: () => void;
 }
 
+type Tab = "general" | "api" | "llm";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "general", label: "General" },
+  { id: "api", label: "Cles API" },
+  { id: "llm", label: "IA / LLM" },
+];
+
+const inputClass =
+  "w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500";
+
 export default function SettingsModal({ onClose }: Props) {
+  const [tab, setTab] = useState<Tab>("general");
   const [settings, setSettings] = useState<SettingsPayload>({
     tmdb_api_key: null,
     igdb_client_id: null,
@@ -46,7 +58,8 @@ export default function SettingsModal({ onClose }: Props) {
   const secretInput = (
     label: string,
     key: keyof SettingsPayload,
-    fieldKey: string
+    fieldKey: string,
+    placeholder?: string
   ) => (
     <div className="flex flex-col gap-1">
       <label className="text-xs text-gray-400">{label}</label>
@@ -60,13 +73,13 @@ export default function SettingsModal({ onClose }: Props) {
               [key]: e.target.value || null,
             }))
           }
-          className="flex-1 bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
-          placeholder="Non configuré"
+          className={inputClass}
+          placeholder={placeholder ?? "Non configure"}
         />
         <button
           type="button"
           onClick={() => toggleShow(fieldKey)}
-          className="bg-[#16213e] border border-[#2a2a4a] rounded px-3 py-2 text-xs text-gray-400 hover:text-white transition-colors"
+          className="bg-[#16213e] border border-[#2a2a4a] rounded px-3 py-2 text-xs text-gray-400 hover:text-white transition-colors shrink-0"
         >
           {showKeys[fieldKey] ? "Masquer" : "Afficher"}
         </button>
@@ -79,9 +92,10 @@ export default function SettingsModal({ onClose }: Props) {
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg w-full max-w-lg mx-4 shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2a4a]">
-          <h2 className="text-white text-lg font-medium">Settings</h2>
+      <div className="bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg w-full max-w-2xl mx-4 shadow-2xl flex flex-col" style={{ height: "min(520px, 80vh)" }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2a4a] shrink-0">
+          <h2 className="text-white text-lg font-medium">Parametres</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors text-xl leading-none"
@@ -90,148 +104,175 @@ export default function SettingsModal({ onClose }: Props) {
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto">
-          <section>
-            <h3 className="text-sm font-medium text-gray-300 mb-3">
-              Clés API
-            </h3>
-            <div className="space-y-3">
-              {secretInput("TMDB API Key", "tmdb_api_key", "tmdb")}
-              {secretInput("IGDB Client ID", "igdb_client_id", "igdb_id")}
-              {secretInput(
-                "IGDB Client Secret",
-                "igdb_client_secret",
-                "igdb_secret"
-              )}
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-sm font-medium text-gray-300 mb-3">
-              LLM (descriptions jeux)
-            </h3>
-            <div className="space-y-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-400">Provider</label>
-                <select
-                  value={settings.llm_provider ?? ""}
-                  onChange={(e) =>
-                    setSettings((s) => ({
-                      ...s,
-                      llm_provider: e.target.value || null,
-                      ...(e.target.value ? {} : { llm_api_key: null }),
-                    }))
-                  }
-                  className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
-                >
-                  <option value="">(Aucun)</option>
-                  <option value="groq">Groq</option>
-                  <option value="mistral">Mistral</option>
-                  <option value="gemini">Gemini</option>
-                </select>
-              </div>
-              {settings.llm_provider && (
-                <>
-                  {secretInput("Clé API LLM", "llm_api_key", "llm")}
-                  <p className="text-xs text-gray-500">
-                    {settings.llm_provider === "groq" && (
-                      <>Clé gratuite sur <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">console.groq.com</a></>
-                    )}
-                    {settings.llm_provider === "mistral" && (
-                      <>Clé gratuite sur <a href="https://console.mistral.ai/api-keys" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">console.mistral.ai</a></>
-                    )}
-                    {settings.llm_provider === "gemini" && (
-                      <>Clé gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">aistudio.google.com</a></>
-                    )}
-                  </p>
-                </>
-              )}
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-sm font-medium text-gray-300 mb-3">
-              Préférences
-            </h3>
-            <div className="space-y-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-400">Langue</label>
-                <select
-                  value={settings.language}
-                  onChange={(e) =>
-                    setSettings((s) => ({ ...s, language: e.target.value }))
-                  }
-                  className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
-                >
-                  <option value="fr-FR">Français (fr-FR)</option>
-                  <option value="en-US">English (en-US)</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-400">Pseudo (signature footer)</label>
-                <input
-                  type="text"
-                  value={settings.pseudo}
-                  onChange={(e) =>
-                    setSettings((s) => ({ ...s, pseudo: e.target.value }))
-                  }
-                  className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
-                  placeholder="Laisser vide pour ne pas afficher de footer"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-400">
-                  Couleur titre par défaut
-                </label>
-                <input
-                  type="text"
-                  value={settings.title_color}
-                  onChange={(e) =>
-                    setSettings((s) => ({ ...s, title_color: e.target.value }))
-                  }
-                  className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
-                  placeholder="c0392b"
-                />
-              </div>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.auto_clipboard}
-                  onChange={(e) =>
-                    setSettings((s) => ({
-                      ...s,
-                      auto_clipboard: e.target.checked,
-                    }))
-                  }
-                  className="accent-blue-500"
-                />
-                <span className="text-sm text-gray-300">
-                  Copier automatiquement dans le presse-papier
-                </span>
-              </label>
-
+        {/* Body: sidebar tabs + content */}
+        <div className="flex flex-1 min-h-0">
+          {/* Tab sidebar */}
+          <nav className="w-40 border-r border-[#2a2a4a] py-2 shrink-0">
+            {TABS.map((t) => (
               <button
-                type="button"
-                onClick={() => {
-                  resetOnboarding();
-                  window.location.reload();
-                }}
-                className="text-xs text-gray-500 hover:text-gray-300 underline transition-colors"
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                  tab === t.id
+                    ? "bg-blue-600/20 text-blue-300 border-r-2 border-blue-500"
+                    : "text-gray-400 hover:text-white hover:bg-[#16213e]"
+                }`}
               >
-                Relancer le tutoriel de premiere utilisation
+                {t.label}
               </button>
-            </div>
-          </section>
+            ))}
+          </nav>
 
-          {error && (
-            <p className="text-red-400 text-sm">{error}</p>
-          )}
+          {/* Tab content */}
+          <div className="flex-1 px-6 py-5 overflow-y-auto">
+            {tab === "general" && (
+              <div className="space-y-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-400">Langue</label>
+                  <select
+                    value={settings.language}
+                    onChange={(e) =>
+                      setSettings((s) => ({ ...s, language: e.target.value }))
+                    }
+                    className={inputClass}
+                  >
+                    <option value="fr-FR">Francais (fr-FR)</option>
+                    <option value="en-US">English (en-US)</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-400">Pseudo (signature footer)</label>
+                  <input
+                    type="text"
+                    value={settings.pseudo}
+                    onChange={(e) =>
+                      setSettings((s) => ({ ...s, pseudo: e.target.value }))
+                    }
+                    className={inputClass}
+                    placeholder="Laisser vide pour ne pas afficher de footer"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-400">
+                    Couleur titre par defaut
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-8 h-8 rounded border border-[#2a2a4a]"
+                      style={{ backgroundColor: `#${settings.title_color || "c0392b"}` }}
+                    />
+                    <input
+                      type="text"
+                      value={settings.title_color}
+                      onChange={(e) =>
+                        setSettings((s) => ({ ...s, title_color: e.target.value }))
+                      }
+                      className={inputClass + " max-w-32 font-mono"}
+                      placeholder="c0392b"
+                      maxLength={6}
+                    />
+                    <span className="text-[11px] text-gray-500">
+                      Utilisee si le template n'a pas de couleur personnalisee
+                    </span>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.auto_clipboard}
+                    onChange={(e) =>
+                      setSettings((s) => ({
+                        ...s,
+                        auto_clipboard: e.target.checked,
+                      }))
+                    }
+                    className="accent-blue-500"
+                  />
+                  <span className="text-sm text-gray-300">
+                    Copier automatiquement dans le presse-papier
+                  </span>
+                </label>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetOnboarding();
+                      window.location.reload();
+                    }}
+                    className="text-xs text-gray-500 hover:text-gray-300 underline transition-colors"
+                  >
+                    Relancer le tutoriel de premiere utilisation
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {tab === "api" && (
+              <div className="space-y-4">
+                <p className="text-xs text-gray-500 mb-2">
+                  Cles necessaires pour la recherche de films, series et jeux.
+                </p>
+                {secretInput("TMDB API Key", "tmdb_api_key", "tmdb")}
+                {secretInput("IGDB Client ID", "igdb_client_id", "igdb_id")}
+                {secretInput("IGDB Client Secret", "igdb_client_secret", "igdb_secret")}
+              </div>
+            )}
+
+            {tab === "llm" && (
+              <div className="space-y-4">
+                <p className="text-xs text-gray-500 mb-2">
+                  Un LLM peut generer automatiquement les descriptions de jeux en francais.
+                </p>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-400">Provider</label>
+                  <select
+                    value={settings.llm_provider ?? ""}
+                    onChange={(e) =>
+                      setSettings((s) => ({
+                        ...s,
+                        llm_provider: e.target.value || null,
+                        ...(e.target.value ? {} : { llm_api_key: null }),
+                      }))
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">(Aucun)</option>
+                    <option value="groq">Groq</option>
+                    <option value="mistral">Mistral</option>
+                    <option value="gemini">Gemini</option>
+                  </select>
+                </div>
+                {settings.llm_provider && (
+                  <>
+                    {secretInput("Cle API LLM", "llm_api_key", "llm")}
+                    <p className="text-xs text-gray-500">
+                      {settings.llm_provider === "groq" && (
+                        <>Cle gratuite sur <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">console.groq.com</a></>
+                      )}
+                      {settings.llm_provider === "mistral" && (
+                        <>Cle gratuite sur <a href="https://console.mistral.ai/api-keys" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">console.mistral.ai</a></>
+                      )}
+                      {settings.llm_provider === "gemini" && (
+                        <>Cle gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">aistudio.google.com</a></>
+                      )}
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+
+            {error && (
+              <p className="text-red-400 text-sm mt-4">{error}</p>
+            )}
+          </div>
         </div>
 
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#2a2a4a]">
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#2a2a4a] shrink-0">
           <button
             onClick={onClose}
             className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors"

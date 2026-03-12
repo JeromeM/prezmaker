@@ -10,6 +10,7 @@ import type {
   TechInfo,
   MediaTechInfo,
   AppPayload,
+  PendingGeneration,
   SettingsPayload,
   TorrentInfo,
 } from "../types/api";
@@ -108,9 +109,9 @@ export function usePrezMaker() {
     [titleColor]
   );
 
-  // --- Select result (normal flow, uses template) ---
+  // --- Select result (normal flow, goes to template pick) ---
   const selectResult = useCallback(
-    async (id: number, contentType: ContentType, templateName: string = "default", source?: string) => {
+    async (id: number, contentType: ContentType, _templateName: string = "default", source?: string) => {
       if (contentType === "jeu") {
         setState({ step: "generating" });
         try {
@@ -129,14 +130,15 @@ export function usePrezMaker() {
         return;
       }
 
-      await generateWithTemplate(contentType, templateName, id);
+      // Go to template pick (auto-selects if only one template)
+      setState({ step: "template_pick", pending: { contentType, tmdbId: id } });
     },
-    [titleColor, generateWithTemplate]
+    [titleColor]
   );
 
   // --- Torrent result (with tech info) ---
   const selectTorrentResult = useCallback(
-    async (id: number, contentType: ContentType, torrentInfo: TorrentInfo, templateName: string = "default", source?: string) => {
+    async (id: number, contentType: ContentType, torrentInfo: TorrentInfo, _templateName: string = "default", source?: string) => {
       if (contentType === "jeu") {
         setState({ step: "generating" });
         try {
@@ -157,9 +159,9 @@ export function usePrezMaker() {
       }
 
       const tech = buildMediaTech(torrentInfo.parsed, torrentInfo.size_formatted);
-      await generateWithTemplate(contentType, templateName, id, tech);
+      setState({ step: "template_pick", pending: { contentType, tmdbId: id, tech } });
     },
-    [titleColor, generateWithTemplate]
+    [titleColor]
   );
 
   // --- Torrent import ---
@@ -219,29 +221,47 @@ export function usePrezMaker() {
     [searchForTorrent]
   );
 
-  // --- Game generation (with template) ---
+  // --- Game generation (goes to template pick) ---
   const generateGame = useCallback(
-    async (
+    (
       game: Game,
       description: string | null,
       installation: string | null,
       techInfo: TechInfo,
-      templateName: string = "default",
     ) => {
-      await generateWithTemplate("jeu", templateName, undefined, undefined, {
-        game,
-        description,
-        installation,
-        tech_info: techInfo,
+      setState({
+        step: "template_pick",
+        pending: {
+          contentType: "jeu",
+          gamePayload: { game, description, installation, tech_info: techInfo },
+        },
       });
     },
-    [generateWithTemplate]
+    []
   );
 
-  // --- App generation (with template) ---
+  // --- App generation (goes to template pick) ---
   const generateApp = useCallback(
-    async (payload: AppPayload, templateName: string = "default") => {
-      await generateWithTemplate("app", templateName, undefined, undefined, undefined, payload);
+    (payload: AppPayload) => {
+      setState({
+        step: "template_pick",
+        pending: { contentType: "app", appPayload: payload },
+      });
+    },
+    []
+  );
+
+  // --- Confirm template selection → actually generate ---
+  const confirmTemplate = useCallback(
+    async (templateName: string, pending: PendingGeneration) => {
+      await generateWithTemplate(
+        pending.contentType,
+        templateName,
+        pending.tmdbId,
+        pending.tech,
+        pending.gamePayload,
+        pending.appPayload,
+      );
     },
     [generateWithTemplate]
   );
@@ -267,6 +287,7 @@ export function usePrezMaker() {
     confirmTorrentContentType,
     generateGame,
     generateApp,
+    confirmTemplate,
     convertBBCode,
     reset,
   };

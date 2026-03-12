@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { ContentType, ContentTemplate, TemplateTag } from "../types/api";
+import type { ContentType, ContentTemplate, TemplateTag, SettingsPayload } from "../types/api";
 
 interface Props {
   onClose: () => void;
@@ -177,7 +177,7 @@ function highlightTemplate(body: string): HighlightSpan[] {
            "img_cover", "img_logo", "spoiler", "td", "th", "table", "tr",
            "bold", "italic", "underline", "center", "quote",
            "poster_info", "cover_info", "logo_info", "ratings_table",
-           "tech_table", "game_tech_table", "app_tech_table", "screenshots_grid"].includes(tagName)) {
+           "tech_table", "game_tech_table", "game_reqs_table", "app_tech_table", "screenshots_grid"].includes(tagName)) {
         cls = "hl-layout";
       } else {
         cls = "hl-data";
@@ -254,13 +254,22 @@ export default function TemplateEditor({ onClose }: Props) {
   const [newName, setNewName] = useState("");
   const [previewHtml, setPreviewHtml] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set(DEFAULT_COLLAPSED));
-  const [titleColor, setTitleColor] = useState("c0392b");
+  const [globalColor, setGlobalColor] = useState("c0392b");
+  const [customColor, setCustomColor] = useState<string | null>(null); // null = use global
   const [showTitleColorPicker, setShowTitleColorPicker] = useState(false);
+  const titleColor = customColor ?? globalColor;
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pickedColor, setPickedColor] = useState("e74c3c");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
+
+  // Load global title color from settings
+  useEffect(() => {
+    invoke<SettingsPayload>("get_settings").then((s) => {
+      setGlobalColor(s.title_color || "c0392b");
+    });
+  }, []);
 
   const updatePreview = useCallback(async (templateBody: string, ct: string, color: string) => {
     try {
@@ -293,6 +302,7 @@ export default function TemplateEditor({ onClose }: Props) {
       if (current) {
         setSelected(current.name);
         setBody(autoIndent(current.body));
+        setCustomColor(current.title_color ?? null);
       }
       setDirty(false);
     } catch (e) {
@@ -356,6 +366,7 @@ export default function TemplateEditor({ onClose }: Props) {
       });
       setSelected(tpl.name);
       setBody(autoIndent(tpl.body));
+      setCustomColor(tpl.title_color ?? null);
       setDirty(false);
     } catch (e) {
       console.error(e);
@@ -365,7 +376,7 @@ export default function TemplateEditor({ onClose }: Props) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await invoke("save_content_template", { contentType, name: selected, body });
+      await invoke("save_content_template", { contentType, name: selected, body, titleColor: customColor });
       setDirty(false);
       await loadTemplates(contentType);
     } catch (e) {
@@ -392,6 +403,7 @@ export default function TemplateEditor({ onClose }: Props) {
         name: safe,
       });
       setBody(autoIndent(tpl.body));
+      setCustomColor(tpl.title_color ?? null);
       setDirty(false);
     } catch (e) {
       alert("Erreur: " + e);
@@ -511,19 +523,31 @@ export default function TemplateEditor({ onClose }: Props) {
               <option value="jeu">Jeu</option>
               <option value="app">Application</option>
             </select>
-            {/* Title color picker */}
+            {/* Per-template title color picker */}
             <div className="relative flex items-center gap-1">
               <span className="text-xs text-gray-400">Couleur titre</span>
               <button
                 onClick={() => setShowTitleColorPicker(!showTitleColorPicker)}
                 className="w-6 h-6 rounded border border-[#2a2a4a] cursor-pointer"
                 style={{ backgroundColor: `#${titleColor}` }}
-                title={`Couleur des titres : #${titleColor}`}
+                title={`Couleur des titres : #${titleColor}${customColor ? '' : ' (défaut)'}`}
               />
+              {customColor && (
+                <button
+                  onClick={() => { setCustomColor(null); setDirty(true); }}
+                  className="text-[10px] text-gray-500 hover:text-gray-300"
+                  title="Utiliser la couleur par défaut"
+                >
+                  reset
+                </button>
+              )}
+              {!customColor && (
+                <span className="text-[10px] text-gray-500">défaut</span>
+              )}
               {showTitleColorPicker && (
                 <ColorPickerPopup
                   value={titleColor}
-                  onChange={setTitleColor}
+                  onChange={(v) => { setCustomColor(v); setDirty(true); }}
                   onClose={() => setShowTitleColorPicker(false)}
                 />
               )}

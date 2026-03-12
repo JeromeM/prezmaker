@@ -17,25 +17,40 @@ export default function TemplatePicker({
 }: Props) {
   const [templates, setTemplates] = useState<ContentTemplate[]>([]);
   const [selected, setSelected] = useState("default");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     invoke<ContentTemplate[]>("list_content_templates", { contentType }).then(
       (list) => {
         setTemplates(list);
         if (list.length > 0) setSelected(list[0].name);
+        setLoading(false);
       }
     );
   }, [contentType]);
 
   // If only default template, auto-select it
   useEffect(() => {
-    if (templates.length === 1 && templates[0].name === "default") {
-      onSelect("default");
+    if (!loading && templates.length <= 1) {
+      onSelect(templates[0]?.name ?? "default");
     }
-  }, [templates]);
+  }, [templates, loading]);
 
-  // Don't render if auto-selected
-  if (templates.length <= 1) return null;
+  // Show spinner while loading or during auto-select
+  if (loading || templates.length <= 1) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-400">
+          <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Generation du BBCode...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto p-6">
@@ -55,9 +70,16 @@ export default function TemplatePicker({
             <span className="text-sm font-medium">
               {t.name}
               {t.is_default && (
-                <span className="text-gray-400 ml-2">(par défaut)</span>
+                <span className="text-gray-400 ml-2">(par defaut)</span>
               )}
             </span>
+            {t.title_color && (
+              <span
+                className="inline-block ml-2 w-3 h-3 rounded-full border border-white/20 align-middle"
+                style={{ backgroundColor: `#${t.title_color}` }}
+                title={`Couleur: #${t.title_color}`}
+              />
+            )}
           </button>
         ))}
       </div>

@@ -198,8 +198,9 @@ pub fn get_content_template(content_type: String, name: String) -> Result<Conten
 }
 
 #[tauri::command]
-pub fn save_content_template(content_type: String, name: String, body: String) -> Result<(), String> {
-    template_engine::save_template(&content_type, &name, &body)
+pub fn save_content_template(content_type: String, name: String, body: String, title_color: Option<String>) -> Result<(), String> {
+    template_engine::save_template(&content_type, &name, &body)?;
+    template_engine::save_template_meta(&content_type, &name, title_color)
 }
 
 #[tauri::command]
@@ -231,7 +232,10 @@ pub async fn generate_from_template(
     app_payload: Option<GenerateAppPayload>,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, title_color.as_deref());
+    // Per-template title_color overrides global
+    let tpl_meta = template_engine::get_template(&content_type, &template_name).ok();
+    let effective_color = tpl_meta.and_then(|t| t.title_color).or(title_color);
+    let api = make_api(&config, effective_color.as_deref());
 
     match content_type.as_str() {
         "film" => {

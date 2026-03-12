@@ -27,6 +27,15 @@ pub struct ContentTemplate {
     pub content_type: String,
     pub body: String,
     pub is_default: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title_color: Option<String>,
+}
+
+/// Per-template metadata stored in companion `.meta.json` files
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct TemplateMeta {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    title_color: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,6 +77,40 @@ fn sanitize_name(name: &str) -> String {
         .to_string()
 }
 
+fn meta_path(content_type: &str, name: &str) -> Result<PathBuf, String> {
+    let safe = sanitize_name(name);
+    if safe.is_empty() {
+        return Err("Template name is empty".to_string());
+    }
+    Ok(content_type_dir(content_type)?.join(format!("{}.meta.json", safe)))
+}
+
+fn load_meta(content_type: &str, name: &str) -> TemplateMeta {
+    meta_path(content_type, name)
+        .ok()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+pub fn save_template_meta(content_type: &str, name: &str, title_color: Option<String>) -> Result<(), String> {
+    let meta = TemplateMeta { title_color };
+    // Only write file if there's actual metadata
+    if meta.title_color.is_some() {
+        let path = meta_path(content_type, name)?;
+        let json = serde_json::to_string_pretty(&meta)
+            .map_err(|e| format!("JSON error: {}", e))?;
+        std::fs::write(&path, json)
+            .map_err(|e| format!("Cannot write meta: {}", e))?;
+    } else {
+        // Remove meta file if empty
+        if let Ok(path) = meta_path(content_type, name) {
+            let _ = std::fs::remove_file(path);
+        }
+    }
+    Ok(())
+}
+
 pub fn list_templates(content_type: &str) -> Result<Vec<ContentTemplate>, String> {
     let dir = content_type_dir(content_type)?;
     let mut templates = Vec::new();
@@ -83,11 +126,13 @@ pub fn list_templates(content_type: &str) -> Result<Vec<ContentTemplate>, String
                     .to_string();
                 let body =
                     std::fs::read_to_string(&path).map_err(|e| format!("Read error: {}", e))?;
+                let meta = load_meta(content_type, &name);
                 templates.push(ContentTemplate {
                     name: name.clone(),
                     content_type: content_type.to_string(),
                     body,
                     is_default: name == "default",
+                    title_color: meta.title_color,
                 });
             }
         }
@@ -104,6 +149,7 @@ pub fn list_templates(content_type: &str) -> Result<Vec<ContentTemplate>, String
             content_type: content_type.to_string(),
             body: default_body,
             is_default: true,
+            title_color: None,
         });
     }
 
@@ -132,16 +178,19 @@ pub fn get_template(content_type: &str, name: &str) -> Result<ContentTemplate, S
             content_type: content_type.to_string(),
             body,
             is_default: true,
+            title_color: None,
         });
     }
 
     let body = std::fs::read_to_string(&path)
         .map_err(|e| format!("Cannot read template '{}': {}", name, e))?;
+    let meta = load_meta(content_type, &safe);
     Ok(ContentTemplate {
         name: safe.clone(),
         content_type: content_type.to_string(),
         body,
         is_default: safe == "default",
+        title_color: meta.title_color,
     })
 }
 
@@ -162,7 +211,12 @@ pub fn delete_template(content_type: &str, name: &str) -> Result<(), String> {
     }
     let dir = content_type_dir(content_type)?;
     let path = dir.join(format!("{}.tpl", safe));
-    std::fs::remove_file(&path).map_err(|e| format!("Cannot delete template: {}", e))
+    std::fs::remove_file(&path).map_err(|e| format!("Cannot delete template: {}", e))?;
+    // Also remove metadata file if present
+    if let Ok(mp) = meta_path(content_type, &safe) {
+        let _ = std::fs::remove_file(mp);
+    }
+    Ok(())
 }
 
 pub fn duplicate_template(
@@ -180,7 +234,12 @@ pub fn duplicate_template(
     if dst.exists() {
         return Err(format!("Template '{}' already exists", new_name));
     }
-    std::fs::write(&dst, &src.body).map_err(|e| format!("Cannot write template: {}", e))
+    std::fs::write(&dst, &src.body).map_err(|e| format!("Cannot write template: {}", e))?;
+    // Also duplicate metadata if present
+    if src.title_color.is_some() {
+        save_template_meta(content_type, &safe_new, src.title_color)?;
+    }
+    Ok(())
 }
 
 // --- Template rendering ---
