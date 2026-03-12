@@ -1,15 +1,63 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getVersion } from "@tauri-apps/api/app";
+import { check, Update } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 
 interface Props {
   onClose: () => void;
 }
 
+type CheckState =
+  | { step: "idle" }
+  | { step: "checking" }
+  | { step: "up-to-date" }
+  | { step: "available"; version: string; update: Update }
+  | { step: "downloading"; downloaded: number; total: number }
+  | { step: "installing" }
+  | { step: "error"; message: string };
+
 export default function AboutModal({ onClose }: Props) {
   const [version, setVersion] = useState("");
+  const [updateState, setUpdateState] = useState<CheckState>({ step: "idle" });
 
   useEffect(() => {
     getVersion().then(setVersion).catch(() => setVersion("?"));
+  }, []);
+
+  const checkForUpdate = useCallback(async () => {
+    setUpdateState({ step: "checking" });
+    try {
+      const update = await check();
+      if (update) {
+        setUpdateState({ step: "available", version: update.version, update });
+      } else {
+        setUpdateState({ step: "up-to-date" });
+      }
+    } catch (e) {
+      setUpdateState({ step: "error", message: String(e) });
+    }
+  }, []);
+
+  const startUpdate = useCallback(async (update: Update) => {
+    setUpdateState({ step: "downloading", downloaded: 0, total: 0 });
+    try {
+      await update.downloadAndInstall((event) => {
+        if (event.event === "Started" && event.data.contentLength) {
+          setUpdateState((prev) =>
+            prev.step === "downloading" ? { ...prev, total: event.data.contentLength! } : prev
+          );
+        } else if (event.event === "Progress") {
+          setUpdateState((prev) =>
+            prev.step === "downloading" ? { ...prev, downloaded: prev.downloaded + event.data.chunkLength } : prev
+          );
+        } else if (event.event === "Finished") {
+          setUpdateState({ step: "installing" });
+        }
+      });
+      await relaunch();
+    } catch (e) {
+      setUpdateState({ step: "error", message: String(e) });
+    }
   }, []);
   return (
     <div
@@ -71,13 +119,90 @@ export default function AboutModal({ onClose }: Props) {
           </div>
         </div>
 
-        <div className="flex justify-end px-6 py-4 border-t border-[#2a2a4a]">
-          <button
-            onClick={onClose}
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors"
-          >
-            Fermer
-          </button>
+        <div className="px-6 py-4 border-t border-[#2a2a4a] space-y-3">
+          {/* Update section */}
+          {updateState.step === "idle" && (
+            <button
+              onClick={checkForUpdate}
+              className="w-full flex items-center justify-center gap-2 bg-[#16213e] hover:bg-[#1e2d4d] border border-[#2a2a4a] text-gray-300 hover:text-white rounded px-4 py-2 text-sm transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m0 0a9 9 0 0 1 9-9m-9 9a9 9 0 0 0 9 9" />
+              </svg>
+              Rechercher les mises a jour
+            </button>
+          )}
+
+          {updateState.step === "checking" && (
+            <div className="flex items-center justify-center gap-2 text-gray-400 text-sm py-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Verification en cours...
+            </div>
+          )}
+
+          {updateState.step === "up-to-date" && (
+            <p className="text-center text-green-400 text-sm py-1">
+              Vous etes a jour !
+            </p>
+          )}
+
+          {updateState.step === "available" && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-300">
+                Version <span className="text-white font-semibold">{updateState.version}</span> disponible
+              </p>
+              <button
+                onClick={() => startUpdate(updateState.update)}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded text-sm transition-colors"
+              >
+                Mettre a jour
+              </button>
+            </div>
+          )}
+
+          {updateState.step === "downloading" && (
+            <div className="space-y-2">
+              <div className="w-full bg-[#2a2a4a] rounded-full h-2">
+                <div
+                  className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: updateState.total > 0 ? `${Math.min((updateState.downloaded / updateState.total) * 100, 100)}%` : "0%" }}
+                />
+              </div>
+              <p className="text-gray-400 text-xs text-center">
+                {updateState.total > 0
+                  ? `${(updateState.downloaded / 1024 / 1024).toFixed(1)} / ${(updateState.total / 1024 / 1024).toFixed(1)} Mo`
+                  : `${(updateState.downloaded / 1024 / 1024).toFixed(1)} Mo`}
+              </p>
+            </div>
+          )}
+
+          {updateState.step === "installing" && (
+            <div className="flex items-center justify-center gap-2 text-purple-400 text-sm py-1">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Installation et redemarrage...
+            </div>
+          )}
+
+          {updateState.step === "error" && (
+            <p className="text-center text-red-400 text-xs py-1">
+              Erreur : {updateState.message}
+            </p>
+          )}
+
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors"
+            >
+              Fermer
+            </button>
+          </div>
         </div>
       </div>
     </div>
