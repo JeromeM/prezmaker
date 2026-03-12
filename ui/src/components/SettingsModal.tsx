@@ -26,6 +26,7 @@ export default function SettingsModal({ onClose }: Props) {
     igdb_client_secret: null,
     language: "fr-FR",
     title_color: "c0392b",
+    default_templates: {},
     auto_clipboard: false,
     llm_provider: null,
     llm_api_key: null,

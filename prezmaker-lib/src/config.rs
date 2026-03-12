@@ -1,5 +1,6 @@
 use crate::error::PrezError;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use tracing::debug;
 
@@ -42,6 +43,9 @@ pub struct Preferences {
     pub auto_clipboard: bool,
     #[serde(default = "default_pseudo")]
     pub pseudo: String,
+    /// Default template name per content type (e.g. "film" -> "MonTemplate")
+    #[serde(default)]
+    pub default_templates: HashMap<String, String>,
 }
 
 impl Default for Preferences {
@@ -51,6 +55,7 @@ impl Default for Preferences {
             title_color: default_title_color(),
             auto_clipboard: false,
             pseudo: default_pseudo(),
+            default_templates: HashMap::new(),
         }
     }
 }

@@ -6,6 +6,7 @@ use prezmaker_lib::orchestrator_api::{GameDetailsResponse, OrchestratorApi, Sear
 use prezmaker_lib::torrent::{self, TorrentInfo};
 use prezmaker_lib::template_engine::{self, ContentTemplate, TemplateTag};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -347,6 +348,8 @@ pub struct SettingsPayload {
     pub igdb_client_secret: Option<String>,
     pub language: String,
     pub title_color: String,
+    #[serde(default)]
+    pub default_templates: HashMap<String, String>,
     pub auto_clipboard: bool,
     pub llm_provider: Option<String>,
     pub llm_api_key: Option<String>,
@@ -362,6 +365,7 @@ pub fn get_settings(state: tauri::State<'_, AppState>) -> SettingsPayload {
         igdb_client_secret: config.igdb.client_secret.clone(),
         language: config.preferences.language.clone(),
         title_color: config.preferences.title_color.clone(),
+        default_templates: config.preferences.default_templates.clone(),
         auto_clipboard: config.preferences.auto_clipboard,
         llm_provider: config.llm.provider.clone(),
         llm_api_key: config.llm.api_key.clone(),
@@ -384,7 +388,32 @@ pub fn save_settings(
     config.llm.provider = settings.llm_provider;
     config.llm.api_key = settings.llm_api_key;
     config.preferences.pseudo = settings.pseudo;
+    config.preferences.default_templates = settings.default_templates;
     config.save().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_default_template(
+    state: tauri::State<'_, AppState>,
+    content_type: String,
+    template_name: String,
+) -> Result<(), String> {
+    let mut config = state.config.lock().unwrap();
+    if template_name.is_empty() {
+        config.preferences.default_templates.remove(&content_type);
+    } else {
+        config.preferences.default_templates.insert(content_type, template_name);
+    }
+    config.save().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_default_template(
+    state: tauri::State<'_, AppState>,
+    content_type: String,
+) -> Option<String> {
+    let config = state.config.lock().unwrap();
+    config.preferences.default_templates.get(&content_type).cloned()
 }
 
 // --- Templates ---

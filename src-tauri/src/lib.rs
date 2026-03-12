@@ -48,6 +48,8 @@ pub fn run() {
             commands::generate_nfo,
             commands::get_settings,
             commands::save_settings,
+            commands::set_default_template,
+            commands::get_default_template,
             commands::list_templates,
             commands::load_template,
             commands::save_template,

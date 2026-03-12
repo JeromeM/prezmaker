@@ -77,6 +77,7 @@ export interface SettingsPayload {
   igdb_client_secret: string | null;
   language: string;
   title_color: string;
+  default_templates: Record<string, string>;
   auto_clipboard: boolean;
   llm_provider: string | null;
   llm_api_key: string | null;

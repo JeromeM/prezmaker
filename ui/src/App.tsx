@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { open } from "@tauri-apps/plugin-dialog";
 import { usePrezMaker } from "./hooks/usePrezMaker";
 import TopBar from "./components/TopBar";
 import ResultSelector from "./components/ResultSelector";
@@ -32,6 +34,37 @@ function App() {
     reset,
   } = usePrezMaker();
 
+  const [dragging, setDragging] = useState(false);
+
+  // Global drag-drop listener for .torrent files
+  useEffect(() => {
+    const unlisten = getCurrentWindow().onDragDropEvent((event) => {
+      if (event.payload.type === "enter") {
+        const hasTorrent = event.payload.paths.some((p) =>
+          p.toLowerCase().endsWith(".torrent")
+        );
+        if (hasTorrent) setDragging(true);
+      } else if (event.payload.type === "drop") {
+        setDragging(false);
+        const torrent = event.payload.paths.find((p) =>
+          p.toLowerCase().endsWith(".torrent")
+        );
+        if (torrent) importTorrent(torrent);
+      } else if (event.payload.type === "leave") {
+        setDragging(false);
+      }
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, [importTorrent]);
+
+  const handleIdleClick = useCallback(async () => {
+    const path = await open({
+      filters: [{ name: "Torrent", extensions: ["torrent"] }],
+      multiple: false,
+    });
+    if (path) importTorrent(path as string);
+  }, [importTorrent]);
+
   const isLoading = state.step === "searching" || state.step === "generating";
 
   if (!onboardingDone) {
@@ -53,11 +86,40 @@ function App() {
 
       <main className="flex-1 flex flex-col min-h-0">
         {state.step === "idle" && (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            <div className="text-center">
-              <p className="text-2xl mb-2">PrezMaker</p>
-              <p className="text-sm">
-                Sélectionnez un type de contenu et lancez une recherche
+          <div
+            onClick={handleIdleClick}
+            className={`flex-1 flex items-center justify-center cursor-pointer transition-colors ${
+              dragging
+                ? "bg-blue-600/10 border-2 border-dashed border-blue-500"
+                : "hover:bg-[#16213e]/30"
+            }`}
+          >
+            <div className="text-center pointer-events-none select-none">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`w-12 h-12 mx-auto mb-4 transition-colors ${
+                  dragging ? "text-blue-400" : "text-gray-600"
+                }`}
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <p className={`text-lg mb-2 transition-colors ${
+                dragging ? "text-blue-400" : "text-gray-500"
+              }`}>
+                {dragging
+                  ? "Déposez le fichier .torrent"
+                  : "Glissez un .torrent ici ou cliquez pour importer"}
+              </p>
+              <p className="text-sm text-gray-600">
+                ou lancez une recherche depuis la barre ci-dessus
               </p>
             </div>
           </div>
@@ -182,6 +244,27 @@ function App() {
           </div>
         )}
       </main>
+      {dragging && state.step !== "idle" && (
+        <div className="absolute inset-0 z-50 bg-[#0f0f23]/80 flex items-center justify-center pointer-events-none">
+          <div className="border-2 border-dashed border-blue-500 rounded-xl p-12 text-center">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-12 h-12 mx-auto mb-4 text-blue-400"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <p className="text-blue-400 text-lg">Déposez le fichier .torrent</p>
+          </div>
+        </div>
+      )}
       {showSettings && (
         <SettingsModal onClose={() => setShowSettings(false)} />
       )}
