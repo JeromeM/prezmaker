@@ -29,6 +29,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Check signing key is set
+        shell: bash
         run: |
           if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
             echo "::error::TAURI_SIGNING_PRIVATE_KEY is NOT set"
