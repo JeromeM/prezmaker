@@ -155,6 +155,7 @@ const COLOR_TAGS = new Set(["heading", "section", "sub_section", "inline_heading
 interface HighlightSpan {
   text: string;
   className: string;
+  error?: string;
 }
 
 /** Find last index in array matching predicate (ES2020-compatible) */
@@ -165,8 +166,8 @@ function findLastIdx<T>(arr: T[], pred: (item: T) => boolean): number {
   return -1;
 }
 
-function findUnmatchedTags(body: string): Set<number> {
-  const unmatched = new Set<number>();
+function findUnmatchedTags(body: string): Map<number, string> {
+  const unmatched = new Map<number, string>();
   const positions = extractTagPositions(body);
   const stack: { name: string; pos: number }[] = [];
 
@@ -177,18 +178,21 @@ function findUnmatchedTags(body: string): Set<number> {
 
     if (name === "/if") {
       const idx = findLastIdx(stack, (e) => e.name === "#if");
-      if (idx >= 0) { stack.splice(idx, 1); } else { unmatched.add(p.start); }
+      if (idx >= 0) { stack.splice(idx, 1); } else { unmatched.set(p.start, "{{/if}} sans {{#if}} correspondant"); }
     } else if (name === "#if") {
       stack.push({ name: "#if", pos: p.start });
     } else if (name.startsWith("/")) {
       const base = name.slice(1);
       const idx = findLastIdx(stack, (e) => e.name === base);
-      if (idx >= 0) { stack.splice(idx, 1); } else { unmatched.add(p.start); }
+      if (idx >= 0) { stack.splice(idx, 1); } else { unmatched.set(p.start, `{{/${base}}} sans {{${base}}} correspondant`); }
     } else if (!hasArgs && name in BLOCK_PAIRS) {
       stack.push({ name, pos: p.start });
     }
   }
-  for (const s of stack) { unmatched.add(s.pos); }
+  for (const s of stack) {
+    const closing = s.name === "#if" ? "{{/if}}" : `{{/${s.name}}}`;
+    unmatched.set(s.pos, `${closing} manquant`);
+  }
   return unmatched;
 }
 
@@ -196,7 +200,7 @@ const LAYOUT_TAGS = new Set([
   ...Object.keys(BLOCK_PAIRS),
   ...Object.values(BLOCK_PAIRS).map(v => v),
   ...Array.from(COLOR_TAGS),
-  "hr", "br", "footer", "field", "color", "size", "img", "img_poster",
+  "hr", "br", "footer", "field", "color", "size", "url", "img", "img_poster",
   "img_cover", "img_logo", "spoiler", "td", "th",
   "poster_info", "cover_info", "logo_info", "ratings_table",
   "tech_table", "game_tech_table", "game_reqs_table", "app_tech_table", "screenshots_grid",
@@ -212,7 +216,7 @@ function classifyTag(tag: string): string {
 
 function highlightTemplate(body: string): HighlightSpan[] {
   const spans: HighlightSpan[] = [];
-  const unmatchedPositions = findUnmatchedTags(body);
+  const unmatchedMap = findUnmatchedTags(body);
   const positions = extractTagPositions(body);
   let lastIndex = 0;
 
@@ -224,9 +228,10 @@ function highlightTemplate(body: string): HighlightSpan[] {
 
     const tagText = body.substring(p.start, p.end);
     let cls = classifyTag(tagText);
-    if (unmatchedPositions.has(p.start)) cls += " hl-unmatched";
+    const errorMsg = unmatchedMap.get(p.start);
+    if (errorMsg) cls += " hl-unmatched";
 
-    spans.push({ text: tagText, className: cls });
+    spans.push({ text: tagText, className: cls, error: errorMsg });
     lastIndex = p.end;
   }
 
@@ -299,6 +304,7 @@ export default function TemplateEditor({ onClose }: Props) {
   const titleColor = customColor ?? globalColor;
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pickedColor, setPickedColor] = useState("e74c3c");
+  const [tagSearch, setTagSearch] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
@@ -396,6 +402,20 @@ export default function TemplateEditor({ onClose }: Props) {
     }
     return sorted;
   }, [tags]);
+
+  // Filter tags by search query
+  const filteredTagsByCategory = useMemo(() => {
+    if (!tagSearch.trim()) return tagsByCategory;
+    const q = tagSearch.toLowerCase();
+    const result: [string, TemplateTag[]][] = [];
+    for (const [cat, catTags] of tagsByCategory) {
+      const filtered = catTags.filter(
+        (t) => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)
+      );
+      if (filtered.length > 0) result.push([cat, filtered]);
+    }
+    return result;
+  }, [tagsByCategory, tagSearch]);
 
   const handleSelectTemplate = async (name: string) => {
     if (dirty && !confirm("Modifications non sauvegardées. Continuer ?")) return;
@@ -693,11 +713,17 @@ export default function TemplateEditor({ onClose }: Props) {
         <div className="flex flex-1 min-h-0">
           {/* Tag reference sidebar */}
           <div className="w-72 border-r border-[#2a2a4a] flex flex-col bg-[#16213e]/30">
-            <div className="px-3 py-2 border-b border-[#2a2a4a] text-sm font-medium text-gray-300">
-              Balises
+            <div className="px-3 py-2 border-b border-[#2a2a4a]">
+              <input
+                type="text"
+                value={tagSearch}
+                onChange={(e) => setTagSearch(e.target.value)}
+                placeholder="Rechercher une balise..."
+                className="w-full bg-[#0f0f23] text-white border border-[#2a2a4a] rounded px-2 py-1 text-xs outline-none focus:border-blue-500 placeholder-gray-600"
+              />
             </div>
             <div className="flex-1 overflow-y-auto">
-              {tagsByCategory.map(([category, categoryTags]) => (
+              {filteredTagsByCategory.map(([category, categoryTags]) => (
                 <div key={category}>
                   <button
                     onClick={() => toggleCategory(category)}
@@ -706,7 +732,7 @@ export default function TemplateEditor({ onClose }: Props) {
                     <span className="text-[10px]">{collapsed.has(category) ? "\u25B6" : "\u25BC"}</span>
                     {category}
                   </button>
-                  {!collapsed.has(category) && categoryTags.map((t) => {
+                  {(!collapsed.has(category) || tagSearch.trim()) && categoryTags.map((t) => {
                     const tagName = t.name.split(":")[0].toLowerCase();
                     const isColorTag = tagName === "color";
                     return (
@@ -789,7 +815,12 @@ export default function TemplateEditor({ onClose }: Props) {
                 aria-hidden="true"
               >
                 {highlightedSpans.map((span, i) => (
-                  <span key={i} className={span.className}>{span.text}</span>
+                  <span
+                    key={i}
+                    className={span.className}
+                    title={span.error}
+                    style={span.error ? { pointerEvents: "auto", cursor: "help" } : undefined}
+                  >{span.text}</span>
                 ))}
                 {/* Extra line to match textarea scrollable area */}
                 {"\n"}
@@ -801,6 +832,41 @@ export default function TemplateEditor({ onClose }: Props) {
                 value={body}
                 onChange={(e) => { setBody(e.target.value); setDirty(true); }}
                 onScroll={syncScroll}
+                onKeyDown={(e) => {
+                  if (e.key === "Tab") {
+                    e.preventDefault();
+                    const ta = textareaRef.current!;
+                    const start = ta.selectionStart;
+                    const end = ta.selectionEnd;
+
+                    if (start === end && !e.shiftKey) {
+                      // Simple tab: insert 4 spaces
+                      const newBody = body.substring(0, start) + "    " + body.substring(end);
+                      setBody(newBody);
+                      setDirty(true);
+                      requestAnimationFrame(() => { ta.selectionStart = ta.selectionEnd = start + 4; });
+                    } else {
+                      // Multi-line indent/dedent
+                      const lineStart = body.lastIndexOf("\n", start - 1) + 1;
+                      const lineEnd = end === start ? body.indexOf("\n", end) : body.lastIndexOf("\n", end - 1) + 1 < lineStart ? end : (() => { const i = body.indexOf("\n", end); return i < 0 ? body.length : i; })();
+                      const block = body.substring(lineStart, lineEnd);
+                      const lines = block.split("\n");
+                      const modified = lines.map((line) =>
+                        e.shiftKey
+                          ? line.startsWith("    ") ? line.substring(4) : line.replace(/^\t/, "")
+                          : "    " + line
+                      );
+                      const newBlock = modified.join("\n");
+                      const newBody = body.substring(0, lineStart) + newBlock + body.substring(lineEnd);
+                      setBody(newBody);
+                      setDirty(true);
+                      requestAnimationFrame(() => {
+                        ta.selectionStart = lineStart;
+                        ta.selectionEnd = lineStart + newBlock.length;
+                      });
+                    }
+                  }
+                }}
                 className="absolute inset-0 w-full h-full bg-transparent text-transparent caret-gray-200 font-mono text-sm p-4 resize-none outline-none border-none"
                 style={{ caretColor: "#e0e0e0", WebkitTextFillColor: "transparent" }}
                 spellCheck={false}

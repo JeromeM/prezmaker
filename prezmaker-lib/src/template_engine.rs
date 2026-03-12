@@ -620,6 +620,20 @@ fn render_single_layout_tag(
             }
         }
 
+        // --- URL ---
+        "url" => {
+            let text = arg.unwrap_or("");
+            if let Some(sep) = text.find(':') {
+                let href = &text[..sep];
+                let label = &text[sep + 1..];
+                Some(bbcode::url(href, label))
+            } else if !text.is_empty() {
+                Some(bbcode::url(text, text))
+            } else {
+                Some(String::new())
+            }
+        }
+
         // --- Images ---
         "img" => {
             let url_full = arg.unwrap_or("");
@@ -1570,6 +1584,9 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
         tag_ex("img_poster:URL", "Image poster (300px)", images, "{{img_poster:{{poster_url}}}}"),
         tag_ex("img_cover:URL", "Image jaquette (264px)", images, "{{img_cover:{{cover_url}}}}"),
         tag_ex("img_logo:URL", "Image logo (200px)", images, "{{img_logo:{{logo_url}}}}"),
+
+        // --- URL ---
+        tag_ex("url:URL:label", "Lien hypertexte", links_cat, "{{url:https://...:Cliquez ici}}"),
 
         // --- Tableaux ---
         tag_ex("table}}...{{/table", "Bloc tableau", tables, "{{table}}...{{/table}}"),
