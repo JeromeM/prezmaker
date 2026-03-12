@@ -304,20 +304,44 @@ impl OrchestratorApi {
 
         // Cross-fetch Steam for system requirements if missing
         if game.min_reqs.is_none() && game.rec_reqs.is_none() {
-            if let Some(appid) = game.steam_appid {
-                info!("Cross-fetch Steam pour config requise (appid={})", appid);
-                let steam = SteamClient::new(self.language.clone());
-                match steam.get_game_details(appid).await {
-                    Ok(steam_game) => {
-                        game.min_reqs = steam_game.min_reqs;
-                        game.rec_reqs = steam_game.rec_reqs;
-                        // Also grab Metacritic score from Steam if we don't have it
-                        if game.ratings.is_empty() {
-                            game.ratings = steam_game.ratings;
+            let steam = SteamClient::new(self.language.clone());
+
+            // Try by Steam App ID first (from IGDB external_games)
+            let steam_result = if let Some(appid) = game.steam_appid {
+                info!("Cross-fetch Steam par appid={}", appid);
+                Some(steam.get_game_details(appid).await)
+            } else {
+                // Fallback: search Steam by title
+                info!("Cross-fetch Steam par recherche titre: {}", game.title);
+                match steam.search_games(&game.title).await {
+                    Ok(results) => {
+                        if let Some(first) = results.into_iter().next() {
+                            if let Some(appid) = first.steam_appid {
+                                game.steam_appid = Some(appid);
+                                Some(steam.get_game_details(appid).await)
+                            } else {
+                                None
+                            }
+                        } else {
+                            warn!("Aucun resultat Steam pour: {}", game.title);
+                            None
                         }
                     }
-                    Err(e) => warn!("Steam cross-fetch echoue : {}", e),
+                    Err(e) => {
+                        warn!("Recherche Steam echouee: {}", e);
+                        None
+                    }
                 }
+            };
+
+            if let Some(Ok(steam_game)) = steam_result {
+                game.min_reqs = steam_game.min_reqs;
+                game.rec_reqs = steam_game.rec_reqs;
+                if game.ratings.is_empty() {
+                    game.ratings = steam_game.ratings;
+                }
+            } else if let Some(Err(e)) = steam_result {
+                warn!("Steam cross-fetch echoue: {}", e);
             }
         }
 

@@ -425,10 +425,11 @@ fn replace_data_tags(template: &str, data: &HashMap<String, String>) -> String {
 
 fn render_layout_tags(template: &str, ctx: &RenderContext, title_color: &str, pseudo: &str) -> String {
     let mut result = String::new();
+    let bytes = template.as_bytes();
     let mut pos = 0;
 
-    while pos < template.len() {
-        if template[pos..].starts_with("{{") {
+    while pos < bytes.len() {
+        if pos + 1 < bytes.len() && bytes[pos] == b'{' && bytes[pos + 1] == b'{' {
             if let Some(end) = template[pos + 2..].find("}}") {
                 let tag_content = &template[pos + 2..pos + 2 + end];
                 let after = pos + 2 + end + 2;
@@ -441,10 +442,16 @@ fn render_layout_tags(template: &str, ctx: &RenderContext, title_color: &str, ps
                 }
             }
         }
-        if pos < template.len() {
-            let ch = &template[pos..pos + 1];
-            result.push_str(ch);
-            pos += 1;
+        // Advance by one UTF-8 character
+        if pos < bytes.len() {
+            let b = bytes[pos];
+            let char_len = if b < 0x80 { 1 }
+                else if b < 0xE0 { 2 }
+                else if b < 0xF0 { 3 }
+                else { 4 };
+            let end = (pos + char_len).min(bytes.len());
+            result.push_str(&template[pos..end]);
+            pos = end;
         }
     }
 

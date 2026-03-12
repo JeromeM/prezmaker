@@ -561,35 +561,6 @@ export default function TemplateEditor({ onClose }: Props) {
               <option value="jeu">Jeu</option>
               <option value="app">Application</option>
             </select>
-            {/* Per-template title color picker */}
-            <div className="relative flex items-center gap-1">
-              <span className="text-xs text-gray-400">Couleur titre</span>
-              <button
-                onClick={() => setShowTitleColorPicker(!showTitleColorPicker)}
-                className="w-6 h-6 rounded border border-[#2a2a4a] cursor-pointer"
-                style={{ backgroundColor: `#${titleColor}` }}
-                title={`Couleur des titres : #${titleColor}${customColor ? '' : ' (défaut)'}`}
-              />
-              {customColor && (
-                <button
-                  onClick={() => { setCustomColor(null); setDirty(true); }}
-                  className="text-[10px] text-gray-500 hover:text-gray-300"
-                  title="Utiliser la couleur par défaut"
-                >
-                  reset
-                </button>
-              )}
-              {!customColor && (
-                <span className="text-[10px] text-gray-500">défaut</span>
-              )}
-              {showTitleColorPicker && (
-                <ColorPickerPopup
-                  value={titleColor}
-                  onChange={(v) => { setCustomColor(v); setDirty(true); }}
-                  onClose={() => setShowTitleColorPicker(false)}
-                />
-              )}
-            </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
         </div>
@@ -633,6 +604,36 @@ export default function TemplateEditor({ onClose }: Props) {
           )}
 
           {dirty && <span className="text-yellow-400 text-xs">modifié</span>}
+
+          {/* Per-template title color picker — right-aligned */}
+          <div className="relative flex items-center gap-1 ml-auto">
+            <span className="text-xs text-gray-400">Couleur titre</span>
+            <button
+              onClick={() => setShowTitleColorPicker(!showTitleColorPicker)}
+              className="w-6 h-6 rounded border border-[#2a2a4a] cursor-pointer"
+              style={{ backgroundColor: `#${titleColor}` }}
+              title={`Couleur des titres : #${titleColor}${customColor ? '' : ' (défaut)'}`}
+            />
+            {customColor && (
+              <button
+                onClick={() => { setCustomColor(null); setDirty(true); }}
+                className="text-[10px] text-gray-500 hover:text-gray-300"
+                title="Utiliser la couleur par défaut"
+              >
+                reset
+              </button>
+            )}
+            {!customColor && (
+              <span className="text-[10px] text-gray-500">défaut</span>
+            )}
+            {showTitleColorPicker && (
+              <ColorPickerPopup
+                value={titleColor}
+                onChange={(v) => { setCustomColor(v); setDirty(true); }}
+                onClose={() => setShowTitleColorPicker(false)}
+              />
+            )}
+          </div>
         </div>
 
         {/* New dialog */}
