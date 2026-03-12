@@ -247,6 +247,7 @@ fn parse_steam_requirements(html: &str) -> SystemReqs {
     // Extract each <li> content, strip tags, then match known labels
     for segment in html.split("<li>") {
         let clean = strip_html_tags(segment)
+            .replace('\u{00a0}', " ") // non-breaking space → normal space
             .replace('\n', " ")
             .trim()
             .to_string();
@@ -326,6 +327,19 @@ mod tests {
         assert_eq!(reqs.ram, "12 GB de mémoire");
         assert_eq!(reqs.gpu, "GeForce GTX 1060 6GB");
         assert_eq!(reqs.storage, "70 GB d'espace disque disponible");
+    }
+
+    #[test]
+    fn test_parse_steam_requirements_nbsp() {
+        // Real Steam HTML uses \u{00a0} (non-breaking space) before colons
+        let html = "<strong>Minimale\u{00a0}:</strong><br><ul class=\"bb_ul\"><li><strong>Syst\u{00e8}me d'exploitation\u{00a0}:</strong> Windows 10 64 bit\u{ff08}1903\u{ff09}<br></li><li><strong>Processeur\u{00a0}:</strong> INTEL E3-1230v2<br></li><li><strong>M\u{00e9}moire vive\u{00a0}:</strong> 8\u{00a0}GB de m\u{00e9}moire<br></li><li><strong>Graphiques\u{00a0}:</strong> NVIDIA GTX960(4G)<br></li><li><strong>Espace disque\u{00a0}:</strong> 13\u{00a0}GB d'espace disque disponible<br></li></ul>";
+        let reqs = parse_steam_requirements(html);
+        assert!(!reqs.is_empty(), "Requirements should not be empty");
+        assert!(reqs.os.contains("Windows"), "OS should contain Windows, got: {}", reqs.os);
+        assert!(reqs.cpu.contains("E3-1230"), "CPU should contain E3-1230, got: {}", reqs.cpu);
+        assert!(reqs.ram.contains("8"), "RAM should contain 8, got: {}", reqs.ram);
+        assert!(reqs.gpu.contains("GTX960"), "GPU should contain GTX960, got: {}", reqs.gpu);
+        assert!(reqs.storage.contains("13"), "Storage should contain 13, got: {}", reqs.storage);
     }
 
     #[test]
