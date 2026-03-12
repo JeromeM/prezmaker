@@ -226,10 +226,7 @@ export default function GameExtrasForm({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm text-gray-400 mb-1">
-            Description{" "}
-            {claudeDescription && (
-              <span className="text-green-400">(pre-remplie par Claude)</span>
-            )}
+            Description
           </label>
           <textarea
             value={description}

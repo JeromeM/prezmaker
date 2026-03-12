@@ -283,7 +283,7 @@ impl OrchestratorApi {
         game_id: u64,
         source: Option<&str>,
     ) -> Result<GameDetailsResponse, PrezError> {
-        let game = match source.unwrap_or("igdb") {
+        let mut game = match source.unwrap_or("igdb") {
             "steam" => {
                 info!("Recuperation details Steam : {}", game_id);
                 let steam = SteamClient::new(self.language.clone());
@@ -301,6 +301,25 @@ impl OrchestratorApi {
                     .map_err(|e| PrezError::Other(format!("Erreur details IGDB : {}", e)))?
             }
         };
+
+        // Cross-fetch Steam for system requirements if missing
+        if game.min_reqs.is_none() && game.rec_reqs.is_none() {
+            if let Some(appid) = game.steam_appid {
+                info!("Cross-fetch Steam pour config requise (appid={})", appid);
+                let steam = SteamClient::new(self.language.clone());
+                match steam.get_game_details(appid).await {
+                    Ok(steam_game) => {
+                        game.min_reqs = steam_game.min_reqs;
+                        game.rec_reqs = steam_game.rec_reqs;
+                        // Also grab Metacritic score from Steam if we don't have it
+                        if game.ratings.is_empty() {
+                            game.ratings = steam_game.ratings;
+                        }
+                    }
+                    Err(e) => warn!("Steam cross-fetch echoue : {}", e),
+                }
+            }
+        }
 
         let claude_description = self
             .resolve_description(&game.title, game.synopsis.as_deref())

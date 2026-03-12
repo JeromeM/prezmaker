@@ -81,7 +81,7 @@ impl GameProvider for IgdbClient {
 
     async fn get_game_details(&self, id: u64) -> anyhow::Result<Game> {
         let body = format!(
-            r#"where id = {}; fields name,slug,summary,first_release_date,genres.name,platforms.name,involved_companies.company.name,involved_companies.developer,involved_companies.publisher,cover.image_id,screenshots.image_id,total_rating,aggregated_rating;"#,
+            r#"where id = {}; fields name,slug,summary,first_release_date,genres.name,platforms.name,involved_companies.company.name,involved_companies.developer,involved_companies.publisher,cover.image_id,screenshots.image_id,total_rating,aggregated_rating,external_games.category,external_games.uid;"#,
             id
         );
 
@@ -145,6 +145,17 @@ impl GameProvider for IgdbClient {
             }
         }
 
+        // Extract Steam App ID from external_games (category 1 = Steam)
+        let steam_appid = g
+            .external_games
+            .as_ref()
+            .and_then(|ext| {
+                ext.iter()
+                    .find(|e| e.category == 1)
+                    .and_then(|e| e.uid.as_deref())
+                    .and_then(|uid| uid.parse::<u64>().ok())
+            });
+
         Ok(Game {
             title: g.name,
             release_date: g.first_release_date.map(format_timestamp),
@@ -159,7 +170,7 @@ impl GameProvider for IgdbClient {
             ratings,
             igdb_id: Some(id),
             igdb_slug: g.slug,
-            steam_appid: None,
+            steam_appid,
             tech_info: None,
             installation: None,
             min_reqs: None,

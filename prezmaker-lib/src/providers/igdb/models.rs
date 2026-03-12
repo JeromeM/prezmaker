@@ -14,6 +14,13 @@ pub struct IgdbGame {
     pub screenshots: Option<Vec<IgdbScreenshot>>,
     pub total_rating: Option<f64>,
     pub aggregated_rating: Option<f64>,
+    pub external_games: Option<Vec<IgdbExternalGame>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct IgdbExternalGame {
+    pub category: u32,
+    pub uid: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
