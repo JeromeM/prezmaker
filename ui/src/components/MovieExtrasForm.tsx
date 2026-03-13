@@ -18,9 +18,6 @@ interface Props {
   onCancel: () => void;
 }
 
-const inputClass =
-  "w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500";
-
 export default function MovieExtrasForm({ contentType, tmdbId, title, tech, onGenerate, onCancel }: Props) {
   const [analysis, setAnalysis] = useState<MediaAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
