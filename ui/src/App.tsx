@@ -91,7 +91,7 @@ function App() {
             className={`flex-1 flex items-center justify-center cursor-pointer transition-colors ${
               dragging
                 ? "bg-blue-600/10 border-2 border-dashed border-blue-500"
-                : "hover:bg-[#16213e]/30"
+                : ""
             }`}
           >
             <div className="text-center pointer-events-none select-none">
