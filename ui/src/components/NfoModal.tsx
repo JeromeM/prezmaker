@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 
 interface Props {
   content: string;
@@ -18,14 +20,17 @@ export default function NfoModal({ content, onClose }: Props) {
     }
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "info.nfo";
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDownload = async () => {
+    const path = await save({
+      defaultPath: "info.nfo",
+      filters: [{ name: "NFO", extensions: ["nfo", "txt"] }],
+    });
+    if (!path) return;
+    try {
+      await invoke("save_text_file", { path, content });
+    } catch (e) {
+      alert("Erreur: " + e);
+    }
   };
 
   return (

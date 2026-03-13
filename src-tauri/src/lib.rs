@@ -49,6 +49,7 @@ pub fn run() {
             commands::get_template_tags,
             commands::generate_from_template,
             commands::convert_bbcode,
+            commands::save_text_file,
             commands::generate_nfo,
             commands::get_settings,
             commands::save_settings,

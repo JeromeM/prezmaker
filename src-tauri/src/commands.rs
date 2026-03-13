@@ -324,6 +324,11 @@ pub async fn generate_from_template(
 }
 
 #[tauri::command]
+pub fn save_text_file(path: String, content: String) -> Result<(), String> {
+    std::fs::write(&path, content).map_err(|e| format!("Cannot write file: {}", e))
+}
+
+#[tauri::command]
 pub fn convert_bbcode(bbcode: String) -> String {
     bbcode_to_html::convert_bbcode_to_html(&bbcode)
 }
