@@ -9,6 +9,7 @@ interface Props {
   onOpenSettings: () => void;
   onImportTorrent: (filePath: string) => void;
   onOpenTemplateEditor: () => void;
+  onOpenCollections: () => void;
   onOpenAbout: () => void;
 }
 
@@ -19,6 +20,7 @@ export default function TopBar({
   onOpenSettings,
   onImportTorrent,
   onOpenTemplateEditor,
+  onOpenCollections,
   onOpenAbout,
 }: Props) {
   const [query, setQuery] = useState("");
@@ -101,6 +103,17 @@ export default function TopBar({
               <line x1="16" y1="13" x2="8" y2="13" />
               <line x1="16" y1="17" x2="8" y2="17" />
               <polyline points="10 9 9 9 8 9" />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenCollections}
+            className="text-fg-muted hover:text-fg-bright transition-colors p-2"
+            title="Collections"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
             </svg>
           </button>
 

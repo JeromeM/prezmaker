@@ -60,6 +60,10 @@ pub fn run() {
             commands::duplicate_template,
             commands::export_template,
             commands::import_template,
+            commands::save_to_collection,
+            commands::list_collection,
+            commands::get_collection_entry,
+            commands::delete_collection_entry,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

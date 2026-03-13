@@ -6,16 +6,18 @@ import HtmlPreview from "./HtmlPreview";
 import NfoModal from "./NfoModal";
 import TemplateManager from "./TemplateManager";
 import { useTemplates } from "../hooks/useTemplates";
+import type { PresentationMeta } from "../types/api";
 
 interface Props {
   bbcode: string;
   html: string;
   onConvert: (bbcode: string) => Promise<string>;
+  meta: PresentationMeta;
 }
 
 const PALETTE_KEY = "prezmaker_palette_collapsed";
 
-export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml, onConvert }: Props) {
+export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml, onConvert, meta }: Props) {
   const [bbcode, setBBCode] = useState(initialBBCode);
   const [html, setHtml] = useState(initialHtml);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -26,6 +28,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
 
   const [nfoContent, setNfoContent] = useState<string | null>(null);
   const [nfoLoading, setNfoLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const { templates, loading, load, save, remove, rename, duplicate } = useTemplates();
 
@@ -165,6 +168,21 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
     }
   }, [bbcode]);
 
+  const handleSaveToCollection = useCallback(async () => {
+    try {
+      await invoke("save_to_collection", {
+        title: meta.title,
+        contentType: meta.contentType,
+        bbcode,
+        posterUrl: meta.posterUrl,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      alert(String(e));
+    }
+  }, [bbcode, meta]);
+
   const templateActions = (
     <TemplateManager
       templates={templates}
@@ -193,6 +211,17 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
             headerActions={
               <>
                 {templateActions}
+                <button
+                  onClick={handleSaveToCollection}
+                  disabled={saved || !bbcode.trim()}
+                  className={`text-xs px-3 py-1 rounded transition-colors ${
+                    saved
+                      ? "bg-green-700 text-white"
+                      : "bg-edge hover:bg-edge-hover text-fg disabled:opacity-50"
+                  }`}
+                >
+                  {saved ? "Sauvegardé !" : "Sauvegarder"}
+                </button>
                 <button
                   onClick={handleGenerateNfo}
                   disabled={nfoLoading || !bbcode.trim()}

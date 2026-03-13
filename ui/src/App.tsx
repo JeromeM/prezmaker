@@ -15,10 +15,12 @@ import AboutModal from "./components/AboutModal";
 import TorrentContentTypePicker from "./components/TorrentContentTypePicker";
 import Onboarding, { isOnboardingDone } from "./components/Onboarding";
 import UpdateChecker from "./components/UpdateChecker";
+import CollectionBrowser from "./components/CollectionBrowser";
 
 function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
+  const [showCollections, setShowCollections] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [onboardingDone, setOnboardingDone] = useState(isOnboardingDone);
   const {
@@ -32,6 +34,7 @@ function App() {
     generateApp,
     confirmTemplate,
     convertBBCode,
+    loadPresentation,
     reset,
   } = usePrezMaker();
 
@@ -83,6 +86,7 @@ function App() {
         onOpenSettings={() => setShowSettings(true)}
         onImportTorrent={importTorrent}
         onOpenTemplateEditor={() => setShowTemplateEditor(true)}
+        onOpenCollections={() => setShowCollections(true)}
         onOpenAbout={() => setShowAbout(true)}
       />
 
@@ -179,7 +183,7 @@ function App() {
           <ResultSelector
             results={state.results}
             contentType={state.contentType}
-            onSelect={(id, ct, source) => selectResult(id, ct, "default", source)}
+            onSelect={(id, ct, source, label) => selectResult(id, ct, "default", source, label)}
             onCancel={reset}
           />
         )}
@@ -188,7 +192,7 @@ function App() {
           <ResultSelector
             results={state.results}
             contentType={state.contentType}
-            onSelect={(id, ct, source) => selectTorrentResult(id, ct, state.torrentInfo, "default", source)}
+            onSelect={(id, ct, source, label) => selectTorrentResult(id, ct, state.torrentInfo, "default", source, label)}
             onCancel={reset}
           />
         )}
@@ -229,6 +233,7 @@ function App() {
             bbcode={state.bbcode}
             html={state.html}
             onConvert={convertBBCode}
+            meta={state.meta}
           />
         )}
 
@@ -272,6 +277,15 @@ function App() {
       )}
       {showTemplateEditor && (
         <TemplateEditor onClose={() => setShowTemplateEditor(false)} />
+      )}
+      {showCollections && (
+        <CollectionBrowser
+          onClose={() => setShowCollections(false)}
+          onLoad={(bbcode, html) => {
+            setShowCollections(false);
+            loadPresentation(bbcode, html);
+          }}
+        />
       )}
       {showAbout && (
         <AboutModal onClose={() => setShowAbout(false)} />
