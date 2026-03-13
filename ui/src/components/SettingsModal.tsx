@@ -6,6 +6,8 @@ import { resetOnboarding } from "./Onboarding";
 
 interface Props {
   onClose: () => void;
+  theme: "dark" | "light";
+  onSetTheme: (theme: "dark" | "light") => void;
 }
 
 type Tab = "general" | "api" | "llm";
@@ -19,7 +21,7 @@ const TABS: { id: Tab; label: string }[] = [
 const inputClass =
   "w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500";
 
-export default function SettingsModal({ onClose }: Props) {
+export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
   const [tab, setTab] = useState<Tab>("general");
   const [settings, setSettings] = useState<SettingsPayload>({
     tmdb_api_key: null,
@@ -129,6 +131,18 @@ export default function SettingsModal({ onClose }: Props) {
           <div className="flex-1 px-6 py-5 overflow-y-auto">
             {tab === "general" && (
               <div className="space-y-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-fg-muted">Thème</label>
+                  <select
+                    value={theme}
+                    onChange={(e) => onSetTheme(e.target.value as "dark" | "light")}
+                    className={inputClass}
+                  >
+                    <option value="dark">Sombre</option>
+                    <option value="light">Clair</option>
+                  </select>
+                </div>
+
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-fg-muted">Langue</label>
                   <select
