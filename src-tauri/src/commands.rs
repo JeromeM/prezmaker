@@ -606,3 +606,8 @@ pub fn get_collection_entry(collection_id: String, id: String) -> Result<SavedPr
 pub fn delete_collection_entry(collection_id: String, id: String) -> Result<(), String> {
     collections::delete_presentation(&collection_id, &id)
 }
+
+#[tauri::command]
+pub fn move_collection_entry(from_collection: String, to_collection: String, id: String) -> Result<(), String> {
+    collections::move_presentation(&from_collection, &to_collection, &id)
+}

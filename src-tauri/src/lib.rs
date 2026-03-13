@@ -70,6 +70,7 @@ pub fn run() {
             commands::list_collection,
             commands::get_collection_entry,
             commands::delete_collection_entry,
+            commands::move_collection_entry,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
