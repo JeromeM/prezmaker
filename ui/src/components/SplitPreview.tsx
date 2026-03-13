@@ -5,8 +5,9 @@ import BBCodePalette from "./BBCodePalette";
 import HtmlPreview from "./HtmlPreview";
 import NfoModal from "./NfoModal";
 import TemplateManager from "./TemplateManager";
+import CollectionSaveDialog from "./CollectionSaveDialog";
 import { useTemplates } from "../hooks/useTemplates";
-import type { PresentationMeta } from "../types/api";
+import type { PresentationMeta, SavedPresentation } from "../types/api";
 
 interface Props {
   bbcode: string;
@@ -29,6 +30,10 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
   const [nfoContent, setNfoContent] = useState<string | null>(null);
   const [nfoLoading, setNfoLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [savedRef, setSavedRef] = useState<{ collectionId: string; entryId: string } | null>(
+    meta.savedRef ?? null
+  );
 
   const { templates, loading, load, save, remove, rename, duplicate } = useTemplates();
 
@@ -168,20 +173,31 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
     }
   }, [bbcode]);
 
-  const handleSaveToCollection = useCallback(async () => {
+  const doSave = useCallback(async (collectionId: string, entryId?: string) => {
     try {
-      await invoke("save_to_collection", {
+      const result = await invoke<SavedPresentation>("save_to_collection", {
+        collectionId,
+        entryId: entryId ?? null,
         title: meta.title,
         contentType: meta.contentType,
         bbcode,
         posterUrl: meta.posterUrl,
       });
+      setSavedRef({ collectionId: result.collection_id, entryId: result.id });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       alert(String(e));
     }
   }, [bbcode, meta]);
+
+  const handleSaveToCollection = useCallback(() => {
+    if (savedRef) {
+      doSave(savedRef.collectionId, savedRef.entryId);
+    } else {
+      setShowSaveDialog(true);
+    }
+  }, [savedRef, doSave]);
 
   const templateActions = (
     <TemplateManager
@@ -239,6 +255,15 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
       </div>
       {nfoContent && (
         <NfoModal content={nfoContent} onClose={() => setNfoContent(null)} />
+      )}
+      {showSaveDialog && (
+        <CollectionSaveDialog
+          onSave={(collectionId) => {
+            setShowSaveDialog(false);
+            doSave(collectionId);
+          }}
+          onClose={() => setShowSaveDialog(false)}
+        />
       )}
     </div>
   );

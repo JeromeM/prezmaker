@@ -1,6 +1,6 @@
 use crate::bbcode_to_html;
 use prezmaker_lib::cache::ApiCache;
-use prezmaker_lib::collections::{self, SavedPresentation};
+use prezmaker_lib::collections::{self, Collection, SavedPresentation};
 use prezmaker_lib::config::Config;
 use prezmaker_lib::models::{Application, Game, MediaTechInfo, SystemReqs, TechInfo};
 use prezmaker_lib::providers::llm::LlmClient;
@@ -554,26 +554,55 @@ pub fn import_template(path: String) -> Result<ContentTemplate, String> {
 // --- Collections ---
 
 #[tauri::command]
+pub fn create_collection(name: String) -> Result<Collection, String> {
+    collections::create_collection(&name)
+}
+
+#[tauri::command]
+pub fn list_collections() -> Result<Vec<Collection>, String> {
+    collections::list_collections()
+}
+
+#[tauri::command]
+pub fn rename_collection(id: String, name: String) -> Result<(), String> {
+    collections::rename_collection(&id, &name)
+}
+
+#[tauri::command]
+pub fn delete_collection(id: String) -> Result<(), String> {
+    collections::delete_collection(&id)
+}
+
+#[tauri::command]
 pub fn save_to_collection(
+    collection_id: String,
+    entry_id: Option<String>,
     title: String,
     content_type: String,
     bbcode: String,
     poster_url: Option<String>,
 ) -> Result<SavedPresentation, String> {
-    collections::save_presentation(&title, &content_type, &bbcode, poster_url.as_deref())
+    collections::save_presentation(
+        &collection_id,
+        entry_id.as_deref(),
+        &title,
+        &content_type,
+        &bbcode,
+        poster_url.as_deref(),
+    )
 }
 
 #[tauri::command]
-pub fn list_collection() -> Result<Vec<SavedPresentation>, String> {
-    collections::list_presentations()
+pub fn list_collection(collection_id: String) -> Result<Vec<SavedPresentation>, String> {
+    collections::list_presentations(&collection_id)
 }
 
 #[tauri::command]
-pub fn get_collection_entry(id: String) -> Result<SavedPresentation, String> {
-    collections::get_presentation(&id)
+pub fn get_collection_entry(collection_id: String, id: String) -> Result<SavedPresentation, String> {
+    collections::get_presentation(&collection_id, &id)
 }
 
 #[tauri::command]
-pub fn delete_collection_entry(id: String) -> Result<(), String> {
-    collections::delete_presentation(&id)
+pub fn delete_collection_entry(collection_id: String, id: String) -> Result<(), String> {
+    collections::delete_presentation(&collection_id, &id)
 }
