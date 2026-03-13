@@ -3158,7 +3158,7 @@ dependencies = [
 
 [[package]]
 name = "prezmaker-cli"
-version = "1.12.1"
+version = "1.13.0"
 dependencies = [
  "anyhow",
  "arboard",
@@ -3172,7 +3172,7 @@ dependencies = [
 
 [[package]]
 name = "prezmaker-lib"
-version = "1.12.1"
+version = "1.13.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3194,7 +3194,7 @@ dependencies = [
 
 [[package]]
 name = "prezmaker-tauri"
-version = "1.12.1"
+version = "1.13.0"
 dependencies = [
  "dirs 5.0.1",
  "prezmaker-lib",
