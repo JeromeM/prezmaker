@@ -37,6 +37,9 @@ export default function Onboarding({ onComplete }: Props) {
     auto_clipboard: false,
     llm_provider: null,
     llm_api_key: null,
+    groq_api_key: null,
+    mistral_api_key: null,
+    gemini_api_key: null,
     pseudo: "",
   });
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
