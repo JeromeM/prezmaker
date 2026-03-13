@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import BBCodePanel from "./BBCodePanel";
 import BBCodePalette from "./BBCodePalette";
 import HtmlPreview from "./HtmlPreview";
@@ -161,17 +162,21 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
   );
 
   const handleGenerateNfo = useCallback(async () => {
-    if (!bbcode.trim()) return;
+    const path = await open({
+      filters: [{ name: "Media", extensions: ["mkv", "mp4", "avi", "wmv", "flv", "mov", "ts", "m2ts", "iso"] }],
+      multiple: false,
+    });
+    if (!path) return;
     setNfoLoading(true);
     try {
-      const result = await invoke<string>("generate_nfo", { bbcode });
+      const result = await invoke<string>("run_mediainfo", { path });
       setNfoContent(result);
     } catch (e) {
       alert(String(e));
     } finally {
       setNfoLoading(false);
     }
-  }, [bbcode]);
+  }, []);
 
   const doSave = useCallback(async (collectionId: string, entryId?: string) => {
     try {
@@ -240,7 +245,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
                 </button>
                 <button
                   onClick={handleGenerateNfo}
-                  disabled={nfoLoading || !bbcode.trim()}
+                  disabled={nfoLoading}
                   className={`text-xs px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
                     nfoLoading
                       ? "bg-blue-600 text-white cursor-wait"
@@ -253,7 +258,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
                       style={{ animation: "spin 1s linear infinite" }}
                     />
                   )}
-                  {nfoLoading ? "Generation NFO..." : "NFO"}
+                  {nfoLoading ? "Analyse MediaInfo..." : "NFO"}
                 </button>
               </>
             }

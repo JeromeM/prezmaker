@@ -3,7 +3,6 @@ use prezmaker_lib::cache::ApiCache;
 use prezmaker_lib::collections::{self, Collection, SavedPresentation};
 use prezmaker_lib::config::Config;
 use prezmaker_lib::models::{Application, Game, MediaTechInfo, SystemReqs, TechInfo};
-use prezmaker_lib::providers::llm::LlmClient;
 use prezmaker_lib::orchestrator_api::{GameDetailsResponse, OrchestratorApi, SearchResult};
 use prezmaker_lib::torrent::{self, TorrentInfo};
 use prezmaker_lib::template_engine::{self, ContentTemplate, TemplateTag};
@@ -334,23 +333,28 @@ pub fn convert_bbcode(bbcode: String) -> String {
 }
 
 #[tauri::command]
-pub async fn generate_nfo(
-    state: tauri::State<'_, AppState>,
-    bbcode: String,
-) -> Result<String, String> {
-    let config = state.config.lock().unwrap().clone();
-    let provider = config.llm.provider.as_deref().unwrap_or("");
-    let api_key = config.llm.resolve_api_key().unwrap_or("");
+pub fn run_mediainfo(path: String) -> Result<String, String> {
+    let output = std::process::Command::new("mediainfo")
+        .arg(&path)
+        .output()
+        .map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                "MediaInfo n'est pas installé. Installez-le depuis https://mediaarea.net/fr/MediaInfo".to_string()
+            } else {
+                format!("Erreur lors de l'exécution de MediaInfo: {}", e)
+            }
+        })?;
 
-    if provider.is_empty() || api_key.is_empty() {
-        return Err("LLM non configuré. Allez dans les paramètres pour configurer un provider LLM.".to_string());
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("MediaInfo a échoué: {}", stderr));
     }
 
-    let client = LlmClient::new(provider, api_key);
-    client
-        .generate_nfo(&bbcode)
-        .await
-        .map_err(|e| e.to_string())
+    let result = String::from_utf8_lossy(&output.stdout).to_string();
+    if result.trim().is_empty() {
+        return Err("MediaInfo n'a retourné aucune donnée pour ce fichier.".to_string());
+    }
+    Ok(result)
 }
 
 // --- Settings ---

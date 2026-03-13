@@ -50,7 +50,7 @@ pub fn run() {
             commands::generate_from_template,
             commands::convert_bbcode,
             commands::save_text_file,
-            commands::generate_nfo,
+            commands::run_mediainfo,
             commands::get_settings,
             commands::save_settings,
             commands::set_default_template,
