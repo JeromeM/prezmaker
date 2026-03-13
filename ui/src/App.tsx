@@ -35,7 +35,7 @@ function App() {
     reset,
   } = usePrezMaker();
 
-  const { theme, toggle: toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [dragging, setDragging] = useState(false);
 
   // Global drag-drop listener for .torrent files
@@ -84,8 +84,6 @@ function App() {
         onImportTorrent={importTorrent}
         onOpenTemplateEditor={() => setShowTemplateEditor(true)}
         onOpenAbout={() => setShowAbout(true)}
-        theme={theme}
-        onToggleTheme={toggleTheme}
       />
 
       <main className="flex-1 flex flex-col min-h-0">
@@ -270,7 +268,7 @@ function App() {
         </div>
       )}
       {showSettings && (
-        <SettingsModal onClose={() => setShowSettings(false)} />
+        <SettingsModal onClose={() => setShowSettings(false)} theme={theme} onSetTheme={setTheme} />
       )}
       {showTemplateEditor && (
         <TemplateEditor onClose={() => setShowTemplateEditor(false)} />
