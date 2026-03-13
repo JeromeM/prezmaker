@@ -33,6 +33,9 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
     auto_clipboard: false,
     llm_provider: null,
     llm_api_key: null,
+    groq_api_key: null,
+    mistral_api_key: null,
+    gemini_api_key: null,
     pseudo: "",
   });
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
@@ -261,7 +264,6 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
                       setSettings((s) => ({
                         ...s,
                         llm_provider: e.target.value || null,
-                        ...(e.target.value ? {} : { llm_api_key: null }),
                       }))
                     }
                     className={inputClass}
@@ -272,22 +274,21 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
                     <option value="gemini">Gemini</option>
                   </select>
                 </div>
-                {settings.llm_provider && (
-                  <>
-                    {secretInput("Cle API LLM", "llm_api_key", "llm")}
-                    <p className="text-xs text-fg-dim">
-                      {settings.llm_provider === "groq" && (
-                        <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.groq.com/keys"); }} className="text-blue-400 hover:underline">console.groq.com</a></>
-                      )}
-                      {settings.llm_provider === "mistral" && (
-                        <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.mistral.ai/api-keys"); }} className="text-blue-400 hover:underline">console.mistral.ai</a></>
-                      )}
-                      {settings.llm_provider === "gemini" && (
-                        <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://aistudio.google.com/apikey"); }} className="text-blue-400 hover:underline">aistudio.google.com</a></>
-                      )}
-                    </p>
-                  </>
-                )}
+
+                {secretInput("Cle API Groq", "groq_api_key", "groq")}
+                <p className="text-xs text-fg-dim -mt-2">
+                  Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.groq.com/keys"); }} className="text-blue-400 hover:underline">console.groq.com</a>
+                </p>
+
+                {secretInput("Cle API Mistral", "mistral_api_key", "mistral")}
+                <p className="text-xs text-fg-dim -mt-2">
+                  Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.mistral.ai/api-keys"); }} className="text-blue-400 hover:underline">console.mistral.ai</a>
+                </p>
+
+                {secretInput("Cle API Gemini", "gemini_api_key", "gemini")}
+                <p className="text-xs text-fg-dim -mt-2">
+                  Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://aistudio.google.com/apikey"); }} className="text-blue-400 hover:underline">aistudio.google.com</a>
+                </p>
               </div>
             )}
 

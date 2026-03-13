@@ -335,7 +335,7 @@ pub async fn generate_nfo(
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
     let provider = config.llm.provider.as_deref().unwrap_or("");
-    let api_key = config.llm.api_key.as_deref().unwrap_or("");
+    let api_key = config.llm.resolve_api_key().unwrap_or("");
 
     if provider.is_empty() || api_key.is_empty() {
         return Err("LLM non configuré. Allez dans les paramètres pour configurer un provider LLM.".to_string());
@@ -362,6 +362,9 @@ pub struct SettingsPayload {
     pub auto_clipboard: bool,
     pub llm_provider: Option<String>,
     pub llm_api_key: Option<String>,
+    pub groq_api_key: Option<String>,
+    pub mistral_api_key: Option<String>,
+    pub gemini_api_key: Option<String>,
     pub pseudo: String,
 }
 
@@ -378,6 +381,9 @@ pub fn get_settings(state: tauri::State<'_, AppState>) -> SettingsPayload {
         auto_clipboard: config.preferences.auto_clipboard,
         llm_provider: config.llm.provider.clone(),
         llm_api_key: config.llm.api_key.clone(),
+        groq_api_key: config.llm.groq_api_key.clone(),
+        mistral_api_key: config.llm.mistral_api_key.clone(),
+        gemini_api_key: config.llm.gemini_api_key.clone(),
         pseudo: config.preferences.pseudo.clone(),
     }
 }
@@ -396,6 +402,9 @@ pub fn save_settings(
     config.preferences.auto_clipboard = settings.auto_clipboard;
     config.llm.provider = settings.llm_provider;
     config.llm.api_key = settings.llm_api_key;
+    config.llm.groq_api_key = settings.groq_api_key;
+    config.llm.mistral_api_key = settings.mistral_api_key;
+    config.llm.gemini_api_key = settings.gemini_api_key;
     config.preferences.pseudo = settings.pseudo;
     config.preferences.default_templates = settings.default_templates;
     config.save().map_err(|e| e.to_string())

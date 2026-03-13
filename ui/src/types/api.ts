@@ -82,6 +82,9 @@ export interface SettingsPayload {
   auto_clipboard: boolean;
   llm_provider: string | null;
   llm_api_key: string | null;
+  groq_api_key: string | null;
+  mistral_api_key: string | null;
+  gemini_api_key: string | null;
   pseudo: string;
 }
 

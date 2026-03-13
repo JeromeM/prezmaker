@@ -3,9 +3,10 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 
 const SYSTEM_PROMPT: &str = "Tu es un redacteur specialise en jeux video. \
-Tu reponds UNIQUEMENT en francais. Toute ta production doit etre integralement en langue francaise. \
-Tu ne dois jamais repondre en anglais, meme si le contenu fourni est en anglais. \
-Tu retournes uniquement la description demandee, sans titre, sans commentaire, sans explication.";
+Tu rediges des descriptions originales, engageantes et informatives en francais. \
+Tu ne traduis pas : tu ecris ta propre description a partir de tes connaissances du jeu. \
+Tu reponds UNIQUEMENT en francais. \
+Tu retournes uniquement la description (2-3 paragraphes), sans titre, sans commentaire, sans explication.";
 
 const NFO_SYSTEM_PROMPT: &str = r#"Tu es un generateur de fichiers NFO pour des releases de contenus multimedia.
 A partir du BBCode fourni, genere un fichier NFO en texte brut avec un style ASCII art.
@@ -89,6 +90,8 @@ struct GeminiRequest {
 
 #[derive(Serialize)]
 struct GeminiContent {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    role: Option<String>,
     parts: Vec<GeminiPart>,
 }
 
@@ -155,7 +158,7 @@ impl LlmClient {
                 system,
                 user,
             ).await,
-            "gemini" => self.call_gemini_custom(system, user).await,
+            "gemini" => self.call_gemini(system, user).await,
             other => anyhow::bail!("Provider LLM inconnu : {}", other),
         }
     }
@@ -171,16 +174,16 @@ impl LlmClient {
 
     fn build_user_prompt(title: &str, english_summary: Option<&str>) -> String {
         let context = match english_summary {
-            Some(en) => format!(
-                "\n\nVoici le resume original en anglais a traduire et reecrire en francais :\n{}",
+            Some(en) if !en.is_empty() => format!(
+                "\n\nPour contexte, voici un resume existant (ne le traduis pas, ecris ta propre description) :\n{}",
                 en
             ),
-            None => String::new(),
+            _ => String::new(),
         };
 
         format!(
-            "Ecris une description engageante et informative en francais (2-3 paragraphes) \
-            pour le jeu video \"{}\".{}",
+            "Ecris une description originale en francais (2-3 paragraphes) \
+            pour le jeu video \"{}\". Base-toi sur tes connaissances du jeu.{}",
             title, context
         )
     }
@@ -232,19 +235,21 @@ impl LlmClient {
         Ok(text)
     }
 
-    async fn call_gemini_custom(&self, system_prompt: &str, user_prompt: &str) -> anyhow::Result<String> {
+    async fn call_gemini(&self, system_prompt: &str, user_prompt: &str) -> anyhow::Result<String> {
         let url = format!(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={}",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={}",
             self.api_key
         );
 
         let body = GeminiRequest {
             system_instruction: GeminiContent {
+                role: None,
                 parts: vec![GeminiPart {
                     text: system_prompt.to_string(),
                 }],
             },
             contents: vec![GeminiContent {
+                role: Some("user".to_string()),
                 parts: vec![GeminiPart {
                     text: user_prompt.to_string(),
                 }],
