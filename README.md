@@ -1,11 +1,21 @@
 <p align="center">
+  <a href="README.en.md">English</a> | Fran&ccedil;ais
+</p>
+
+<p align="center">
   <img src="src-tauri/icons/128x128.png" alt="PrezMaker" width="80" />
 </p>
 
 <h1 align="center">PrezMaker</h1>
 
 <p align="center">
-  Générateur de présentations BBCode pour les trackers
+  <strong>Generateur de presentations BBCode pour les trackers</strong>
+</p>
+
+<p align="center">
+  <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/JeromeM/prezmaker?style=flat-square&label=Version&color=blue" alt="Release" /></a>
+  <a href="../../releases/latest"><img src="https://img.shields.io/github/downloads/JeromeM/prezmaker/total?style=flat-square&label=Telechargements&color=green" alt="Downloads" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/JeromeM/prezmaker?style=flat-square" alt="License" /></a>
 </p>
 
 <p align="center">
@@ -15,38 +25,77 @@
 
 ---
 
-Recherchez un film, une série, un jeu ou une application, et obtenez une présentation complète formatée en BBCode, prête à être collée sur un tracker.
+Recherchez un film, une serie, un jeu ou une application, et obtenez une presentation complete formatee en BBCode, prete a etre collee sur un tracker.
 
-## Fonctionnalités
+<p align="center">
+  <img src="screenshots/main.png" alt="PrezMaker" width="800" />
+</p>
 
-- **Recherche automatique** — interroge TMDB (films/séries), IGDB et Steam (jeux) pour récupérer les métadonnées
-- **Enrichissement Allociné** — récupère les notes Allociné en complément de TMDB
-- **Import torrent** — glissez un `.torrent`, le titre est parsé automatiquement, le type de contenu détecté, les infos techniques pré-remplies
-- **Éditeur de templates** — créez et personnalisez vos templates BBCode avec balises, conditionnels et aperçu en temps réel
-- **Configuration requise** — tableau min/recommandée pour les jeux, récupéré automatiquement depuis Steam
-- **Génération NFO** — générez un NFO via LLM à partir du BBCode produit
-- **Description IA** — génération automatique de descriptions en français via LLM (Groq, Mistral, Gemini)
-- **Mise à jour automatique** — vérification et installation des nouvelles versions au lancement
+## Fonctionnalites
+
+### Recherche et import
+
+- **Recherche automatique** — interroge TMDB (films/series), IGDB et Steam (jeux) pour recuperer les metadonnees
+- **Enrichissement Allocine** — recupere les notes Allocine en complement de TMDB
+- **Import torrent** — glissez un `.torrent` directement sur l'application ou cliquez sur l'ecran d'accueil. Le titre est parse automatiquement, le type de contenu detecte, et les infos techniques pre-remplies
+- **Configuration requise** — tableau min/recommandee pour les jeux, recupere automatiquement depuis Steam
+
+### Templates et editeur
+
+- **Editeur de templates** — creez et personnalisez vos templates BBCode avec coloration syntaxique, apercu en temps reel et infobulles d'erreurs
+- **Balises conditionnelles** — `{{#if synopsis}}...{{/if}}`, avec support des comparaisons (`>`, `<`, `==`, `!=`)
+- **Balises de mise en forme** — `{{heading:...}}`, `{{section:...}}`, `{{url:URL:label}}`, `{{br}}`, `{{center}}`, `{{bold}}`, etc.
+- **Blocs composites** — `{{ratings_table}}`, `{{game_reqs_table}}`, `{{game_tech_table}}`, `{{screenshots_grid}}`
+- **Template favori** — definissez un template par defaut par type de contenu, pre-selectionne automatiquement
 - **Couleur par template** — chaque template peut avoir sa propre couleur de titre
-- **Paramètres organisés** — interface à onglets (Général, Clés API, IA/LLM)
+- **Export / Import** — partagez ou sauvegardez vos templates au format JSON
+- **Recherche de balises** — filtrez les balises disponibles dans la sidebar
+- **Tab / Shift+Tab** — indentation et desindentation dans l'editeur
+
+### IA et generation
+
+- **Description IA** — generation automatique de descriptions en francais via LLM (Groq, Mistral, Gemini)
+- **Generation NFO** — generez un NFO a partir du BBCode produit via LLM
+
+### Interface
+
+- **Theme clair / sombre** — basculez entre les deux via le bouton soleil/lune dans la barre du haut
+- **Mise a jour automatique** — verification et installation des nouvelles versions au lancement, ou manuellement depuis la fenetre A propos
+- **Persistance de la fenetre** — la taille et la position de la fenetre sont memorisees entre les lancements
+- **Liens cliquables** — les liens dans les previews et dans l'app s'ouvrent dans le navigateur systeme
 
 ## Screenshots
 
-| Vue principale | Résultats de recherche |
-|:-:|:-:|
-| ![Main](screenshots/main.png) | ![Search](screenshots/search.png) |
-
-| Présentation générée | Éditeur de templates |
-|:-:|:-:|
-| ![Preview](screenshots/preview.png) | ![Templates](screenshots/templates.png) |
-
-| Formulaire jeu | Paramètres |
-|:-:|:-:|
-| ![Game](screenshots/game.png) | ![Settings](screenshots/settings.png) |
+<table>
+  <tr>
+    <td align="center"><strong>Resultats de recherche</strong></td>
+    <td align="center"><strong>Presentation generee</strong></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/search.png" alt="Recherche" /></td>
+    <td><img src="screenshots/preview.png" alt="Preview" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Editeur de templates</strong></td>
+    <td align="center"><strong>Formulaire jeu</strong></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/templates.png" alt="Templates" /></td>
+    <td><img src="screenshots/game.png" alt="Jeu" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Parametres</strong></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/settings.png" alt="Parametres" /></td>
+    <td></td>
+  </tr>
+</table>
 
 ## Installation
 
-Téléchargez la dernière version depuis la page [Releases](../../releases/latest) :
+Telechargez la derniere version depuis la page [Releases](../../releases/latest) :
 
 | Plateforme | Fichier |
 |---|---|
@@ -55,37 +104,30 @@ Téléchargez la dernière version depuis la page [Releases](../../releases/late
 | macOS (Intel) | `.dmg` |
 | Linux | `.deb`, `.AppImage` ou `.rpm` |
 
-L'application se met à jour automatiquement au lancement lorsqu'une nouvelle version est disponible.
+L'application se met a jour automatiquement au lancement lorsqu'une nouvelle version est disponible.
 
 ## Configuration
 
-Au premier lancement, allez dans les paramètres (icône engrenage) :
+Au premier lancement, un assistant vous guide pour configurer les cles API necessaires.
 
-| Clé | Description | Obligatoire |
+Vous pouvez aussi acceder aux parametres a tout moment via l'icone engrenage :
+
+| Cle | Description | Obligatoire |
 |---|---|:-:|
-| **TMDB API Key** | Pour rechercher films et séries | Oui |
+| **TMDB API Key** | Pour rechercher films et series | Oui |
 | **IGDB Client ID / Secret** | Pour rechercher des jeux | Oui (jeux) |
-| **LLM Provider + API Key** | Pour les descriptions IA et la génération NFO | Non |
-| **Couleur du titre** | Code couleur hex par défaut pour les titres BBCode | Non |
+| **LLM Provider + API Key** | Pour les descriptions IA et la generation NFO | Non |
+| **Pseudo** | Signature dans le footer des presentations | Non |
+| **Couleur du titre** | Code couleur hex par defaut pour les titres BBCode | Non |
 
 ## Utilisation
 
-1. Sélectionnez le type de contenu (Film, Série, Jeu, Application)
-2. Tapez votre recherche ou importez un fichier `.torrent`
-3. Sélectionnez le bon résultat
-4. Complétez les informations supplémentaires si nécessaire (description, config requise, installation...)
-5. La présentation BBCode est générée avec aperçu HTML en temps réel
-6. Copiez le BBCode ou éditez-le directement
-
-### Templates
-
-Ouvrez l'éditeur de templates pour :
-- Visualiser et modifier les templates par type de contenu
-- Créer de nouveaux templates avec duplication
-- Définir une couleur de titre personnalisée par template
-- Utiliser des balises (`{{titre}}`, `{{synopsis}}`, `{{game_reqs_table}}`...)
-- Ajouter des conditionnels (`{{#if synopsis}}...{{/if}}`)
-- Voir l'aperçu en temps réel avec des données fictives
+1. Selectionnez le type de contenu (Film, Serie, Jeu, Application)
+2. Tapez votre recherche ou importez un fichier `.torrent` (drag & drop ou clic)
+3. Selectionnez le bon resultat
+4. Completez les informations supplementaires si necessaire
+5. La presentation BBCode est generee avec apercu HTML en temps reel
+6. Copiez le BBCode ou editez-le directement
 
 ## Stack technique
 
@@ -94,16 +136,16 @@ Ouvrez l'éditeur de templates pour :
 | GUI | [Tauri v2](https://v2.tauri.app/) |
 | Frontend | React 19 + TypeScript + Tailwind CSS v4 + Vite |
 | Backend | Rust (workspace : `prezmaker-lib`, `prezmaker-cli`, `src-tauri`) |
-| APIs | TMDB, IGDB, Steam, Allociné (scraping), Groq/Mistral/Gemini (LLM) |
+| APIs | TMDB, IGDB, Steam, Allocine (scraping), Groq/Mistral/Gemini (LLM) |
 
 ## Build depuis les sources
 
-### Prérequis
+### Prerequis
 
 - [Rust](https://rustup.rs/) (stable)
 - [Node.js](https://nodejs.org/) >= 20
 - [Tauri CLI](https://v2.tauri.app/start/prerequisites/) : `cargo install tauri-cli --version "^2"`
-- Dépendances système selon la plateforme ([voir la doc Tauri](https://v2.tauri.app/start/prerequisites/))
+- Dependances systeme selon la plateforme ([voir la doc Tauri](https://v2.tauri.app/start/prerequisites/))
 
 ### Build
 
@@ -111,10 +153,10 @@ Ouvrez l'éditeur de templates pour :
 git clone https://github.com/JeromeM/prezmaker.git
 cd prezmaker
 
-# Installer les dépendances frontend
+# Installer les dependances frontend
 cd ui && npm install && cd ..
 
-# Mode développement
+# Mode developpement
 cargo tauri dev
 
 # Build production
@@ -124,7 +166,7 @@ cargo tauri build
 Un `Makefile` est disponible avec des cibles par plateforme :
 
 ```bash
-make deps-linux       # Installer les dépendances système Linux
+make deps-linux       # Installer les dependances systeme Linux
 make build-linux      # Build Linux
 make build-windows    # Build Windows
 make build-macos-arm  # Build macOS Apple Silicon
@@ -134,4 +176,4 @@ make dev              # Lancer en mode dev
 
 ## Licence
 
-Ce projet est distribué sous licence MIT.
+Ce projet est distribue sous licence MIT.
