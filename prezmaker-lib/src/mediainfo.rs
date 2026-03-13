@@ -1,0 +1,334 @@
+use std::fmt::Write;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
+use std::time::Duration;
+
+/// Analyse a media file and return a MediaInfo-style text output.
+pub fn analyze(path: &str) -> Result<String, String> {
+    let ext = Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+        .unwrap_or_default();
+
+    let file_size = std::fs::metadata(path)
+        .map(|m| m.len())
+        .map_err(|e| format!("Impossible de lire le fichier: {}", e))?;
+
+    let file_name = Path::new(path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("unknown")
+        .to_string();
+
+    match ext.as_str() {
+        "mkv" | "mka" | "mks" | "webm" => analyze_matroska(path, &file_name, file_size),
+        "mp4" | "m4v" | "m4a" | "mov" => analyze_mp4(path, &file_name, file_size),
+        _ => Err(format!(
+            "Format non supporté: .{}. Formats acceptés: MKV, MP4, M4V, MOV, WebM",
+            ext
+        )),
+    }
+}
+
+fn format_size(bytes: u64) -> String {
+    const GIB: f64 = 1024.0 * 1024.0 * 1024.0;
+    const MIB: f64 = 1024.0 * 1024.0;
+    let b = bytes as f64;
+    if b >= GIB {
+        format!("{:.2} GiB", b / GIB)
+    } else {
+        format!("{:.1} MiB", b / MIB)
+    }
+}
+
+fn format_duration(d: Duration) -> String {
+    let total_secs = d.as_secs();
+    let hours = total_secs / 3600;
+    let mins = (total_secs % 3600) / 60;
+    if hours > 0 {
+        format!("{} h {} min", hours, mins)
+    } else {
+        format!("{} min", mins)
+    }
+}
+
+fn format_bitrate(bytes: u64, duration: &Duration) -> String {
+    let secs = duration.as_secs_f64();
+    if secs <= 0.0 {
+        return String::new();
+    }
+    let bits_per_sec = (bytes as f64 * 8.0) / secs;
+    if bits_per_sec >= 1_000_000.0 {
+        format!("{:.1} Mb/s", bits_per_sec / 1_000_000.0)
+    } else {
+        format!("{:.0} kb/s", bits_per_sec / 1_000.0)
+    }
+}
+
+fn field(out: &mut String, name: &str, value: &str) {
+    if !value.is_empty() {
+        let _ = writeln!(out, "{:<40} : {}", name, value);
+    }
+}
+
+fn mkv_codec_name(codec_id: &str) -> &str {
+    match codec_id {
+        "V_MPEG4/ISO/AVC" => "AVC (H.264)",
+        "V_MPEGH/ISO/HEVC" => "HEVC (H.265)",
+        "V_MPEG4/ISO/SP" | "V_MPEG4/ISO/ASP" | "V_MPEG4/ISO/AP" => "MPEG-4 Visual",
+        "V_VP8" => "VP8",
+        "V_VP9" => "VP9",
+        "V_AV1" => "AV1",
+        "A_AAC" | "A_AAC/MPEG4/LC" | "A_AAC/MPEG2/LC" => "AAC",
+        "A_AC3" => "AC-3 (Dolby Digital)",
+        "A_EAC3" => "E-AC-3 (Dolby Digital Plus)",
+        "A_DTS" => "DTS",
+        "A_DTS/EXPRESS" => "DTS Express",
+        "A_DTS/LOSSLESS" => "DTS-HD Master Audio",
+        "A_TRUEHD" => "TrueHD",
+        "A_VORBIS" => "Vorbis",
+        "A_OPUS" => "Opus",
+        "A_FLAC" => "FLAC",
+        "A_PCM/INT/LIT" | "A_PCM/INT/BIG" => "PCM",
+        "A_MP3" | "A_MPEG/L3" => "MP3",
+        "S_TEXT/UTF8" => "UTF-8 (SRT)",
+        "S_TEXT/ASS" | "S_TEXT/SSA" => "ASS/SSA",
+        "S_HDMV/PGS" => "PGS (Blu-ray)",
+        "S_VOBSUB" => "VobSub",
+        "S_TEXT/WEBVTT" => "WebVTT",
+        other => other,
+    }
+}
+
+fn language_name(lang: &str) -> &str {
+    match lang {
+        "fre" | "fra" | "fr" => "French",
+        "eng" | "en" => "English",
+        "spa" | "es" => "Spanish",
+        "ger" | "deu" | "de" => "German",
+        "ita" | "it" => "Italian",
+        "por" | "pt" => "Portuguese",
+        "jpn" | "ja" => "Japanese",
+        "kor" | "ko" => "Korean",
+        "chi" | "zho" | "zh" => "Chinese",
+        "rus" | "ru" => "Russian",
+        "ara" | "ar" => "Arabic",
+        "dut" | "nld" | "nl" => "Dutch",
+        "pol" | "pl" => "Polish",
+        "und" => "Undefined",
+        other => other,
+    }
+}
+
+fn mkv_language_str(lang: &matroska::Language) -> &str {
+    match lang {
+        matroska::Language::ISO639(s) => s.as_str(),
+        matroska::Language::IETF(s) => s.as_str(),
+    }
+}
+
+fn channels_label(ch: u64) -> String {
+    match ch {
+        1 => "1 channel (Mono)".to_string(),
+        2 => "2 channels (Stereo)".to_string(),
+        6 => "6 channels (5.1)".to_string(),
+        8 => "8 channels (7.1)".to_string(),
+        _ => format!("{} channels", ch),
+    }
+}
+
+fn analyze_matroska(path: &str, file_name: &str, file_size: u64) -> Result<String, String> {
+    let file = File::open(path).map_err(|e| format!("Impossible d'ouvrir le fichier: {}", e))?;
+    let mkv = matroska::Matroska::open(file)
+        .map_err(|e| format!("Erreur de lecture MKV: {}", e))?;
+
+    let mut out = String::new();
+
+    // General
+    out.push_str("General\n");
+    field(&mut out, "Complete name", file_name);
+    field(&mut out, "Format", "Matroska");
+    if let Some(ref title) = mkv.info.title {
+        field(&mut out, "Title", title);
+    }
+    field(&mut out, "File size", &format_size(file_size));
+    if let Some(ref dur) = mkv.info.duration {
+        field(&mut out, "Duration", &format_duration(*dur));
+        field(&mut out, "Overall bit rate", &format_bitrate(file_size, dur));
+    }
+    if !mkv.info.writing_app.is_empty() {
+        field(&mut out, "Writing application", &mkv.info.writing_app);
+    }
+    if !mkv.info.muxing_app.is_empty() {
+        field(&mut out, "Writing library", &mkv.info.muxing_app);
+    }
+
+    // Video tracks
+    for track in mkv.video_tracks() {
+        out.push('\n');
+        let label = match &track.name {
+            Some(n) => format!("Video ({})", n),
+            None => "Video".to_string(),
+        };
+        out.push_str(&label);
+        out.push('\n');
+        field(&mut out, "Format", mkv_codec_name(&track.codec_id));
+        if let matroska::Settings::Video(ref v) = track.settings {
+            field(&mut out, "Width", &format!("{} pixels", v.pixel_width));
+            field(&mut out, "Height", &format!("{} pixels", v.pixel_height));
+            if let (Some(dw), Some(dh)) = (v.display_width, v.display_height) {
+                if dh > 0 {
+                    let ratio = dw as f64 / dh as f64;
+                    field(&mut out, "Display aspect ratio", &format!("{:.2}:1", ratio));
+                }
+            }
+        }
+        if let Some(ref dur) = track.default_duration {
+            let fps = 1.0 / dur.as_secs_f64();
+            field(&mut out, "Frame rate", &format!("{:.3} FPS", fps));
+        }
+        if let Some(ref lang) = track.language {
+            field(&mut out, "Language", language_name(mkv_language_str(lang)));
+        }
+        field(&mut out, "Default", if track.default { "Yes" } else { "No" });
+    }
+
+    // Audio tracks
+    for (i, track) in mkv.audio_tracks().enumerate() {
+        out.push('\n');
+        let label = match &track.name {
+            Some(n) => format!("Audio #{} ({})", i + 1, n),
+            None => format!("Audio #{}", i + 1),
+        };
+        out.push_str(&label);
+        out.push('\n');
+        field(&mut out, "Format", mkv_codec_name(&track.codec_id));
+        if let matroska::Settings::Audio(ref a) = track.settings {
+            field(&mut out, "Channel(s)", &channels_label(a.channels));
+            field(
+                &mut out,
+                "Sampling rate",
+                &format!("{:.1} kHz", a.sample_rate / 1000.0),
+            );
+            if let Some(bd) = a.bit_depth {
+                field(&mut out, "Bit depth", &format!("{} bits", bd));
+            }
+        }
+        if let Some(ref lang) = track.language {
+            field(&mut out, "Language", language_name(mkv_language_str(lang)));
+        }
+        field(&mut out, "Default", if track.default { "Yes" } else { "No" });
+    }
+
+    // Subtitle tracks
+    for (i, track) in mkv.subtitle_tracks().enumerate() {
+        out.push('\n');
+        let label = match &track.name {
+            Some(n) => format!("Text #{} ({})", i + 1, n),
+            None => format!("Text #{}", i + 1),
+        };
+        out.push_str(&label);
+        out.push('\n');
+        field(&mut out, "Format", mkv_codec_name(&track.codec_id));
+        if let Some(ref lang) = track.language {
+            field(&mut out, "Language", language_name(mkv_language_str(lang)));
+        }
+        field(&mut out, "Default", if track.default { "Yes" } else { "No" });
+        field(&mut out, "Forced", if track.forced { "Yes" } else { "No" });
+    }
+
+    Ok(out)
+}
+
+fn mp4_media_type_name(mt: &mp4::MediaType) -> &'static str {
+    match mt {
+        mp4::MediaType::H264 => "AVC (H.264)",
+        mp4::MediaType::H265 => "HEVC (H.265)",
+        mp4::MediaType::VP9 => "VP9",
+        mp4::MediaType::AAC => "AAC",
+        mp4::MediaType::TTXT => "Timed Text",
+    }
+}
+
+fn analyze_mp4(path: &str, file_name: &str, file_size: u64) -> Result<String, String> {
+    let file = File::open(path).map_err(|e| format!("Impossible d'ouvrir le fichier: {}", e))?;
+    let reader = BufReader::new(file);
+    let mp4 = mp4::Mp4Reader::read_header(reader, file_size)
+        .map_err(|e| format!("Erreur de lecture MP4: {}", e))?;
+
+    let mut out = String::new();
+    let duration = mp4.duration();
+
+    // General
+    out.push_str("General\n");
+    field(&mut out, "Complete name", file_name);
+    field(&mut out, "Format", "MPEG-4");
+    field(&mut out, "File size", &format_size(file_size));
+    field(&mut out, "Duration", &format_duration(duration));
+    field(&mut out, "Overall bit rate", &format_bitrate(file_size, &duration));
+
+    // Tracks
+    let mut audio_idx = 0u32;
+    let mut text_idx = 0u32;
+    for track in mp4.tracks().values() {
+        let track_type = match track.track_type() {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+        let media_type_str = track.media_type()
+            .map(|mt| mp4_media_type_name(&mt))
+            .unwrap_or("Unknown");
+
+        match track_type {
+            mp4::TrackType::Video => {
+                out.push('\n');
+                out.push_str("Video\n");
+                field(&mut out, "Format", media_type_str);
+                field(&mut out, "Width", &format!("{} pixels", track.width()));
+                field(&mut out, "Height", &format!("{} pixels", track.height()));
+                let dur = track.duration();
+                if dur.as_secs() > 0 {
+                    field(&mut out, "Frame rate", &format!("{:.3} FPS",
+                        track.sample_count() as f64 / dur.as_secs_f64()));
+                }
+                let bitrate = track.bitrate();
+                if bitrate > 0 {
+                    field(&mut out, "Bit rate", &format!("{} kb/s", bitrate / 1000));
+                }
+                field(&mut out, "Language", language_name(track.language()));
+            }
+            mp4::TrackType::Audio => {
+                audio_idx += 1;
+                out.push('\n');
+                let _ = writeln!(out, "Audio #{}", audio_idx);
+                field(&mut out, "Format", media_type_str);
+                if let Ok(ch) = track.channel_config() {
+                    field(&mut out, "Channel(s)", &channels_label(ch as u64));
+                }
+                if let Ok(freq) = track.sample_freq_index() {
+                    field(
+                        &mut out,
+                        "Sampling rate",
+                        &format!("{:.1} kHz", freq.freq() as f64 / 1000.0),
+                    );
+                }
+                let bitrate = track.bitrate();
+                if bitrate > 0 {
+                    field(&mut out, "Bit rate", &format!("{} kb/s", bitrate / 1000));
+                }
+                field(&mut out, "Language", language_name(track.language()));
+            }
+            mp4::TrackType::Subtitle => {
+                text_idx += 1;
+                out.push('\n');
+                let _ = writeln!(out, "Text #{}", text_idx);
+                field(&mut out, "Format", media_type_str);
+                field(&mut out, "Language", language_name(track.language()));
+            }
+        }
+    }
+
+    Ok(out)
+}

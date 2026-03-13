@@ -334,27 +334,7 @@ pub fn convert_bbcode(bbcode: String) -> String {
 
 #[tauri::command]
 pub fn run_mediainfo(path: String) -> Result<String, String> {
-    let output = std::process::Command::new("mediainfo")
-        .arg(&path)
-        .output()
-        .map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                "MediaInfo n'est pas installé. Installez-le depuis https://mediaarea.net/fr/MediaInfo".to_string()
-            } else {
-                format!("Erreur lors de l'exécution de MediaInfo: {}", e)
-            }
-        })?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("MediaInfo a échoué: {}", stderr));
-    }
-
-    let result = String::from_utf8_lossy(&output.stdout).to_string();
-    if result.trim().is_empty() {
-        return Err("MediaInfo n'a retourné aucune donnée pour ce fichier.".to_string());
-    }
-    Ok(result)
+    prezmaker_lib::mediainfo::analyze(&path)
 }
 
 // --- Settings ---

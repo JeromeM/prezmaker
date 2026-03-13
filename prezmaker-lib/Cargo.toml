@@ -21,3 +21,5 @@ serde_bencode = "0.2"
 regex = "1"
 uuid = { version = "1", features = ["v4"] }
 chrono = "0.4"
+matroska = "0.23"
+mp4 = "0.14"
