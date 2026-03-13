@@ -254,6 +254,11 @@ pub fn duplicate_content_template(content_type: String, name: String, new_name: 
 }
 
 #[tauri::command]
+pub fn reorder_content_templates(content_type: String, names: Vec<String>) -> Result<(), String> {
+    template_engine::reorder_templates(&content_type, names)
+}
+
+#[tauri::command]
 pub fn get_template_tags(content_type: String) -> Vec<TemplateTag> {
     template_engine::get_available_tags(&content_type)
 }

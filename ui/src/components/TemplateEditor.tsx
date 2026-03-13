@@ -637,17 +637,44 @@ export default function TemplateEditor({ onClose }: Props) {
 
         {/* Template selector bar */}
         <div className="flex items-center gap-2 px-4 py-2 border-b border-edge bg-input/50">
-          <select
-            value={selected}
-            onChange={(e) => handleSelectTemplate(e.target.value)}
-            className="bg-input text-fg-bright border border-edge rounded px-2 py-1 text-sm flex-1 max-w-xs"
-          >
+          <div className="flex items-center gap-0.5 overflow-x-auto max-w-md scrollbar-thin">
             {templates.map((t) => (
-              <option key={t.name} value={t.name}>
-                {t.name}{t.is_default ? " (par défaut)" : ""}
-              </option>
+              <button
+                key={t.name}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("text/plain", t.name);
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const draggedName = e.dataTransfer.getData("text/plain");
+                  if (draggedName === t.name) return;
+                  const oldOrder = templates.map((x) => x.name);
+                  const fromIdx = oldOrder.indexOf(draggedName);
+                  const toIdx = oldOrder.indexOf(t.name);
+                  if (fromIdx < 0 || toIdx < 0) return;
+                  oldOrder.splice(fromIdx, 1);
+                  oldOrder.splice(toIdx, 0, draggedName);
+                  invoke("reorder_content_templates", { contentType, names: oldOrder })
+                    .then(() => loadTemplates(contentType));
+                }}
+                onClick={() => handleSelectTemplate(t.name)}
+                className={`px-3 py-1 text-sm rounded-t border border-b-0 whitespace-nowrap cursor-grab active:cursor-grabbing transition-colors ${
+                  selected === t.name
+                    ? "bg-surface text-fg-bright border-edge"
+                    : "bg-input/50 text-fg-muted border-transparent hover:bg-input hover:text-fg"
+                }`}
+              >
+                {t.name === favoriteName && <span className="text-yellow-400 mr-1">★</span>}
+                {t.name}
+              </button>
             ))}
-          </select>
+          </div>
 
           <button
             onClick={async () => {

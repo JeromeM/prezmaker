@@ -92,6 +92,7 @@ export interface ContentTemplate {
   body: string;
   is_default: boolean;
   title_color?: string | null;
+  order?: number | null;
 }
 
 export interface TemplateTag {

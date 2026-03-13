@@ -29,6 +29,8 @@ pub struct ContentTemplate {
     pub is_default: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub order: Option<u32>,
 }
 
 /// Per-template metadata stored in companion `.meta.json` files
@@ -36,6 +38,8 @@ pub struct ContentTemplate {
 struct TemplateMeta {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     title_color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    order: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,20 +97,32 @@ fn load_meta(content_type: &str, name: &str) -> TemplateMeta {
         .unwrap_or_default()
 }
 
-pub fn save_template_meta(content_type: &str, name: &str, title_color: Option<String>) -> Result<(), String> {
-    let meta = TemplateMeta { title_color };
-    // Only write file if there's actual metadata
-    if meta.title_color.is_some() {
+fn save_full_meta(content_type: &str, name: &str, meta: &TemplateMeta) -> Result<(), String> {
+    if meta.title_color.is_some() || meta.order.is_some() {
         let path = meta_path(content_type, name)?;
-        let json = serde_json::to_string_pretty(&meta)
+        let json = serde_json::to_string_pretty(meta)
             .map_err(|e| format!("JSON error: {}", e))?;
         std::fs::write(&path, json)
             .map_err(|e| format!("Cannot write meta: {}", e))?;
     } else {
-        // Remove meta file if empty
         if let Ok(path) = meta_path(content_type, name) {
             let _ = std::fs::remove_file(path);
         }
+    }
+    Ok(())
+}
+
+pub fn save_template_meta(content_type: &str, name: &str, title_color: Option<String>) -> Result<(), String> {
+    let mut meta = load_meta(content_type, name);
+    meta.title_color = title_color;
+    save_full_meta(content_type, name, &meta)
+}
+
+pub fn reorder_templates(content_type: &str, names: Vec<String>) -> Result<(), String> {
+    for (i, name) in names.iter().enumerate() {
+        let mut meta = load_meta(content_type, name);
+        meta.order = Some(i as u32);
+        save_full_meta(content_type, name, &meta)?;
     }
     Ok(())
 }
@@ -133,6 +149,7 @@ pub fn list_templates(content_type: &str) -> Result<Vec<ContentTemplate>, String
                     body,
                     is_default: name == "default",
                     title_color: meta.title_color,
+                    order: meta.order,
                 });
             }
         }
@@ -150,12 +167,14 @@ pub fn list_templates(content_type: &str) -> Result<Vec<ContentTemplate>, String
             body: default_body,
             is_default: true,
             title_color: None,
+            order: Some(0),
         });
     }
 
     templates.sort_by(|a, b| {
-        // Default first, then alphabetical
-        b.is_default.cmp(&a.is_default).then(a.name.cmp(&b.name))
+        // Sort by order (None goes last), then alphabetical as tiebreaker
+        a.order.unwrap_or(u32::MAX).cmp(&b.order.unwrap_or(u32::MAX))
+            .then(a.name.cmp(&b.name))
     });
     Ok(templates)
 }
@@ -179,6 +198,7 @@ pub fn get_template(content_type: &str, name: &str) -> Result<ContentTemplate, S
             body,
             is_default: true,
             title_color: None,
+            order: Some(0),
         });
     }
 
@@ -191,6 +211,7 @@ pub fn get_template(content_type: &str, name: &str) -> Result<ContentTemplate, S
         body,
         is_default: safe == "default",
         title_color: meta.title_color,
+        order: meta.order,
     })
 }
 
