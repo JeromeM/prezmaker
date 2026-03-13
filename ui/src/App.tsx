@@ -6,6 +6,7 @@ import { useTheme } from "./hooks/useTheme";
 import TopBar from "./components/TopBar";
 import ResultSelector from "./components/ResultSelector";
 import GameExtrasForm from "./components/GameExtrasForm";
+import MovieExtrasForm from "./components/MovieExtrasForm";
 import AppForm from "./components/AppForm";
 import SplitPreview from "./components/SplitPreview";
 import SettingsModal from "./components/SettingsModal";
@@ -30,6 +31,7 @@ function App() {
     selectTorrentResult,
     importTorrent,
     confirmTorrentContentType,
+    generateMovie,
     generateGame,
     generateApp,
     confirmTemplate,
@@ -215,6 +217,17 @@ function App() {
           />
         )}
 
+        {state.step === "movie_extras" && (
+          <MovieExtrasForm
+            contentType={state.contentType}
+            tmdbId={state.tmdbId}
+            title={state.title}
+            tech={state.tech}
+            onGenerate={generateMovie}
+            onCancel={reset}
+          />
+        )}
+
         {state.step === "template_pick" && (
           <TemplatePicker
             contentType={state.pending.contentType}
@@ -234,6 +247,7 @@ function App() {
             html={state.html}
             onConvert={convertBBCode}
             meta={state.meta}
+            mediaAnalysis={state.mediaAnalysis}
           />
         )}
 

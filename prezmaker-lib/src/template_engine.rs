@@ -18,6 +18,7 @@ pub struct RenderContext {
     pub game_tech: Option<crate::models::TechInfo>,
     pub min_reqs: Option<crate::models::SystemReqs>,
     pub rec_reqs: Option<crate::models::SystemReqs>,
+    pub media_analysis: Option<crate::models::MediaAnalysis>,
     pub info_bbcode: Option<String>,
 }
 
@@ -704,6 +705,13 @@ fn render_single_layout_tag(
         "app_tech_table" => {
             Some(render_game_tech_block(None, title_color))
         }
+        "mediainfo_table" => {
+            if let Some(ref ma) = ctx.media_analysis {
+                Some(render_mediainfo_block(ma, title_color))
+            } else {
+                Some(String::new())
+            }
+        }
         "screenshots_grid" => {
             Some(render_screenshots_block(&ctx.screenshots, title_color))
         }
@@ -980,6 +988,41 @@ pub fn build_app_data(app: &crate::models::Application) -> HashMap<String, Strin
     data
 }
 
+/// Inject MediaAnalysis data into the template data map.
+pub fn build_media_analysis_data(data: &mut HashMap<String, String>, ma: &crate::models::MediaAnalysis) {
+    data.insert("mi_format".into(), ma.format.clone());
+    data.insert("mi_file_size".into(), ma.file_size.clone());
+    if let Some(ref d) = ma.duration {
+        data.insert("mi_duration".into(), d.clone());
+    }
+    if let Some(ref b) = ma.bitrate {
+        data.insert("mi_bitrate".into(), b.clone());
+    }
+    if let Some(codec) = ma.video_codec() {
+        data.insert("mi_video_codec".into(), codec.to_string());
+    }
+    if let Some(res) = ma.resolution() {
+        data.insert("mi_resolution".into(), res);
+    }
+    if let Some(ref v) = ma.video.first() {
+        if let Some(ref fps) = v.fps {
+            data.insert("mi_video_fps".into(), fps.clone());
+        }
+    }
+    let audio_langs = ma.audio_languages();
+    if !audio_langs.is_empty() {
+        data.insert("mi_audio_langs".into(), audio_langs);
+    }
+    let sub_langs = ma.subtitle_languages();
+    if !sub_langs.is_empty() {
+        data.insert("mi_subtitle_langs".into(), sub_langs);
+    }
+    data.insert("mi_audio_count".into(), ma.audio.len().to_string());
+    data.insert("mi_subtitle_count".into(), ma.subtitles.len().to_string());
+    // Flag for conditionals
+    data.insert("has_mediainfo".into(), "true".into());
+}
+
 // --- Composite block renderers ---
 
 pub fn render_ratings_block(
@@ -1225,6 +1268,97 @@ pub fn render_cover_info_block(
     out
 }
 
+pub fn render_mediainfo_block(
+    ma: &crate::models::MediaAnalysis,
+    title_color: &str,
+) -> String {
+    let mut out = String::new();
+    out.push_str(&bbcode::section_heading("MediaInfo", title_color));
+    out.push('\n');
+
+    // Video info table
+    if let Some(v) = ma.video.first() {
+        let mut headers = vec!["Codec Video", "Resolution"];
+        let mut values: Vec<String> = vec![
+            v.codec.clone(),
+            format!("{}x{}", v.width, v.height),
+        ];
+        if let Some(ref fps) = v.fps {
+            headers.push("FPS");
+            values.push(fps.clone());
+        }
+        if let Some(ref d) = ma.duration {
+            headers.push("Duree");
+            values.push(d.clone());
+        }
+        if let Some(ref b) = ma.bitrate {
+            headers.push("Debit");
+            values.push(b.clone());
+        }
+        headers.push("Taille");
+        values.push(ma.file_size.clone());
+
+        let mut table = String::new();
+        let mut hrow = String::new();
+        for h in &headers {
+            hrow.push_str(&bbcode::th(h));
+        }
+        table.push_str(&bbcode::tr(&hrow));
+        let mut vrow = String::new();
+        for val in &values {
+            vrow.push_str(&bbcode::td(&bbcode::center(val)));
+        }
+        table.push_str(&bbcode::tr(&vrow));
+        out.push_str(&bbcode::table(&table));
+    }
+
+    // Audio tracks table
+    if !ma.audio.is_empty() {
+        out.push('\n');
+        out.push_str(&bbcode::sub_heading("Pistes audio", title_color));
+        out.push('\n');
+        let mut table = String::new();
+        let mut hrow = String::new();
+        hrow.push_str(&bbcode::th("#"));
+        hrow.push_str(&bbcode::th("Codec"));
+        hrow.push_str(&bbcode::th("Canaux"));
+        hrow.push_str(&bbcode::th("Langue"));
+        table.push_str(&bbcode::tr(&hrow));
+        for (i, a) in ma.audio.iter().enumerate() {
+            let mut row = String::new();
+            row.push_str(&bbcode::td(&bbcode::center(&format!("{}", i + 1))));
+            row.push_str(&bbcode::td(&bbcode::center(&a.codec)));
+            row.push_str(&bbcode::td(&bbcode::center(&a.channels)));
+            row.push_str(&bbcode::td(&bbcode::center(a.language.as_deref().unwrap_or("-"))));
+            table.push_str(&bbcode::tr(&row));
+        }
+        out.push_str(&bbcode::table(&table));
+    }
+
+    // Subtitle tracks table
+    if !ma.subtitles.is_empty() {
+        out.push('\n');
+        out.push_str(&bbcode::sub_heading("Sous-titres", title_color));
+        out.push('\n');
+        let mut table = String::new();
+        let mut hrow = String::new();
+        hrow.push_str(&bbcode::th("#"));
+        hrow.push_str(&bbcode::th("Format"));
+        hrow.push_str(&bbcode::th("Langue"));
+        table.push_str(&bbcode::tr(&hrow));
+        for (i, s) in ma.subtitles.iter().enumerate() {
+            let mut row = String::new();
+            row.push_str(&bbcode::td(&bbcode::center(&format!("{}", i + 1))));
+            row.push_str(&bbcode::td(&bbcode::center(&s.format)));
+            row.push_str(&bbcode::td(&bbcode::center(s.language.as_deref().unwrap_or("-"))));
+            table.push_str(&bbcode::tr(&row));
+        }
+        out.push_str(&bbcode::table(&table));
+    }
+
+    out
+}
+
 // --- Preview with sample data ---
 
 pub fn preview_template(
@@ -1293,12 +1427,15 @@ fn build_sample_movie(title_color: &str) -> (HashMap<String, String>, RenderCont
         size: Some("12.5 Go".into()),
     };
 
-    let data = build_movie_data(&movie, Some(&tech));
+    let sample_analysis = build_sample_media_analysis();
+    let mut data = build_movie_data(&movie, Some(&tech));
+    build_media_analysis_data(&mut data, &sample_analysis);
     let info_bbcode = build_sample_movie_info(&movie, title_color);
     let ctx = RenderContext {
         ratings: movie.ratings.clone(),
         poster_url: movie.poster_url.clone(),
         tech: Some(tech),
+        media_analysis: Some(sample_analysis),
         info_bbcode: Some(info_bbcode),
         ..Default::default()
     };
@@ -1375,12 +1512,15 @@ fn build_sample_series(title_color: &str) -> (HashMap<String, String>, RenderCon
         size: Some("45.2 Go".into()),
     };
 
-    let data = build_series_data(&series, Some(&tech));
+    let sample_analysis = build_sample_media_analysis();
+    let mut data = build_series_data(&series, Some(&tech));
+    build_media_analysis_data(&mut data, &sample_analysis);
     let info_bbcode = build_sample_series_info(&series, title_color);
     let ctx = RenderContext {
         ratings: series.ratings.clone(),
         poster_url: series.poster_url.clone(),
         tech: Some(tech),
+        media_analysis: Some(sample_analysis),
         info_bbcode: Some(info_bbcode),
         ..Default::default()
     };
@@ -1561,6 +1701,57 @@ fn build_sample_app_info(app: &crate::models::Application) -> String {
     info
 }
 
+fn build_sample_media_analysis() -> crate::models::MediaAnalysis {
+    use crate::models::{AudioTrack, MediaAnalysis, SubtitleTrack, VideoTrack};
+
+    MediaAnalysis {
+        format: "Matroska".into(),
+        file_name: "Movie.2014.1080p.BluRay.DTS-HD.MA.5.1.x264-GRP.mkv".into(),
+        file_size: "12.5 GiB".into(),
+        duration: Some("2 h 49 min".into()),
+        bitrate: Some("10.5 Mb/s".into()),
+        video: vec![VideoTrack {
+            codec: "AVC (H.264)".into(),
+            width: 1920,
+            height: 1080,
+            fps: Some("23.976 FPS".into()),
+            bitrate: Some("9500 kb/s".into()),
+            language: Some("English".into()),
+        }],
+        audio: vec![
+            AudioTrack {
+                codec: "DTS-HD Master Audio".into(),
+                channels: "6 channels (5.1)".into(),
+                sample_rate: Some("48.0 kHz".into()),
+                language: Some("French".into()),
+                is_default: true,
+            },
+            AudioTrack {
+                codec: "DTS-HD Master Audio".into(),
+                channels: "6 channels (5.1)".into(),
+                sample_rate: Some("48.0 kHz".into()),
+                language: Some("English".into()),
+                is_default: false,
+            },
+        ],
+        subtitles: vec![
+            SubtitleTrack {
+                format: "UTF-8 (SRT)".into(),
+                language: Some("French".into()),
+                is_default: true,
+                is_forced: false,
+            },
+            SubtitleTrack {
+                format: "UTF-8 (SRT)".into(),
+                language: Some("English".into()),
+                is_default: false,
+                is_forced: false,
+            },
+        ],
+        raw_text: String::new(),
+    }
+}
+
 // --- Tag reference ---
 
 pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
@@ -1624,6 +1815,7 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
         tag("logo_info", "Bloc logo + infos (app)", shortcuts),
         tag("ratings_table", "Tableau des notes formaté", shortcuts),
         tag("tech_table", "Tableau infos techniques (film/série)", shortcuts),
+        tag("mediainfo_table", "Tableau MediaInfo complet (vidéo, audio, sous-titres)", shortcuts),
         tag("game_tech_table", "Tableau infos techniques (jeu)", shortcuts),
         tag("game_reqs_table", "Tableau configuration requise min/rec (jeu)", shortcuts),
         tag("screenshots_grid", "Grille de screenshots (jeu)", shortcuts),
@@ -1658,6 +1850,16 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tech_langue", "Langue(s)", tech_cat),
                 tag("tech_soustitres", "Sous-titres", tech_cat),
                 tag("tech_taille", "Taille du fichier", tech_cat),
+                // MediaInfo
+                tag("mi_video_codec", "Codec vidéo (MediaInfo)", tech_cat),
+                tag("mi_resolution", "Résolution vidéo (ex: 1920x1080)", tech_cat),
+                tag("mi_video_fps", "Images par seconde", tech_cat),
+                tag("mi_duration", "Durée (MediaInfo)", tech_cat),
+                tag("mi_bitrate", "Débit global", tech_cat),
+                tag("mi_file_size", "Taille du fichier (MediaInfo)", tech_cat),
+                tag("mi_audio_langs", "Langues audio", tech_cat),
+                tag("mi_subtitle_langs", "Langues sous-titres", tech_cat),
+                tag("has_mediainfo", "Flag: fichier média analysé", tech_cat),
                 // Liens
                 tag_ex("link", "Lien principal (TMDB)", links_cat, "{{#if link}}{{field:Lien:{{link}}}}{{/if}}"),
                 tag("tmdb_link", "Lien vers la page TMDB", links_cat),
@@ -1691,6 +1893,16 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tech_langue", "Langue(s)", tech_cat),
                 tag("tech_soustitres", "Sous-titres", tech_cat),
                 tag("tech_taille", "Taille du fichier", tech_cat),
+                // MediaInfo
+                tag("mi_video_codec", "Codec vidéo (MediaInfo)", tech_cat),
+                tag("mi_resolution", "Résolution vidéo (ex: 1920x1080)", tech_cat),
+                tag("mi_video_fps", "Images par seconde", tech_cat),
+                tag("mi_duration", "Durée (MediaInfo)", tech_cat),
+                tag("mi_bitrate", "Débit global", tech_cat),
+                tag("mi_file_size", "Taille du fichier (MediaInfo)", tech_cat),
+                tag("mi_audio_langs", "Langues audio", tech_cat),
+                tag("mi_subtitle_langs", "Langues sous-titres", tech_cat),
+                tag("has_mediainfo", "Flag: fichier média analysé", tech_cat),
                 // Liens
                 tag_ex("link", "Lien principal (TMDB)", links_cat, "{{#if link}}{{field:Lien:{{link}}}}{{/if}}"),
                 tag("tmdb_link", "Lien vers la page TMDB", links_cat),

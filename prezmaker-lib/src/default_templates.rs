@@ -25,6 +25,10 @@ const DEFAULT_FILM: &str = r#"{{heading:🎬 {{titre_maj}} 🎬}}
 
 {{hr}}
 
+{{/if}}{{#if has_mediainfo}}{{mediainfo_table}}
+
+{{hr}}
+
 {{/if}}{{tech_table}}
 
 {{footer}}"#;
@@ -43,6 +47,10 @@ const DEFAULT_SERIE: &str = r#"{{heading:📺 {{titre_maj}} 📺}}
 {{#if synopsis}}{{section:Synopsis}}
 
 {{quote:{{synopsis}}}}
+
+{{hr}}
+
+{{/if}}{{#if has_mediainfo}}{{mediainfo_table}}
 
 {{hr}}
 

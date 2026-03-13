@@ -2,7 +2,7 @@ use crate::bbcode_to_html;
 use prezmaker_lib::cache::ApiCache;
 use prezmaker_lib::collections::{self, Collection, SavedPresentation};
 use prezmaker_lib::config::Config;
-use prezmaker_lib::models::{Application, Game, MediaTechInfo, SystemReqs, TechInfo};
+use prezmaker_lib::models::{Application, Game, MediaAnalysis, MediaTechInfo, SystemReqs, TechInfo};
 use prezmaker_lib::orchestrator_api::{GameDetailsResponse, OrchestratorApi, SearchResult};
 use prezmaker_lib::torrent::{self, TorrentInfo};
 use prezmaker_lib::template_engine::{self, ContentTemplate, TemplateTag};
@@ -276,6 +276,7 @@ pub async fn generate_from_template(
     title_color: Option<String>,
     template_name: String,
     tech: Option<MediaTechInfo>,
+    media_analysis: Option<MediaAnalysis>,
     game_payload: Option<GenerateJeuPayload>,
     app_payload: Option<GenerateAppPayload>,
 ) -> Result<String, String> {
@@ -288,13 +289,13 @@ pub async fn generate_from_template(
     match content_type.as_str() {
         "film" => {
             let id = tmdb_id.ok_or("tmdb_id required for film")?;
-            api.generate_film_from_template(id, false, tech, &template_name)
+            api.generate_film_from_template(id, false, tech, media_analysis.as_ref(), &template_name)
                 .await
                 .map_err(|e| e.to_string())
         }
         "serie" => {
             let id = tmdb_id.ok_or("tmdb_id required for serie")?;
-            api.generate_serie_from_template(id, false, tech, &template_name)
+            api.generate_serie_from_template(id, false, tech, media_analysis.as_ref(), &template_name)
                 .await
                 .map_err(|e| e.to_string())
         }
@@ -335,6 +336,11 @@ pub fn convert_bbcode(bbcode: String) -> String {
 #[tauri::command]
 pub fn run_mediainfo(path: String) -> Result<String, String> {
     prezmaker_lib::mediainfo::analyze(&path)
+}
+
+#[tauri::command]
+pub fn analyze_media(path: String) -> Result<MediaAnalysis, String> {
+    prezmaker_lib::mediainfo::analyze_structured(&path)
 }
 
 // --- Settings ---

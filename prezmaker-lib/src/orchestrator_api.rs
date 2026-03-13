@@ -3,7 +3,7 @@ use crate::config::Config;
 use crate::error::PrezError;
 use crate::formatters::{app_fmt, game_fmt, movie_fmt, series_fmt};
 use crate::formatters::bbcode;
-use crate::models::{Application, Game, MediaTechInfo, Movie, Series, TechInfo};
+use crate::models::{Application, Game, MediaAnalysis, MediaTechInfo, Movie, Series, TechInfo};
 use crate::template_engine::{self, RenderContext};
 use crate::providers::allocine::AllocineClient;
 use crate::providers::igdb::IgdbClient;
@@ -443,6 +443,7 @@ impl OrchestratorApi {
         tmdb_id: u64,
         no_allocine: bool,
         tech: Option<MediaTechInfo>,
+        media_analysis: Option<&MediaAnalysis>,
         template_name: &str,
     ) -> Result<String, PrezError> {
         let api_key = self.config.tmdb_api_key()?;
@@ -458,7 +459,12 @@ impl OrchestratorApi {
 
         let tpl = template_engine::get_template("film", template_name)
             .map_err(|e| PrezError::Other(e))?;
-        let data = template_engine::build_movie_data(&movie, tech.as_ref());
+        let mut data = template_engine::build_movie_data(&movie, tech.as_ref());
+
+        // Inject media analysis data tags
+        if let Some(ma) = media_analysis {
+            template_engine::build_media_analysis_data(&mut data, ma);
+        }
 
         // Build info BBCode for poster_info composite
         let info_bbcode = self.build_movie_info_bbcode(&movie);
@@ -466,6 +472,7 @@ impl OrchestratorApi {
             ratings: movie.ratings.clone(),
             poster_url: movie.poster_url.clone(),
             tech,
+            media_analysis: media_analysis.cloned(),
             info_bbcode: Some(info_bbcode),
             ..Default::default()
         };
@@ -478,6 +485,7 @@ impl OrchestratorApi {
         tmdb_id: u64,
         no_allocine: bool,
         tech: Option<MediaTechInfo>,
+        media_analysis: Option<&MediaAnalysis>,
         template_name: &str,
     ) -> Result<String, PrezError> {
         let api_key = self.config.tmdb_api_key()?;
@@ -493,13 +501,18 @@ impl OrchestratorApi {
 
         let tpl = template_engine::get_template("serie", template_name)
             .map_err(|e| PrezError::Other(e))?;
-        let data = template_engine::build_series_data(&series, tech.as_ref());
+        let mut data = template_engine::build_series_data(&series, tech.as_ref());
+
+        if let Some(ma) = media_analysis {
+            template_engine::build_media_analysis_data(&mut data, ma);
+        }
 
         let info_bbcode = self.build_series_info_bbcode(&series);
         let ctx = RenderContext {
             ratings: series.ratings.clone(),
             poster_url: series.poster_url.clone(),
             tech,
+            media_analysis: media_analysis.cloned(),
             info_bbcode: Some(info_bbcode),
             ..Default::default()
         };

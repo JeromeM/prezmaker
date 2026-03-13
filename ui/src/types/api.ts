@@ -140,6 +140,42 @@ export interface TorrentInfo {
   size_formatted: string;
 }
 
+export interface VideoTrack {
+  codec: string;
+  width: number;
+  height: number;
+  fps: string | null;
+  bitrate: string | null;
+  language: string | null;
+}
+
+export interface AudioTrack {
+  codec: string;
+  channels: string;
+  sample_rate: string | null;
+  language: string | null;
+  is_default: boolean;
+}
+
+export interface SubtitleTrack {
+  format: string;
+  language: string | null;
+  is_default: boolean;
+  is_forced: boolean;
+}
+
+export interface MediaAnalysis {
+  format: string;
+  file_name: string;
+  file_size: string;
+  duration: string | null;
+  bitrate: string | null;
+  video: VideoTrack[];
+  audio: AudioTrack[];
+  subtitles: SubtitleTrack[];
+  raw_text: string;
+}
+
 export interface PresentationMeta {
   title: string;
   contentType: ContentType;
@@ -167,6 +203,7 @@ export interface PendingGeneration {
   contentType: ContentType;
   tmdbId?: number;
   tech?: MediaTechInfo | null;
+  mediaAnalysis?: MediaAnalysis | null;
   gamePayload?: { game: Game; description: string | null; installation: string | null; tech_info: TechInfo };
   appPayload?: AppPayload;
   title?: string;
@@ -178,10 +215,11 @@ export type AppState =
   | { step: "searching" }
   | { step: "selecting"; results: SearchResult[]; contentType: ContentType }
   | { step: "game_extras"; game: Game; claudeDescription: string | null; torrentInfo?: TorrentInfo }
+  | { step: "movie_extras"; contentType: ContentType; tmdbId: number; title?: string; tech?: MediaTechInfo | null; torrentInfo?: TorrentInfo }
   | { step: "app_form" }
   | { step: "template_pick"; pending: PendingGeneration }
   | { step: "generating" }
-  | { step: "done"; bbcode: string; html: string; meta: PresentationMeta }
+  | { step: "done"; bbcode: string; html: string; meta: PresentationMeta; mediaAnalysis?: MediaAnalysis | null }
   | { step: "error"; message: string }
   | { step: "torrent_parsed"; torrentInfo: TorrentInfo }
   | { step: "torrent_selecting"; results: SearchResult[]; contentType: ContentType; torrentInfo: TorrentInfo };

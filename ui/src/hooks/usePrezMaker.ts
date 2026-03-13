@@ -9,6 +9,7 @@ import type {
   Game,
   TechInfo,
   MediaTechInfo,
+  MediaAnalysis,
   AppPayload,
   PendingGeneration,
   PresentationMeta,
@@ -53,6 +54,7 @@ export function usePrezMaker() {
       templateName: string,
       tmdbId?: number,
       tech?: MediaTechInfo | null,
+      mediaAnalysis?: MediaAnalysis | null,
       gamePayload?: { game: Game; description: string | null; installation: string | null; tech_info: TechInfo },
       appPayload?: AppPayload,
       meta?: PresentationMeta,
@@ -65,6 +67,7 @@ export function usePrezMaker() {
           titleColor: titleColor || null,
           templateName,
           tech: tech ?? null,
+          mediaAnalysis: mediaAnalysis ?? null,
           gamePayload: gamePayload ?? null,
           appPayload: appPayload ?? null,
         });
@@ -74,7 +77,7 @@ export function usePrezMaker() {
           contentType,
           posterUrl: null,
         };
-        setState({ step: "done", bbcode, html, meta: presentationMeta });
+        setState({ step: "done", bbcode, html, meta: presentationMeta, mediaAnalysis: mediaAnalysis ?? null });
       } catch (e) {
         setState({ step: "error", message: String(e) });
       }
@@ -116,7 +119,7 @@ export function usePrezMaker() {
     [titleColor]
   );
 
-  // --- Select result (normal flow, goes to template pick) ---
+  // --- Select result (normal flow) ---
   const selectResult = useCallback(
     async (id: number, contentType: ContentType, _templateName: string = "default", source?: string, label?: string) => {
       if (contentType === "jeu") {
@@ -134,6 +137,11 @@ export function usePrezMaker() {
         } catch (e) {
           setState({ step: "error", message: String(e) });
         }
+        return;
+      }
+
+      if (contentType === "film" || contentType === "serie") {
+        setState({ step: "movie_extras", contentType, tmdbId: id, title: label });
         return;
       }
 
@@ -161,6 +169,12 @@ export function usePrezMaker() {
         } catch (e) {
           setState({ step: "error", message: String(e) });
         }
+        return;
+      }
+
+      if (contentType === "film" || contentType === "serie") {
+        const tech = buildMediaTech(torrentInfo.parsed, torrentInfo.size_formatted);
+        setState({ step: "movie_extras", contentType, tmdbId: id, title: label, tech, torrentInfo });
         return;
       }
 
@@ -248,6 +262,23 @@ export function usePrezMaker() {
     []
   );
 
+  // --- Movie/Serie generation (goes to template pick) ---
+  const generateMovie = useCallback(
+    (
+      contentType: ContentType,
+      tmdbId: number,
+      tech: MediaTechInfo | null,
+      mediaAnalysis: MediaAnalysis | null,
+      title?: string,
+    ) => {
+      setState({
+        step: "template_pick",
+        pending: { contentType, tmdbId, tech: tech ?? undefined, mediaAnalysis, title },
+      });
+    },
+    []
+  );
+
   // --- App generation (goes to template pick) ---
   const generateApp = useCallback(
     (payload: AppPayload) => {
@@ -272,6 +303,7 @@ export function usePrezMaker() {
         templateName,
         pending.tmdbId,
         pending.tech,
+        pending.mediaAnalysis,
         pending.gamePayload,
         pending.appPayload,
         meta,
@@ -308,6 +340,7 @@ export function usePrezMaker() {
     selectTorrentResult,
     importTorrent,
     confirmTorrentContentType,
+    generateMovie,
     generateGame,
     generateApp,
     confirmTemplate,

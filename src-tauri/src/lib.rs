@@ -51,6 +51,7 @@ pub fn run() {
             commands::convert_bbcode,
             commands::save_text_file,
             commands::run_mediainfo,
+            commands::analyze_media,
             commands::get_settings,
             commands::save_settings,
             commands::set_default_template,
