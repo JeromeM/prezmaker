@@ -4,6 +4,7 @@ export interface SearchResult {
   id: number;
   label: string;
   source?: string;
+  thumbnail?: string | null;
 }
 
 export interface TechInfo {
