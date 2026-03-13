@@ -175,15 +175,25 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
                     Couleur titre par defaut
                   </label>
                   <div className="flex items-center gap-2">
-                    <div
-                      className="w-8 h-8 rounded border border-edge"
-                      style={{ backgroundColor: `#${settings.title_color || "c0392b"}` }}
-                    />
+                    <label className="relative w-8 h-8 rounded border border-edge cursor-pointer shrink-0 overflow-hidden">
+                      <div
+                        className="absolute inset-0"
+                        style={{ backgroundColor: `#${settings.title_color || "c0392b"}` }}
+                      />
+                      <input
+                        type="color"
+                        value={`#${settings.title_color || "c0392b"}`}
+                        onChange={(e) =>
+                          setSettings((s) => ({ ...s, title_color: e.target.value.replace("#", "") }))
+                        }
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      />
+                    </label>
                     <input
                       type="text"
                       value={settings.title_color}
                       onChange={(e) =>
-                        setSettings((s) => ({ ...s, title_color: e.target.value }))
+                        setSettings((s) => ({ ...s, title_color: e.target.value.replace("#", "") }))
                       }
                       className={inputClass + " max-w-32 font-mono"}
                       placeholder="c0392b"
