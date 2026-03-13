@@ -281,9 +281,9 @@ function App() {
       {showCollections && (
         <CollectionBrowser
           onClose={() => setShowCollections(false)}
-          onLoad={(bbcode, html) => {
+          onLoad={(bbcode, html, meta) => {
             setShowCollections(false);
-            loadPresentation(bbcode, html);
+            loadPresentation(bbcode, html, meta);
           }}
         />
       )}

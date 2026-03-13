@@ -140,10 +140,18 @@ export interface PresentationMeta {
   title: string;
   contentType: ContentType;
   posterUrl: string | null;
+  savedRef?: { collectionId: string; entryId: string } | null;
+}
+
+export interface Collection {
+  id: string;
+  name: string;
+  created_at: string;
 }
 
 export interface SavedPresentation {
   id: string;
+  collection_id: string;
   title: string;
   content_type: string;
   bbcode: string;
