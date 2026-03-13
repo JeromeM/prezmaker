@@ -219,3 +219,20 @@ pub fn delete_presentation(collection_id: &str, id: &str) -> Result<(), String> 
     std::fs::remove_file(&path)
         .map_err(|e| format!("Cannot delete collection entry: {}", e))
 }
+
+pub fn move_presentation(from_collection: &str, to_collection: &str, id: &str) -> Result<(), String> {
+    let src = collection_dir(from_collection)?.join(format!("{}.json", id));
+    let json = std::fs::read_to_string(&src)
+        .map_err(|e| format!("Cannot read entry: {}", e))?;
+    let mut entry: SavedPresentation = serde_json::from_str(&json)
+        .map_err(|e| format!("Invalid JSON: {}", e))?;
+    entry.collection_id = to_collection.to_string();
+    let new_json = serde_json::to_string_pretty(&entry)
+        .map_err(|e| format!("JSON error: {}", e))?;
+    let dest = collection_dir(to_collection)?.join(format!("{}.json", id));
+    std::fs::write(&dest, new_json)
+        .map_err(|e| format!("Cannot write entry: {}", e))?;
+    std::fs::remove_file(&src)
+        .map_err(|e| format!("Cannot remove old entry: {}", e))?;
+    Ok(())
+}

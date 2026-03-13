@@ -23,6 +23,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
   const [renameValue, setRenameValue] = useState("");
   const [creatingNew, setCreatingNew] = useState(false);
   const [newName, setNewName] = useState("");
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
   const refreshCollections = useCallback(async () => {
     setLoading(true);
@@ -113,6 +114,20 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
     }
   };
 
+  const handleMoveEntry = async (entryId: string, toCollectionId: string) => {
+    if (!selectedCol || toCollectionId === selectedCol) return;
+    try {
+      await invoke("move_collection_entry", {
+        fromCollection: selectedCol,
+        toCollection: toCollectionId,
+        id: entryId,
+      });
+      setEntries((prev) => prev.filter((e) => e.id !== entryId));
+    } catch (e) {
+      alert(String(e));
+    }
+  };
+
   const handleLoad = async (entry: SavedPresentation) => {
     try {
       const html = await invoke<string>("convert_bbcode", { bbcode: entry.bbcode });
@@ -175,8 +190,24 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                 collections.map((col) => (
                   <div
                     key={col.id}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      setDragOverCol(col.id);
+                    }}
+                    onDragLeave={() => setDragOverCol(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOverCol(null);
+                      const entryId = e.dataTransfer.getData("application/x-entry-id");
+                      if (entryId) handleMoveEntry(entryId, col.id);
+                    }}
                     className={`group flex items-center gap-1 rounded transition-colors ${
-                      selectedCol === col.id ? "bg-blue-600/20" : "hover:bg-input/50"
+                      dragOverCol === col.id
+                        ? "bg-blue-600/30 ring-1 ring-blue-500"
+                        : selectedCol === col.id
+                          ? "bg-blue-600/20"
+                          : "hover:bg-input/50"
                     }`}
                   >
                     {renamingId === col.id ? (
@@ -285,7 +316,12 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                 {entries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex items-center gap-3 px-5 py-3 hover:bg-input/50 transition-colors group"
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("application/x-entry-id", entry.id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    className="flex items-center gap-3 px-5 py-3 hover:bg-input/50 transition-colors group cursor-grab active:cursor-grabbing"
                   >
                     {entry.poster_url ? (
                       <img
