@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Collection, SavedPresentation, PresentationMeta, ContentType } from "../types/api";
 
@@ -14,6 +14,46 @@ const TYPE_LABELS: Record<string, string> = {
   app: "Application",
 };
 
+function MoveMenu({ collections, currentColId, onMove, onClose }: {
+  collections: Collection[];
+  currentColId: string;
+  onMove: (colId: string) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const targets = collections.filter((c) => c.id !== currentColId);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  if (targets.length === 0) {
+    return (
+      <div ref={ref} className="absolute right-0 top-full mt-1 z-10 bg-surface border border-edge rounded shadow-lg py-1 px-3 whitespace-nowrap">
+        <p className="text-xs text-fg-dim py-1">Aucune autre collection</p>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref} className="absolute right-0 top-full mt-1 z-10 bg-surface border border-edge rounded shadow-lg py-1 min-w-[140px]">
+      {targets.map((col) => (
+        <button
+          key={col.id}
+          onClick={() => onMove(col.id)}
+          className="w-full text-left px-3 py-1.5 text-xs text-fg hover:bg-input transition-colors truncate"
+        >
+          {col.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function CollectionBrowser({ onClose, onLoad }: Props) {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCol, setSelectedCol] = useState<string | null>(null);
@@ -23,7 +63,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
   const [renameValue, setRenameValue] = useState("");
   const [creatingNew, setCreatingNew] = useState(false);
   const [newName, setNewName] = useState("");
-  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const [movingEntryId, setMovingEntryId] = useState<string | null>(null);
 
   const refreshCollections = useCallback(async () => {
     setLoading(true);
@@ -123,6 +163,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
         id: entryId,
       });
       setEntries((prev) => prev.filter((e) => e.id !== entryId));
+      setMovingEntryId(null);
     } catch (e) {
       alert(String(e));
     }
@@ -190,28 +231,8 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                 collections.map((col) => (
                   <div
                     key={col.id}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = "move";
-                      setDragOverCol(col.id);
-                    }}
-                    onDragLeave={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                        setDragOverCol(null);
-                      }
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setDragOverCol(null);
-                      const entryId = e.dataTransfer.getData("application/x-entry-id");
-                      if (entryId) handleMoveEntry(entryId, col.id);
-                    }}
                     className={`group flex items-center gap-1 rounded transition-colors ${
-                      dragOverCol === col.id
-                        ? "bg-blue-600/30 ring-1 ring-blue-500"
-                        : selectedCol === col.id
-                          ? "bg-blue-600/20"
-                          : "hover:bg-input/50"
+                      selectedCol === col.id ? "bg-blue-600/20" : "hover:bg-input/50"
                     }`}
                   >
                     {renamingId === col.id ? (
@@ -320,27 +341,21 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                 {entries.map((entry) => (
                   <div
                     key={entry.id}
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData("application/x-entry-id", entry.id);
-                      e.dataTransfer.effectAllowed = "move";
-                    }}
-                    className="flex items-center gap-3 px-5 py-3 hover:bg-input/50 transition-colors group cursor-grab active:cursor-grabbing"
+                    className="flex items-center gap-3 px-5 py-3 hover:bg-input/50 transition-colors group"
                   >
                     {entry.poster_url ? (
                       <img
                         src={entry.poster_url}
                         alt=""
-                        draggable={false}
-                        className="w-10 h-14 object-cover rounded shrink-0 pointer-events-none"
+                        className="w-10 h-14 object-cover rounded shrink-0"
                       />
                     ) : (
-                      <div className="w-10 h-14 bg-input rounded shrink-0 flex items-center justify-center text-fg-faint text-xs pointer-events-none">
+                      <div className="w-10 h-14 bg-input rounded shrink-0 flex items-center justify-center text-fg-faint text-xs">
                         ?
                       </div>
                     )}
 
-                    <div className="flex-1 min-w-0 pointer-events-none select-none">
+                    <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-fg-bright truncate">
                         {entry.title}
                       </div>
@@ -359,6 +374,23 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                       >
                         Charger
                       </button>
+                      <div className="relative">
+                        <button
+                          onClick={() => setMovingEntryId(movingEntryId === entry.id ? null : entry.id)}
+                          className="bg-input hover:bg-input-hover border border-edge text-fg text-xs px-2 py-1 rounded transition-colors"
+                          title="Déplacer vers une autre collection"
+                        >
+                          Déplacer
+                        </button>
+                        {movingEntryId === entry.id && selectedCol && (
+                          <MoveMenu
+                            collections={collections}
+                            currentColId={selectedCol}
+                            onMove={(colId) => handleMoveEntry(entry.id, colId)}
+                            onClose={() => setMovingEntryId(null)}
+                          />
+                        )}
+                      </div>
                       <button
                         onClick={() => navigator.clipboard.writeText(entry.bbcode)}
                         className="bg-input hover:bg-input-hover border border-edge text-fg text-xs px-2 py-1 rounded transition-colors"
