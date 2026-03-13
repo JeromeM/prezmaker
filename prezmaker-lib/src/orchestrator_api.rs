@@ -23,6 +23,8 @@ pub struct SearchResult {
     pub label: String,
     #[serde(default)]
     pub source: Option<String>,
+    #[serde(default)]
+    pub thumbnail: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -96,6 +98,7 @@ impl OrchestratorApi {
                         m.year.map(|y| y.to_string()).unwrap_or_default()
                     ),
                     source: None,
+                    thumbnail: m.poster_url.clone(),
                 })
             })
             .collect();
@@ -130,6 +133,7 @@ impl OrchestratorApi {
                         s.year.map(|y| y.to_string()).unwrap_or_default()
                     ),
                     source: None,
+                    thumbnail: s.poster_url.clone(),
                 })
             })
             .collect();
@@ -165,6 +169,7 @@ impl OrchestratorApi {
                                     g.year.map(|y| y.to_string()).unwrap_or_default()
                                 ),
                                 source: Some("igdb".to_string()),
+                                thumbnail: g.cover_url.clone(),
                             })
                         })
                         .collect();
@@ -197,6 +202,7 @@ impl OrchestratorApi {
                         g.year.map(|y| y.to_string()).unwrap_or_default()
                     ),
                     source: Some("steam".to_string()),
+                    thumbnail: g.cover_url.clone(),
                 })
             })
             .collect();

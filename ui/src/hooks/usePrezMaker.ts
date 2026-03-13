@@ -103,7 +103,7 @@ export function usePrezMaker() {
           return;
         }
 
-        if (results.length === 1 && contentType !== "jeu") {
+        if (results.length === 1) {
           await selectResult(results[0].id, contentType, "default", results[0].source, results[0].label);
           return;
         }
@@ -207,7 +207,7 @@ export function usePrezMaker() {
           return;
         }
 
-        if (results.length === 1 && contentType !== "jeu") {
+        if (results.length === 1) {
           await selectTorrentResult(results[0].id, contentType, info, "default", results[0].source, results[0].label);
           return;
         }

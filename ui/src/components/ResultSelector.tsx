@@ -20,17 +20,30 @@ export default function ResultSelector({ results, contentType, onSelect, onCance
             &times;
           </button>
         </div>
-        <ul className="max-h-80 overflow-y-auto">
+        <ul className="max-h-96 overflow-y-auto">
           {results.map((r) => (
             <li key={`${r.source ?? "default"}-${r.id}`}>
               <button
                 onClick={() => onSelect(r.id, contentType, r.source, r.label)}
-                className="w-full text-left px-4 py-3 hover:bg-input transition-colors border-b border-edge/50 last:border-b-0"
+                className="w-full text-left px-4 py-2.5 hover:bg-input transition-colors border-b border-edge/50 last:border-b-0 flex items-center gap-3"
               >
-                <span>{r.label}</span>
-                {r.source === "steam" && (
-                  <span className="ml-2 text-xs text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded">Steam</span>
+                {r.thumbnail ? (
+                  <img
+                    src={r.thumbnail}
+                    alt=""
+                    className="w-8 h-12 object-cover rounded shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-12 bg-input rounded shrink-0 flex items-center justify-center text-fg-faint text-xs">
+                    ?
+                  </div>
                 )}
+                <div className="flex-1 min-w-0">
+                  <span className="block truncate">{r.label}</span>
+                  {r.source === "steam" && (
+                    <span className="text-xs text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded">Steam</span>
+                  )}
+                </div>
               </button>
             </li>
           ))}
