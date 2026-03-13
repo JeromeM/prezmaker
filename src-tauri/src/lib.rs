@@ -2,6 +2,7 @@ mod bbcode_to_html;
 mod commands;
 
 use commands::AppState;
+use prezmaker_lib::cache::ApiCache;
 use prezmaker_lib::config::Config;
 use std::sync::{Arc, Mutex};
 
@@ -25,6 +26,7 @@ pub fn run() {
         })
         .manage(AppState {
             config: Arc::new(Mutex::new(config)),
+            cache: ApiCache::new(),
         })
         .invoke_handler(tauri::generate_handler![
             commands::search,

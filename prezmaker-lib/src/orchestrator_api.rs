@@ -1,3 +1,4 @@
+use crate::cache::ApiCache;
 use crate::config::Config;
 use crate::error::PrezError;
 use crate::formatters::{app_fmt, game_fmt, movie_fmt, series_fmt};
@@ -13,6 +14,7 @@ use crate::providers::translator::ClaudeClient;
 use crate::providers::wikipedia::WikipediaClient;
 use crate::providers::{GameProvider, MovieProvider, SeriesProvider};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use tracing::{info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,7 +36,11 @@ pub struct OrchestratorApi {
     language: String,
     title_color: String,
     pseudo: String,
+    cache: ApiCache,
 }
+
+const SEARCH_TTL: Duration = Duration::from_secs(3600); // 1h
+const DETAILS_TTL: Duration = Duration::from_secs(86400); // 24h
 
 impl OrchestratorApi {
     pub fn new(
@@ -50,7 +56,13 @@ impl OrchestratorApi {
             language: lang,
             title_color: color,
             pseudo,
+            cache: ApiCache::new(),
         }
+    }
+
+    pub fn with_cache(mut self, cache: ApiCache) -> Self {
+        self.cache = cache;
+        self
     }
 
     pub fn set_title_color(&mut self, color: String) {
@@ -58,6 +70,12 @@ impl OrchestratorApi {
     }
 
     pub async fn search_film(&self, query: &str) -> Result<Vec<SearchResult>, PrezError> {
+        let cache_key = format!("search:film:{}:{}", query, self.language);
+        if let Some(cached) = self.cache.get_json::<Vec<SearchResult>>(&cache_key) {
+            info!("Recherche film (cache) : {}", query);
+            return Ok(cached);
+        }
+
         let api_key = self.config.tmdb_api_key()?;
         let tmdb = TmdbClient::new(api_key.to_string(), self.language.clone());
 
@@ -67,7 +85,7 @@ impl OrchestratorApi {
             .await
             .map_err(|e| PrezError::Other(format!("Erreur recherche TMDB : {}", e)))?;
 
-        Ok(results
+        let mapped: Vec<SearchResult> = results
             .into_iter()
             .filter_map(|m| {
                 m.tmdb_id.map(|id| SearchResult {
@@ -80,20 +98,28 @@ impl OrchestratorApi {
                     source: None,
                 })
             })
-            .collect())
+            .collect();
+        self.cache.set_json(cache_key, &mapped, SEARCH_TTL);
+        Ok(mapped)
     }
 
     pub async fn search_serie(&self, query: &str) -> Result<Vec<SearchResult>, PrezError> {
+        let cache_key = format!("search:serie:{}:{}", query, self.language);
+        if let Some(cached) = self.cache.get_json::<Vec<SearchResult>>(&cache_key) {
+            info!("Recherche série (cache) : {}", query);
+            return Ok(cached);
+        }
+
         let api_key = self.config.tmdb_api_key()?;
         let tmdb = TmdbClient::new(api_key.to_string(), self.language.clone());
 
-        info!("Recherche serie : {}", query);
+        info!("Recherche série : {}", query);
         let results = tmdb
             .search_series(query)
             .await
             .map_err(|e| PrezError::Other(format!("Erreur recherche TMDB : {}", e)))?;
 
-        Ok(results
+        let mapped: Vec<SearchResult> = results
             .into_iter()
             .filter_map(|s| {
                 s.tmdb_id.map(|id| SearchResult {
@@ -106,10 +132,18 @@ impl OrchestratorApi {
                     source: None,
                 })
             })
-            .collect())
+            .collect();
+        self.cache.set_json(cache_key, &mapped, SEARCH_TTL);
+        Ok(mapped)
     }
 
     pub async fn search_jeu(&self, query: &str) -> Result<Vec<SearchResult>, PrezError> {
+        let cache_key = format!("search:jeu:{}:{}", query, self.language);
+        if let Some(cached) = self.cache.get_json::<Vec<SearchResult>>(&cache_key) {
+            info!("Recherche jeu (cache) : {}", query);
+            return Ok(cached);
+        }
+
         info!("Recherche jeu : {}", query);
 
         // Try IGDB first if configured
@@ -120,7 +154,7 @@ impl OrchestratorApi {
             {
                 Ok(results) if !results.is_empty() => {
                     info!("IGDB : {} resultats", results.len());
-                    return Ok(results
+                    let mapped: Vec<SearchResult> = results
                         .into_iter()
                         .filter_map(|g| {
                             g.igdb_id.map(|id| SearchResult {
@@ -133,7 +167,9 @@ impl OrchestratorApi {
                                 source: Some("igdb".to_string()),
                             })
                         })
-                        .collect());
+                        .collect();
+                    self.cache.set_json(cache_key, &mapped, SEARCH_TTL);
+                    return Ok(mapped);
                 }
                 Ok(_) => info!("IGDB : aucun resultat, fallback Steam"),
                 Err(e) => warn!("IGDB indisponible ({}), fallback Steam", e),
@@ -150,7 +186,7 @@ impl OrchestratorApi {
             .map_err(|e| PrezError::Other(format!("Erreur recherche Steam : {}", e)))?;
 
         info!("Steam : {} resultats", results.len());
-        Ok(results
+        let mapped: Vec<SearchResult> = results
             .into_iter()
             .filter_map(|g| {
                 g.igdb_id.map(|id| SearchResult {
@@ -163,7 +199,9 @@ impl OrchestratorApi {
                     source: Some("steam".to_string()),
                 })
             })
-            .collect())
+            .collect();
+        self.cache.set_json(cache_key, &mapped, SEARCH_TTL);
+        Ok(mapped)
     }
 
     pub async fn generate_film(
@@ -283,7 +321,14 @@ impl OrchestratorApi {
         game_id: u64,
         source: Option<&str>,
     ) -> Result<GameDetailsResponse, PrezError> {
-        let mut game = match source.unwrap_or("igdb") {
+        let src = source.unwrap_or("igdb");
+        let cache_key = format!("details:game:{}:{}:{}", src, game_id, self.language);
+        if let Some(cached) = self.cache.get_json::<GameDetailsResponse>(&cache_key) {
+            info!("Détails jeu (cache) : {}", game_id);
+            return Ok(cached);
+        }
+
+        let mut game = match src {
             "steam" => {
                 info!("Recuperation details Steam : {}", game_id);
                 let steam = SteamClient::new(self.language.clone());
@@ -349,10 +394,12 @@ impl OrchestratorApi {
             .resolve_description(&game.title, game.synopsis.as_deref())
             .await;
 
-        Ok(GameDetailsResponse {
+        let response = GameDetailsResponse {
             game,
             claude_description,
-        })
+        };
+        self.cache.set_json(cache_key, &response, DETAILS_TTL);
+        Ok(response)
     }
 
     pub fn generate_jeu(

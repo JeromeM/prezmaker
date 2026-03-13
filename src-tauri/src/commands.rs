@@ -1,4 +1,5 @@
 use crate::bbcode_to_html;
+use prezmaker_lib::cache::ApiCache;
 use prezmaker_lib::collections::{self, SavedPresentation};
 use prezmaker_lib::config::Config;
 use prezmaker_lib::models::{Application, Game, MediaTechInfo, SystemReqs, TechInfo};
@@ -13,10 +14,12 @@ use std::sync::{Arc, Mutex};
 
 pub struct AppState {
     pub config: Arc<Mutex<Config>>,
+    pub cache: ApiCache,
 }
 
-fn make_api(config: &Config, title_color: Option<&str>) -> OrchestratorApi {
-    let mut api = OrchestratorApi::new(config.clone(), None, None);
+fn make_api(config: &Config, title_color: Option<&str>, cache: &ApiCache) -> OrchestratorApi {
+    let mut api = OrchestratorApi::new(config.clone(), None, None)
+        .with_cache(cache.clone());
     if let Some(color) = title_color {
         if !color.is_empty() {
             api.set_title_color(color.to_string());
@@ -33,7 +36,7 @@ pub async fn search(
     title_color: Option<String>,
 ) -> Result<Vec<SearchResult>, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref(), &state.cache);
 
     match content_type.as_str() {
         "film" => api.search_film(&query).await.map_err(|e| e.to_string()),
@@ -50,7 +53,7 @@ pub async fn generate_film(
     title_color: Option<String>,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref(), &state.cache);
     api.generate_film(tmdb_id, false)
         .await
         .map_err(|e| e.to_string())
@@ -63,7 +66,7 @@ pub async fn generate_serie(
     title_color: Option<String>,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref(), &state.cache);
     api.generate_serie(tmdb_id, false)
         .await
         .map_err(|e| e.to_string())
@@ -77,7 +80,7 @@ pub async fn fetch_game_details(
     title_color: Option<String>,
 ) -> Result<GameDetailsResponse, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref(), &state.cache);
     api.fetch_game_details(game_id, source.as_deref())
         .await
         .map_err(|e| e.to_string())
@@ -137,7 +140,7 @@ pub async fn generate_jeu(
     title_color: Option<String>,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref(), &state.cache);
     api.generate_jeu(
         payload.game,
         payload.description,
@@ -166,7 +169,7 @@ pub async fn generate_app(
     title_color: Option<String>,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref(), &state.cache);
     let app = Application {
         name: payload.name,
         version: payload.version,
@@ -193,7 +196,7 @@ pub async fn generate_film_with_tech(
     tech: MediaTechInfo,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref(), &state.cache);
     api.generate_film_with_tech(tmdb_id, false, tech)
         .await
         .map_err(|e| e.to_string())
@@ -207,7 +210,7 @@ pub async fn generate_serie_with_tech(
     tech: MediaTechInfo,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, title_color.as_deref());
+    let api = make_api(&config, title_color.as_deref(), &state.cache);
     api.generate_serie_with_tech(tmdb_id, false, tech)
         .await
         .map_err(|e| e.to_string())
@@ -281,7 +284,7 @@ pub async fn generate_from_template(
     // Per-template title_color overrides global
     let tpl_meta = template_engine::get_template(&content_type, &template_name).ok();
     let effective_color = tpl_meta.and_then(|t| t.title_color).or(title_color);
-    let api = make_api(&config, effective_color.as_deref());
+    let api = make_api(&config, effective_color.as_deref(), &state.cache);
 
     match content_type.as_str() {
         "film" => {
