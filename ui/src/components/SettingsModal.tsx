@@ -96,7 +96,7 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-surface border border-edge rounded-lg w-full max-w-2xl mx-4 shadow-2xl flex flex-col" style={{ height: "min(520px, 80vh)" }}>
+      <div className="bg-surface border border-edge rounded-lg w-full max-w-2xl mx-4 shadow-2xl flex flex-col" style={{ height: "min(620px, 85vh)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-edge shrink-0">
           <h2 className="text-fg-bright text-lg font-medium">Parametres</h2>

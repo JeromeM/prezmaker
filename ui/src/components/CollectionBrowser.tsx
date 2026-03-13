@@ -195,7 +195,11 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                       e.dataTransfer.dropEffect = "move";
                       setDragOverCol(col.id);
                     }}
-                    onDragLeave={() => setDragOverCol(null)}
+                    onDragLeave={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                        setDragOverCol(null);
+                      }
+                    }}
                     onDrop={(e) => {
                       e.preventDefault();
                       setDragOverCol(null);
@@ -327,15 +331,16 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                       <img
                         src={entry.poster_url}
                         alt=""
-                        className="w-10 h-14 object-cover rounded shrink-0"
+                        draggable={false}
+                        className="w-10 h-14 object-cover rounded shrink-0 pointer-events-none"
                       />
                     ) : (
-                      <div className="w-10 h-14 bg-input rounded shrink-0 flex items-center justify-center text-fg-faint text-xs">
+                      <div className="w-10 h-14 bg-input rounded shrink-0 flex items-center justify-center text-fg-faint text-xs pointer-events-none">
                         ?
                       </div>
                     )}
 
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 pointer-events-none select-none">
                       <div className="text-sm font-medium text-fg-bright truncate">
                         {entry.title}
                       </div>
