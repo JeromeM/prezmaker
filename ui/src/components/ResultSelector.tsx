@@ -3,7 +3,7 @@ import type { SearchResult, ContentType } from "../types/api";
 interface Props {
   results: SearchResult[];
   contentType: ContentType;
-  onSelect: (id: number, contentType: ContentType, source?: string) => void;
+  onSelect: (id: number, contentType: ContentType, source?: string, label?: string) => void;
   onCancel: () => void;
 }
 
@@ -24,7 +24,7 @@ export default function ResultSelector({ results, contentType, onSelect, onCance
           {results.map((r) => (
             <li key={`${r.source ?? "default"}-${r.id}`}>
               <button
-                onClick={() => onSelect(r.id, contentType, r.source)}
+                onClick={() => onSelect(r.id, contentType, r.source, r.label)}
                 className="w-full text-left px-4 py-3 hover:bg-input transition-colors border-b border-edge/50 last:border-b-0"
               >
                 <span>{r.label}</span>

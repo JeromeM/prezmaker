@@ -1,4 +1,5 @@
 use crate::bbcode_to_html;
+use prezmaker_lib::collections::{self, SavedPresentation};
 use prezmaker_lib::config::Config;
 use prezmaker_lib::models::{Application, Game, MediaTechInfo, SystemReqs, TechInfo};
 use prezmaker_lib::providers::llm::LlmClient;
@@ -545,4 +546,31 @@ pub fn import_template(path: String) -> Result<ContentTemplate, String> {
         template_engine::save_template_meta(&tpl.content_type, &tpl.name, Some(color.clone()))?;
     }
     Ok(tpl)
+}
+
+// --- Collections ---
+
+#[tauri::command]
+pub fn save_to_collection(
+    title: String,
+    content_type: String,
+    bbcode: String,
+    poster_url: Option<String>,
+) -> Result<SavedPresentation, String> {
+    collections::save_presentation(&title, &content_type, &bbcode, poster_url.as_deref())
+}
+
+#[tauri::command]
+pub fn list_collection() -> Result<Vec<SavedPresentation>, String> {
+    collections::list_presentations()
+}
+
+#[tauri::command]
+pub fn get_collection_entry(id: String) -> Result<SavedPresentation, String> {
+    collections::get_presentation(&id)
+}
+
+#[tauri::command]
+pub fn delete_collection_entry(id: String) -> Result<(), String> {
+    collections::delete_presentation(&id)
 }

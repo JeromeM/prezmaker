@@ -136,12 +136,29 @@ export interface TorrentInfo {
   size_formatted: string;
 }
 
+export interface PresentationMeta {
+  title: string;
+  contentType: ContentType;
+  posterUrl: string | null;
+}
+
+export interface SavedPresentation {
+  id: string;
+  title: string;
+  content_type: string;
+  bbcode: string;
+  poster_url: string | null;
+  saved_at: string;
+}
+
 export interface PendingGeneration {
   contentType: ContentType;
   tmdbId?: number;
   tech?: MediaTechInfo | null;
   gamePayload?: { game: Game; description: string | null; installation: string | null; tech_info: TechInfo };
   appPayload?: AppPayload;
+  title?: string;
+  posterUrl?: string | null;
 }
 
 export type AppState =
@@ -152,7 +169,7 @@ export type AppState =
   | { step: "app_form" }
   | { step: "template_pick"; pending: PendingGeneration }
   | { step: "generating" }
-  | { step: "done"; bbcode: string; html: string }
+  | { step: "done"; bbcode: string; html: string; meta: PresentationMeta }
   | { step: "error"; message: string }
   | { step: "torrent_parsed"; torrentInfo: TorrentInfo }
   | { step: "torrent_selecting"; results: SearchResult[]; contentType: ContentType; torrentInfo: TorrentInfo };

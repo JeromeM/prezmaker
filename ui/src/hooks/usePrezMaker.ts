@@ -11,6 +11,7 @@ import type {
   MediaTechInfo,
   AppPayload,
   PendingGeneration,
+  PresentationMeta,
   SettingsPayload,
   TorrentInfo,
 } from "../types/api";
@@ -54,6 +55,7 @@ export function usePrezMaker() {
       tech?: MediaTechInfo | null,
       gamePayload?: { game: Game; description: string | null; installation: string | null; tech_info: TechInfo },
       appPayload?: AppPayload,
+      meta?: PresentationMeta,
     ) => {
       setState({ step: "generating" });
       try {
@@ -67,7 +69,12 @@ export function usePrezMaker() {
           appPayload: appPayload ?? null,
         });
         const html = await invoke<string>("convert_bbcode", { bbcode });
-        setState({ step: "done", bbcode, html });
+        const presentationMeta: PresentationMeta = meta ?? {
+          title: "Présentation",
+          contentType,
+          posterUrl: null,
+        };
+        setState({ step: "done", bbcode, html, meta: presentationMeta });
       } catch (e) {
         setState({ step: "error", message: String(e) });
       }
@@ -97,7 +104,7 @@ export function usePrezMaker() {
         }
 
         if (results.length === 1 && contentType !== "jeu") {
-          await selectResult(results[0].id, contentType, "default", results[0].source);
+          await selectResult(results[0].id, contentType, "default", results[0].source, results[0].label);
           return;
         }
 
@@ -111,7 +118,7 @@ export function usePrezMaker() {
 
   // --- Select result (normal flow, goes to template pick) ---
   const selectResult = useCallback(
-    async (id: number, contentType: ContentType, _templateName: string = "default", source?: string) => {
+    async (id: number, contentType: ContentType, _templateName: string = "default", source?: string, label?: string) => {
       if (contentType === "jeu") {
         setState({ step: "generating" });
         try {
@@ -130,15 +137,14 @@ export function usePrezMaker() {
         return;
       }
 
-      // Go to template pick (auto-selects if only one template)
-      setState({ step: "template_pick", pending: { contentType, tmdbId: id } });
+      setState({ step: "template_pick", pending: { contentType, tmdbId: id, title: label } });
     },
     [titleColor]
   );
 
   // --- Torrent result (with tech info) ---
   const selectTorrentResult = useCallback(
-    async (id: number, contentType: ContentType, torrentInfo: TorrentInfo, _templateName: string = "default", source?: string) => {
+    async (id: number, contentType: ContentType, torrentInfo: TorrentInfo, _templateName: string = "default", source?: string, label?: string) => {
       if (contentType === "jeu") {
         setState({ step: "generating" });
         try {
@@ -159,7 +165,7 @@ export function usePrezMaker() {
       }
 
       const tech = buildMediaTech(torrentInfo.parsed, torrentInfo.size_formatted);
-      setState({ step: "template_pick", pending: { contentType, tmdbId: id, tech } });
+      setState({ step: "template_pick", pending: { contentType, tmdbId: id, tech, title: label } });
     },
     [titleColor]
   );
@@ -202,7 +208,7 @@ export function usePrezMaker() {
         }
 
         if (results.length === 1 && contentType !== "jeu") {
-          await selectTorrentResult(results[0].id, contentType, info, "default", results[0].source);
+          await selectTorrentResult(results[0].id, contentType, info, "default", results[0].source, results[0].label);
           return;
         }
 
@@ -234,6 +240,8 @@ export function usePrezMaker() {
         pending: {
           contentType: "jeu",
           gamePayload: { game, description, installation, tech_info: techInfo },
+          title: game.title,
+          posterUrl: game.cover_url,
         },
       });
     },
@@ -245,7 +253,7 @@ export function usePrezMaker() {
     (payload: AppPayload) => {
       setState({
         step: "template_pick",
-        pending: { contentType: "app", appPayload: payload },
+        pending: { contentType: "app", appPayload: payload, title: payload.name, posterUrl: payload.logo_url },
       });
     },
     []
@@ -254,6 +262,11 @@ export function usePrezMaker() {
   // --- Confirm template selection → actually generate ---
   const confirmTemplate = useCallback(
     async (templateName: string, pending: PendingGeneration) => {
+      const meta: PresentationMeta = {
+        title: pending.title ?? "Présentation",
+        contentType: pending.contentType,
+        posterUrl: pending.posterUrl ?? null,
+      };
       await generateWithTemplate(
         pending.contentType,
         templateName,
@@ -261,6 +274,7 @@ export function usePrezMaker() {
         pending.tech,
         pending.gamePayload,
         pending.appPayload,
+        meta,
       );
     },
     [generateWithTemplate]
@@ -272,6 +286,15 @@ export function usePrezMaker() {
     } catch {
       return "";
     }
+  }, []);
+
+  const loadPresentation = useCallback((bbcode: string, html: string, meta?: PresentationMeta) => {
+    setState({
+      step: "done",
+      bbcode,
+      html,
+      meta: meta ?? { title: "Collection", contentType: "film", posterUrl: null },
+    });
   }, []);
 
   const reset = useCallback(() => {
@@ -289,6 +312,7 @@ export function usePrezMaker() {
     generateApp,
     confirmTemplate,
     convertBBCode,
+    loadPresentation,
     reset,
   };
 }
