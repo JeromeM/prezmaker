@@ -179,7 +179,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
 
   return (
     <div className="flex-1 flex min-h-0">
-      <div className="w-1/2 flex border-r border-[#2a2a4a]">
+      <div className="w-1/2 flex border-r border-edge">
         <BBCodePalette
           collapsed={paletteCollapsed}
           onToggle={togglePalette}
@@ -196,7 +196,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
                 <button
                   onClick={handleGenerateNfo}
                   disabled={nfoLoading || !bbcode.trim()}
-                  className="text-xs bg-[#2a2a4a] hover:bg-[#3a3a5a] text-gray-300 px-3 py-1 rounded transition-colors disabled:opacity-50"
+                  className="text-xs bg-edge hover:bg-edge-hover text-fg px-3 py-1 rounded transition-colors disabled:opacity-50"
                 >
                   {nfoLoading ? "NFO..." : "NFO"}
                 </button>

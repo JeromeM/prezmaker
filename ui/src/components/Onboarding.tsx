@@ -80,7 +80,7 @@ export default function Onboarding({ onComplete }: Props) {
     placeholder?: string,
   ) => (
     <div className="flex flex-col gap-1">
-      <label className="text-sm text-gray-400">{label}</label>
+      <label className="text-sm text-fg-muted">{label}</label>
       <div className="flex gap-2">
         <input
           type={showKeys[fieldKey] ? "text" : "password"}
@@ -88,13 +88,13 @@ export default function Onboarding({ onComplete }: Props) {
           onChange={(e) =>
             setSettings((s) => ({ ...s, [key]: e.target.value || null }))
           }
-          className="flex-1 bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+          className="flex-1 bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
           placeholder={placeholder ?? "Coller votre cle ici"}
         />
         <button
           type="button"
           onClick={() => toggleShow(fieldKey)}
-          className="bg-[#16213e] border border-[#2a2a4a] rounded px-3 py-2 text-xs text-gray-400 hover:text-white transition-colors"
+          className="bg-input border border-edge rounded px-3 py-2 text-xs text-fg-muted hover:text-fg-bright transition-colors"
         >
           {showKeys[fieldKey] ? "Masquer" : "Afficher"}
         </button>
@@ -108,7 +108,7 @@ export default function Onboarding({ onComplete }: Props) {
         <div
           key={s}
           className={`w-2.5 h-2.5 rounded-full transition-colors ${
-            i === stepIndex ? "bg-blue-500" : i < stepIndex ? "bg-blue-800" : "bg-[#2a2a4a]"
+            i === stepIndex ? "bg-blue-500" : i < stepIndex ? "bg-blue-800" : "bg-edge"
           }`}
         />
       ))}
@@ -121,7 +121,7 @@ export default function Onboarding({ onComplete }: Props) {
         {stepIndex > 0 && step !== "done" && (
           <button
             onClick={prev}
-            className="text-gray-400 hover:text-white text-sm transition-colors"
+            className="text-fg-muted hover:text-fg-bright text-sm transition-colors"
           >
             Retour
           </button>
@@ -131,7 +131,7 @@ export default function Onboarding({ onComplete }: Props) {
         {skipLabel && (
           <button
             onClick={next}
-            className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
+            className="text-fg-dim hover:text-fg text-sm transition-colors"
           >
             {skipLabel}
           </button>
@@ -149,22 +149,22 @@ export default function Onboarding({ onComplete }: Props) {
   );
 
   return (
-    <div className="fixed inset-0 bg-[#0f0f23] flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-base flex items-center justify-center z-50">
       <div className="w-full max-w-xl mx-4">
         {progressDots}
 
-        <div className="bg-[#1a1a2e] border border-[#2a2a4a] rounded-xl p-8 shadow-2xl">
+        <div className="bg-surface border border-edge rounded-xl p-8 shadow-2xl">
           {/* Step: Welcome */}
           {step === "welcome" && (
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2 text-center">
+              <h1 className="text-3xl font-bold text-fg-bright mb-2 text-center">
                 Bienvenue sur PrezMaker
               </h1>
-              <p className="text-gray-400 text-center mb-8">
+              <p className="text-fg-muted text-center mb-8">
                 Generateur de presentations BBCode
               </p>
 
-              <div className="space-y-4 text-sm text-gray-300">
+              <div className="space-y-4 text-sm text-fg">
                 <div className="flex gap-3">
                   <span className="text-blue-400 text-lg">1.</span>
                   <span>Recherchez un <strong>film</strong>, une <strong>serie</strong>, un <strong>jeu</strong> ou une <strong>application</strong></span>
@@ -180,19 +180,19 @@ export default function Onboarding({ onComplete }: Props) {
               </div>
 
               <div className="mt-6 flex flex-col gap-1">
-                <label className="text-sm text-gray-400">Votre pseudo (pour la signature des presentations)</label>
+                <label className="text-sm text-fg-muted">Votre pseudo (pour la signature des presentations)</label>
                 <input
                   type="text"
                   value={settings.pseudo}
                   onChange={(e) =>
                     setSettings((s) => ({ ...s, pseudo: e.target.value }))
                   }
-                  className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+                  className="bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
                   placeholder="Laisser vide pour ne pas afficher de footer"
                 />
               </div>
 
-              <p className="text-gray-500 text-xs text-center mt-4">
+              <p className="text-fg-dim text-xs text-center mt-4">
                 Commençons par configurer les cles API necessaires.
               </p>
 
@@ -203,15 +203,15 @@ export default function Onboarding({ onComplete }: Props) {
           {/* Step: TMDB */}
           {step === "tmdb" && (
             <div>
-              <h2 className="text-xl font-semibold text-white mb-1">
+              <h2 className="text-xl font-semibold text-fg-bright mb-1">
                 TMDB - Films et Series
               </h2>
-              <p className="text-gray-400 text-sm mb-6">
+              <p className="text-fg-muted text-sm mb-6">
                 Pour rechercher des films et series, vous avez besoin d'une cle API TMDB (gratuite).
               </p>
 
-              <div className="bg-[#0f0f23] rounded-lg p-4 mb-4 text-sm text-gray-400">
-                <p className="mb-2 font-medium text-gray-300">Comment obtenir une cle :</p>
+              <div className="bg-base rounded-lg p-4 mb-4 text-sm text-fg-muted">
+                <p className="mb-2 font-medium text-fg">Comment obtenir une cle :</p>
                 <ol className="list-decimal list-inside space-y-1">
                   <li>Creez un compte sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://www.themoviedb.org/signup"); }} className="text-blue-400 hover:underline">themoviedb.org</a></li>
                   <li>Allez dans Parametres &gt; API</li>
@@ -229,18 +229,18 @@ export default function Onboarding({ onComplete }: Props) {
           {/* Step: IGDB */}
           {step === "igdb" && (
             <div>
-              <h2 className="text-xl font-semibold text-white mb-1">
+              <h2 className="text-xl font-semibold text-fg-bright mb-1">
                 IGDB - Jeux video
               </h2>
-              <p className="text-gray-400 text-sm mb-6">
+              <p className="text-fg-muted text-sm mb-6">
                 Pour rechercher des jeux, vous avez besoin d'identifiants Twitch/IGDB (gratuits).
               </p>
 
-              <div className="bg-[#0f0f23] rounded-lg p-4 mb-4 text-sm text-gray-400">
-                <p className="mb-2 font-medium text-gray-300">Comment obtenir les cles :</p>
+              <div className="bg-base rounded-lg p-4 mb-4 text-sm text-fg-muted">
+                <p className="mb-2 font-medium text-fg">Comment obtenir les cles :</p>
                 <ol className="list-decimal list-inside space-y-1">
                   <li>Connectez-vous sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://dev.twitch.tv/console/apps"); }} className="text-blue-400 hover:underline">dev.twitch.tv</a></li>
-                  <li>Creez une application (nom libre, URL: <code className="text-xs bg-[#16213e] px-1 rounded">http://localhost</code>)</li>
+                  <li>Creez une application (nom libre, URL: <code className="text-xs bg-input px-1 rounded">http://localhost</code>)</li>
                   <li>Copiez le Client ID et generez un Client Secret</li>
                 </ol>
               </div>
@@ -257,17 +257,17 @@ export default function Onboarding({ onComplete }: Props) {
           {/* Step: LLM */}
           {step === "llm" && (
             <div>
-              <h2 className="text-xl font-semibold text-white mb-1">
+              <h2 className="text-xl font-semibold text-fg-bright mb-1">
                 LLM - Descriptions IA (optionnel)
               </h2>
-              <p className="text-gray-400 text-sm mb-6">
+              <p className="text-fg-muted text-sm mb-6">
                 Un LLM peut generer des descriptions en français pour les jeux et creer des NFO.
                 C'est totalement optionnel.
               </p>
 
               <div className="space-y-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm text-gray-400">Provider</label>
+                  <label className="text-sm text-fg-muted">Provider</label>
                   <select
                     value={settings.llm_provider ?? ""}
                     onChange={(e) =>
@@ -277,7 +277,7 @@ export default function Onboarding({ onComplete }: Props) {
                         ...(e.target.value ? {} : { llm_api_key: null }),
                       }))
                     }
-                    className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+                    className="bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
                   >
                     <option value="">(Aucun)</option>
                     <option value="groq">Groq</option>
@@ -289,7 +289,7 @@ export default function Onboarding({ onComplete }: Props) {
                 {settings.llm_provider && (
                   <>
                     {secretInput("Cle API", "llm_api_key", "llm")}
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-fg-dim mt-1">
                       {settings.llm_provider === "groq" && (
                         <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.groq.com/keys"); }} className="text-blue-400 hover:underline">console.groq.com</a></>
                       )}
@@ -311,59 +311,59 @@ export default function Onboarding({ onComplete }: Props) {
           {/* Step: Tour */}
           {step === "tour" && (
             <div>
-              <h2 className="text-xl font-semibold text-white mb-1">
+              <h2 className="text-xl font-semibold text-fg-bright mb-1">
                 Tour de l'interface
               </h2>
-              <p className="text-gray-400 text-sm mb-6">
+              <p className="text-fg-muted text-sm mb-6">
                 Voici les elements principaux de la barre d'outils :
               </p>
 
               <div className="space-y-4">
-                <div className="flex items-start gap-4 bg-[#0f0f23] rounded-lg p-4">
-                  <div className="bg-[#16213e] border border-[#2a2a4a] rounded px-3 py-1.5 text-sm text-white shrink-0">
+                <div className="flex items-start gap-4 bg-base rounded-lg p-4">
+                  <div className="bg-input border border-edge rounded px-3 py-1.5 text-sm text-fg-bright shrink-0">
                     Film / Serie / Jeu
                   </div>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-fg-muted">
                     Selectionnez le type de contenu a rechercher. Le champ de recherche s'adapte automatiquement.
                   </p>
                 </div>
 
-                <div className="flex items-start gap-4 bg-[#0f0f23] rounded-lg p-4">
-                  <div className="bg-[#16213e] border border-[#2a2a4a] rounded p-2 shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-gray-300">
+                <div className="flex items-start gap-4 bg-base rounded-lg p-4">
+                  <div className="bg-input border border-edge rounded p-2 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-fg">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                       <polyline points="7 10 12 15 17 10" />
                       <line x1="12" y1="15" x2="12" y2="3" />
                     </svg>
                   </div>
-                  <p className="text-sm text-gray-400">
-                    <strong className="text-gray-300">Import torrent</strong> - Importez un fichier .torrent pour detecter automatiquement le contenu et pre-remplir les infos techniques.
+                  <p className="text-sm text-fg-muted">
+                    <strong className="text-fg">Import torrent</strong> - Importez un fichier .torrent pour detecter automatiquement le contenu et pre-remplir les infos techniques.
                   </p>
                 </div>
 
-                <div className="flex items-start gap-4 bg-[#0f0f23] rounded-lg p-4">
-                  <div className="bg-[#16213e] border border-[#2a2a4a] rounded p-2 shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-gray-300">
+                <div className="flex items-start gap-4 bg-base rounded-lg p-4">
+                  <div className="bg-input border border-edge rounded p-2 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-fg">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
                       <line x1="16" y1="13" x2="8" y2="13" />
                       <line x1="16" y1="17" x2="8" y2="17" />
                     </svg>
                   </div>
-                  <p className="text-sm text-gray-400">
-                    <strong className="text-gray-300">Editeur de templates</strong> - Personnalisez les templates BBCode avec des balises dynamiques et un apercu en temps reel.
+                  <p className="text-sm text-fg-muted">
+                    <strong className="text-fg">Editeur de templates</strong> - Personnalisez les templates BBCode avec des balises dynamiques et un apercu en temps reel.
                   </p>
                 </div>
 
-                <div className="flex items-start gap-4 bg-[#0f0f23] rounded-lg p-4">
-                  <div className="bg-[#16213e] border border-[#2a2a4a] rounded p-2 shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-gray-300">
+                <div className="flex items-start gap-4 bg-base rounded-lg p-4">
+                  <div className="bg-input border border-edge rounded p-2 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-fg">
                       <circle cx="12" cy="12" r="3" />
                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                     </svg>
                   </div>
-                  <p className="text-sm text-gray-400">
-                    <strong className="text-gray-300">Parametres</strong> - Modifiez vos cles API, la couleur des titres, et les preferences.
+                  <p className="text-sm text-fg-muted">
+                    <strong className="text-fg">Parametres</strong> - Modifiez vos cles API, la couleur des titres, et les preferences.
                   </p>
                 </div>
               </div>
@@ -381,13 +381,13 @@ export default function Onboarding({ onComplete }: Props) {
                   <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">
+              <h2 className="text-2xl font-bold text-fg-bright mb-2">
                 Vous etes pret !
               </h2>
-              <p className="text-gray-400 mb-2">
+              <p className="text-fg-muted mb-2">
                 La configuration est terminee.
               </p>
-              <p className="text-gray-500 text-sm mb-8">
+              <p className="text-fg-dim text-sm mb-8">
                 Vous pouvez modifier vos parametres a tout moment via l'icone engrenage.
               </p>
 

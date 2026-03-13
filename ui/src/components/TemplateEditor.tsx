@@ -263,7 +263,7 @@ function ColorPickerPopup({ value, onChange, onClose }: {
   }, [onClose]);
 
   return (
-    <div ref={ref} className="absolute top-full left-0 mt-1 z-50 bg-[#1a1a2e] border border-[#2a2a4a] rounded p-2 shadow-lg">
+    <div ref={ref} className="absolute top-full left-0 mt-1 z-50 bg-surface border border-edge rounded p-2 shadow-lg">
       <input
         type="color"
         value={`#${value}`}
@@ -277,7 +277,7 @@ function ColorPickerPopup({ value, onChange, onClose }: {
           const v = e.target.value.replace("#", "").slice(0, 6);
           if (/^[0-9a-fA-F]*$/.test(v)) onChange(v);
         }}
-        className="ml-1 w-20 bg-[#16213e] text-white border border-[#2a2a4a] rounded px-1 py-0.5 text-xs font-mono"
+        className="ml-1 w-20 bg-input text-fg-bright border border-edge rounded px-1 py-0.5 text-xs font-mono"
         maxLength={6}
         placeholder="hex"
       />
@@ -611,9 +611,9 @@ export default function TemplateEditor({ onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg w-[95vw] h-[90vh] flex flex-col">
+      <div className="bg-surface border border-edge rounded-lg w-[95vw] h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2a4a]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-edge">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold">Editeur de templates</h2>
             <select
@@ -624,7 +624,7 @@ export default function TemplateEditor({ onClose }: Props) {
                 setSelected("default");
                 setDirty(false);
               }}
-              className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-2 py-1 text-sm"
+              className="bg-input text-fg-bright border border-edge rounded px-2 py-1 text-sm"
             >
               <option value="film">Film</option>
               <option value="serie">Série</option>
@@ -632,15 +632,15 @@ export default function TemplateEditor({ onClose }: Props) {
               <option value="app">Application</option>
             </select>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+          <button onClick={onClose} className="text-fg-muted hover:text-fg-bright text-xl leading-none">&times;</button>
         </div>
 
         {/* Template selector bar */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-[#2a2a4a] bg-[#16213e]/50">
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-edge bg-input/50">
           <select
             value={selected}
             onChange={(e) => handleSelectTemplate(e.target.value)}
-            className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-2 py-1 text-sm flex-1 max-w-xs"
+            className="bg-input text-fg-bright border border-edge rounded px-2 py-1 text-sm flex-1 max-w-xs"
           >
             {templates.map((t) => (
               <option key={t.name} value={t.name}>
@@ -659,7 +659,7 @@ export default function TemplateEditor({ onClose }: Props) {
             className={`p-1.5 rounded transition-colors ${
               selected === favoriteName
                 ? "text-yellow-400 hover:text-yellow-300"
-                : "text-gray-600 hover:text-gray-400"
+                : "text-fg-faint hover:text-fg-muted"
             }`}
           >
             <svg
@@ -702,7 +702,7 @@ export default function TemplateEditor({ onClose }: Props) {
 
           <button
             onClick={handleExport}
-            className="bg-[#16213e] hover:bg-[#1e2d4d] border border-[#2a2a4a] text-gray-300 hover:text-white px-3 py-1 rounded text-sm"
+            className="bg-input hover:bg-input-hover border border-edge text-fg hover:text-fg-bright px-3 py-1 rounded text-sm"
             title="Exporter le template"
           >
             Exporter
@@ -710,7 +710,7 @@ export default function TemplateEditor({ onClose }: Props) {
 
           <button
             onClick={handleImport}
-            className="bg-[#16213e] hover:bg-[#1e2d4d] border border-[#2a2a4a] text-gray-300 hover:text-white px-3 py-1 rounded text-sm"
+            className="bg-input hover:bg-input-hover border border-edge text-fg hover:text-fg-bright px-3 py-1 rounded text-sm"
             title="Importer un template"
           >
             Importer
@@ -720,24 +720,24 @@ export default function TemplateEditor({ onClose }: Props) {
 
           {/* Per-template title color picker — right-aligned */}
           <div className="relative flex items-center gap-1 ml-auto">
-            <span className="text-xs text-gray-400">Couleur titre</span>
+            <span className="text-xs text-fg-muted">Couleur titre</span>
             <button
               onClick={() => setShowTitleColorPicker(!showTitleColorPicker)}
-              className="w-6 h-6 rounded border border-[#2a2a4a] cursor-pointer"
+              className="w-6 h-6 rounded border border-edge cursor-pointer"
               style={{ backgroundColor: `#${titleColor}` }}
               title={`Couleur des titres : #${titleColor}${customColor ? '' : ' (défaut)'}`}
             />
             {customColor && (
               <button
                 onClick={() => { setCustomColor(null); setDirty(true); }}
-                className="text-[10px] text-gray-500 hover:text-gray-300"
+                className="text-[10px] text-fg-dim hover:text-fg"
                 title="Utiliser la couleur par défaut"
               >
                 reset
               </button>
             )}
             {!customColor && (
-              <span className="text-[10px] text-gray-500">défaut</span>
+              <span className="text-[10px] text-fg-dim">défaut</span>
             )}
             {showTitleColorPicker && (
               <ColorPickerPopup
@@ -751,13 +751,13 @@ export default function TemplateEditor({ onClose }: Props) {
 
         {/* New dialog */}
         {showNewDialog && (
-          <div className="px-4 py-2 border-b border-[#2a2a4a] bg-[#0f0f23] flex items-center gap-2">
+          <div className="px-4 py-2 border-b border-edge bg-base flex items-center gap-2">
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Nom du nouveau template..."
-              className="bg-[#16213e] text-white border border-[#2a2a4a] rounded px-2 py-1 text-sm flex-1 max-w-xs"
+              className="bg-input text-fg-bright border border-edge rounded px-2 py-1 text-sm flex-1 max-w-xs"
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && handleNew()}
             />
@@ -766,7 +766,7 @@ export default function TemplateEditor({ onClose }: Props) {
             </button>
             <button
               onClick={() => { setShowNewDialog(false); setNewName(""); }}
-              className="text-gray-400 hover:text-white text-sm"
+              className="text-fg-muted hover:text-fg-bright text-sm"
             >
               Annuler
             </button>
@@ -776,14 +776,14 @@ export default function TemplateEditor({ onClose }: Props) {
         {/* Main content: 3 columns */}
         <div className="flex flex-1 min-h-0">
           {/* Tag reference sidebar */}
-          <div className="w-72 border-r border-[#2a2a4a] flex flex-col bg-[#16213e]/30">
-            <div className="px-3 py-2 border-b border-[#2a2a4a]">
+          <div className="w-72 border-r border-edge flex flex-col bg-input/30">
+            <div className="px-3 py-2 border-b border-edge">
               <input
                 type="text"
                 value={tagSearch}
                 onChange={(e) => setTagSearch(e.target.value)}
                 placeholder="Rechercher une balise..."
-                className="w-full bg-[#0f0f23] text-white border border-[#2a2a4a] rounded px-2 py-1 text-xs outline-none focus:border-blue-500 placeholder-gray-600"
+                className="w-full bg-base text-fg-bright border border-edge rounded px-2 py-1 text-xs outline-none focus:border-blue-500 placeholder-fg-faint"
               />
             </div>
             <div className="flex-1 overflow-y-auto">
@@ -791,7 +791,7 @@ export default function TemplateEditor({ onClose }: Props) {
                 <div key={category}>
                   <button
                     onClick={() => toggleCategory(category)}
-                    className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:bg-[#2a2a4a]/50 transition-colors"
+                    className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-fg-muted uppercase tracking-wider hover:bg-edge/50 transition-colors"
                   >
                     <span className="text-[10px]">{collapsed.has(category) ? "\u25B6" : "\u25BC"}</span>
                     {category}
@@ -810,12 +810,12 @@ export default function TemplateEditor({ onClose }: Props) {
                             }
                           }}
                           title={`${t.description}${t.example ? '\nExemple : ' + t.example : ''}`}
-                          className="flex-1 text-left px-3 py-1 hover:bg-[#2a2a4a] transition-colors group min-w-0"
+                          className="flex-1 text-left px-3 py-1 hover:bg-edge transition-colors group min-w-0"
                         >
                           <div className="text-xs font-mono text-blue-400 group-hover:text-blue-300 truncate">
                             {"{{" + t.name + "}}"}
                           </div>
-                          <div className="text-[11px] text-gray-500 group-hover:text-gray-400 leading-tight">
+                          <div className="text-[11px] text-fg-dim group-hover:text-fg-muted leading-tight">
                             {t.description}
                           </div>
                         </button>
@@ -823,12 +823,12 @@ export default function TemplateEditor({ onClose }: Props) {
                           <div className="relative pr-2">
                             <button
                               onClick={() => setShowColorPicker(!showColorPicker)}
-                              className="w-4 h-4 rounded border border-[#2a2a4a] cursor-pointer"
+                              className="w-4 h-4 rounded border border-edge cursor-pointer"
                               style={{ backgroundColor: `#${pickedColor}` }}
                               title="Choisir une couleur"
                             />
                             {showColorPicker && (
-                              <div className="absolute right-0 top-full mt-1 z-50 bg-[#1a1a2e] border border-[#2a2a4a] rounded p-2 shadow-lg flex flex-col gap-1">
+                              <div className="absolute right-0 top-full mt-1 z-50 bg-surface border border-edge rounded p-2 shadow-lg flex flex-col gap-1">
                                 <div className="flex items-center gap-1">
                                   <input
                                     type="color"
@@ -843,7 +843,7 @@ export default function TemplateEditor({ onClose }: Props) {
                                       const v = e.target.value.replace("#", "").slice(0, 6);
                                       if (/^[0-9a-fA-F]*$/.test(v)) setPickedColor(v);
                                     }}
-                                    className="w-16 bg-[#16213e] text-white border border-[#2a2a4a] rounded px-1 py-0.5 text-xs font-mono"
+                                    className="w-16 bg-input text-fg-bright border border-edge rounded px-1 py-0.5 text-xs font-mono"
                                     maxLength={6}
                                   />
                                 </div>
@@ -866,9 +866,9 @@ export default function TemplateEditor({ onClose }: Props) {
           </div>
 
           {/* Editor with syntax highlighting */}
-          <div className="flex-1 flex flex-col min-w-0 border-r border-[#2a2a4a]">
-            <div className="px-3 py-2 border-b border-[#2a2a4a] bg-[#16213e]">
-              <span className="text-sm font-medium text-gray-300">Template</span>
+          <div className="flex-1 flex flex-col min-w-0 border-r border-edge">
+            <div className="px-3 py-2 border-b border-edge bg-input">
+              <span className="text-sm font-medium text-fg">Template</span>
             </div>
             <div className="flex-1 relative overflow-hidden">
               {/* Highlight underlay */}
@@ -940,10 +940,10 @@ export default function TemplateEditor({ onClose }: Props) {
 
           {/* Preview */}
           <div className="flex-1 flex flex-col min-w-0">
-            <div className="px-3 py-2 border-b border-[#2a2a4a] bg-[#16213e]">
-              <span className="text-sm font-medium text-gray-300">Aperçu (données fictives)</span>
+            <div className="px-3 py-2 border-b border-edge bg-input">
+              <span className="text-sm font-medium text-fg">Aperçu (données fictives)</span>
             </div>
-            <div className="flex-1 bg-[#1a1a2e]">
+            <div className="flex-1 bg-surface">
               <iframe
                 srcDoc={previewHtml}
                 className="w-full h-full border-none"

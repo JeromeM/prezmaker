@@ -72,29 +72,29 @@ export default function UpdateChecker() {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
-      <div className="bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg w-full max-w-md mx-4 shadow-2xl">
+      <div className="bg-surface border border-edge rounded-lg w-full max-w-md mx-4 shadow-2xl">
         {state.step === "available" && (
           <>
-            <div className="px-6 py-4 border-b border-[#2a2a4a]">
-              <h2 className="text-white text-lg font-medium">
+            <div className="px-6 py-4 border-b border-edge">
+              <h2 className="text-fg-bright text-lg font-medium">
                 Mise a jour disponible
               </h2>
             </div>
             <div className="px-6 py-6 space-y-4">
-              <p className="text-gray-300">
+              <p className="text-fg">
                 La version{" "}
-                <span className="text-white font-semibold">
+                <span className="text-fg-bright font-semibold">
                   {state.version}
                 </span>{" "}
                 est disponible.
               </p>
               {state.body && (
-                <p className="text-gray-400 text-sm whitespace-pre-line max-h-40 overflow-y-auto">
+                <p className="text-fg-muted text-sm whitespace-pre-line max-h-40 overflow-y-auto">
                   {state.body}
                 </p>
               )}
             </div>
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#2a2a4a]">
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-edge">
               <button
                 onClick={() => setState({ step: "dismissed" })}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors"
@@ -113,10 +113,10 @@ export default function UpdateChecker() {
 
         {state.step === "downloading" && (
           <div className="px-6 py-6 space-y-4">
-            <p className="text-white font-medium">
+            <p className="text-fg-bright font-medium">
               Telechargement en cours...
             </p>
-            <div className="w-full bg-[#2a2a4a] rounded-full h-3">
+            <div className="w-full bg-edge rounded-full h-3">
               <div
                 className="bg-purple-600 h-3 rounded-full transition-all duration-300"
                 style={{
@@ -127,7 +127,7 @@ export default function UpdateChecker() {
                 }}
               />
             </div>
-            <p className="text-gray-400 text-sm text-center">
+            <p className="text-fg-muted text-sm text-center">
               {state.total > 0
                 ? `${(state.downloaded / 1024 / 1024).toFixed(1)} / ${(state.total / 1024 / 1024).toFixed(1)} Mo`
                 : `${(state.downloaded / 1024 / 1024).toFixed(1)} Mo`}
@@ -156,7 +156,7 @@ export default function UpdateChecker() {
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
               />
             </svg>
-            <p className="text-white font-medium">
+            <p className="text-fg-bright font-medium">
               Installation et redemarrage...
             </p>
           </div>

@@ -20,17 +20,17 @@ export default function TorrentContentTypePicker({
   return (
     <div className="max-w-lg mx-auto p-6">
       <h2 className="text-xl font-semibold mb-2">Type de contenu non détecté</h2>
-      <p className="text-gray-400 text-sm mb-1">
-        Torrent : <span className="text-white">{torrentInfo.meta.name}</span>
+      <p className="text-fg-muted text-sm mb-1">
+        Torrent : <span className="text-fg-bright">{torrentInfo.meta.name}</span>
       </p>
-      <p className="text-gray-400 text-sm mb-4">
+      <p className="text-fg-muted text-sm mb-4">
         Taille : {torrentInfo.size_formatted}
         {torrentInfo.parsed.title && (
-          <> &middot; Titre détecté : <span className="text-white">{torrentInfo.parsed.title}</span></>
+          <> &middot; Titre détecté : <span className="text-fg-bright">{torrentInfo.parsed.title}</span></>
         )}
       </p>
 
-      <p className="text-sm text-gray-300 mb-3">
+      <p className="text-sm text-fg mb-3">
         Quel type de contenu est-ce ?
       </p>
 
@@ -39,7 +39,7 @@ export default function TorrentContentTypePicker({
           <button
             key={opt.value}
             onClick={() => onConfirm(opt.value, torrentInfo)}
-            className="flex-1 bg-[#16213e] hover:bg-blue-600 border border-[#2a2a4a] hover:border-blue-500 text-white px-4 py-3 rounded text-sm font-medium transition-colors"
+            className="flex-1 bg-input hover:bg-blue-600 border border-edge hover:border-blue-500 text-white px-4 py-3 rounded text-sm font-medium transition-colors"
           >
             {opt.label}
           </button>
@@ -48,7 +48,7 @@ export default function TorrentContentTypePicker({
 
       <button
         onClick={onCancel}
-        className="mt-4 text-gray-400 hover:text-white text-sm transition-colors"
+        className="mt-4 text-fg-muted hover:text-fg-bright text-sm transition-colors"
       >
         Annuler
       </button>

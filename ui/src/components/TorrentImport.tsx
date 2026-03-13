@@ -21,7 +21,7 @@ export default function TorrentImport({ onImport, disabled }: Props) {
       type="button"
       onClick={handleClick}
       disabled={disabled}
-      className="text-gray-400 hover:text-white disabled:text-gray-600 transition-colors p-2"
+      className="text-fg-muted hover:text-fg-bright disabled:text-fg-faint transition-colors p-2"
       title="Importer un .torrent"
     >
       <svg

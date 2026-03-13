@@ -17,7 +17,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 const inputClass =
-  "w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500";
+  "w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500";
 
 export default function SettingsModal({ onClose }: Props) {
   const [tab, setTab] = useState<Tab>("general");
@@ -64,7 +64,7 @@ export default function SettingsModal({ onClose }: Props) {
     placeholder?: string
   ) => (
     <div className="flex flex-col gap-1">
-      <label className="text-xs text-gray-400">{label}</label>
+      <label className="text-xs text-fg-muted">{label}</label>
       <div className="flex gap-2">
         <input
           type={showKeys[fieldKey] ? "text" : "password"}
@@ -81,7 +81,7 @@ export default function SettingsModal({ onClose }: Props) {
         <button
           type="button"
           onClick={() => toggleShow(fieldKey)}
-          className="bg-[#16213e] border border-[#2a2a4a] rounded px-3 py-2 text-xs text-gray-400 hover:text-white transition-colors shrink-0"
+          className="bg-input border border-edge rounded px-3 py-2 text-xs text-fg-muted hover:text-fg-bright transition-colors shrink-0"
         >
           {showKeys[fieldKey] ? "Masquer" : "Afficher"}
         </button>
@@ -94,13 +94,13 @@ export default function SettingsModal({ onClose }: Props) {
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg w-full max-w-2xl mx-4 shadow-2xl flex flex-col" style={{ height: "min(520px, 80vh)" }}>
+      <div className="bg-surface border border-edge rounded-lg w-full max-w-2xl mx-4 shadow-2xl flex flex-col" style={{ height: "min(520px, 80vh)" }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2a4a] shrink-0">
-          <h2 className="text-white text-lg font-medium">Parametres</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-edge shrink-0">
+          <h2 className="text-fg-bright text-lg font-medium">Parametres</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors text-xl leading-none"
+            className="text-fg-muted hover:text-fg-bright transition-colors text-xl leading-none"
           >
             &times;
           </button>
@@ -109,7 +109,7 @@ export default function SettingsModal({ onClose }: Props) {
         {/* Body: sidebar tabs + content */}
         <div className="flex flex-1 min-h-0">
           {/* Tab sidebar */}
-          <nav className="w-40 border-r border-[#2a2a4a] py-2 shrink-0">
+          <nav className="w-40 border-r border-edge py-2 shrink-0">
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -117,7 +117,7 @@ export default function SettingsModal({ onClose }: Props) {
                 className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
                   tab === t.id
                     ? "bg-blue-600/20 text-blue-300 border-r-2 border-blue-500"
-                    : "text-gray-400 hover:text-white hover:bg-[#16213e]"
+                    : "text-fg-muted hover:text-fg-bright hover:bg-input"
                 }`}
               >
                 {t.label}
@@ -130,7 +130,7 @@ export default function SettingsModal({ onClose }: Props) {
             {tab === "general" && (
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-400">Langue</label>
+                  <label className="text-xs text-fg-muted">Langue</label>
                   <select
                     value={settings.language}
                     onChange={(e) =>
@@ -144,7 +144,7 @@ export default function SettingsModal({ onClose }: Props) {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-400">Pseudo (signature footer)</label>
+                  <label className="text-xs text-fg-muted">Pseudo (signature footer)</label>
                   <input
                     type="text"
                     value={settings.pseudo}
@@ -157,12 +157,12 @@ export default function SettingsModal({ onClose }: Props) {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-400">
+                  <label className="text-xs text-fg-muted">
                     Couleur titre par defaut
                   </label>
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-8 h-8 rounded border border-[#2a2a4a]"
+                      className="w-8 h-8 rounded border border-edge"
                       style={{ backgroundColor: `#${settings.title_color || "c0392b"}` }}
                     />
                     <input
@@ -175,7 +175,7 @@ export default function SettingsModal({ onClose }: Props) {
                       placeholder="c0392b"
                       maxLength={6}
                     />
-                    <span className="text-[11px] text-gray-500">
+                    <span className="text-[11px] text-fg-dim">
                       Utilisee si le template n'a pas de couleur personnalisee
                     </span>
                   </div>
@@ -193,7 +193,7 @@ export default function SettingsModal({ onClose }: Props) {
                     }
                     className="accent-blue-500"
                   />
-                  <span className="text-sm text-gray-300">
+                  <span className="text-sm text-fg">
                     Copier automatiquement dans le presse-papier
                   </span>
                 </label>
@@ -205,7 +205,7 @@ export default function SettingsModal({ onClose }: Props) {
                       resetOnboarding();
                       window.location.reload();
                     }}
-                    className="text-xs text-gray-500 hover:text-gray-300 underline transition-colors"
+                    className="text-xs text-fg-dim hover:text-fg underline transition-colors"
                   >
                     Relancer le tutoriel de premiere utilisation
                   </button>
@@ -215,7 +215,7 @@ export default function SettingsModal({ onClose }: Props) {
 
             {tab === "api" && (
               <div className="space-y-4">
-                <p className="text-xs text-gray-500 mb-2">
+                <p className="text-xs text-fg-dim mb-2">
                   Cles necessaires pour la recherche de films, series et jeux.
                 </p>
                 {secretInput("TMDB API Key", "tmdb_api_key", "tmdb")}
@@ -226,11 +226,11 @@ export default function SettingsModal({ onClose }: Props) {
 
             {tab === "llm" && (
               <div className="space-y-4">
-                <p className="text-xs text-gray-500 mb-2">
+                <p className="text-xs text-fg-dim mb-2">
                   Un LLM peut generer automatiquement les descriptions de jeux en francais.
                 </p>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-400">Provider</label>
+                  <label className="text-xs text-fg-muted">Provider</label>
                   <select
                     value={settings.llm_provider ?? ""}
                     onChange={(e) =>
@@ -251,7 +251,7 @@ export default function SettingsModal({ onClose }: Props) {
                 {settings.llm_provider && (
                   <>
                     {secretInput("Cle API LLM", "llm_api_key", "llm")}
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-fg-dim">
                       {settings.llm_provider === "groq" && (
                         <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.groq.com/keys"); }} className="text-blue-400 hover:underline">console.groq.com</a></>
                       )}
@@ -274,7 +274,7 @@ export default function SettingsModal({ onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#2a2a4a] shrink-0">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-edge shrink-0">
           <button
             onClick={onClose}
             className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors"

@@ -39,7 +39,7 @@ export default function AppForm({ onGenerate, onCancel }: Props) {
         <h2 className="text-xl font-semibold">Nouvelle application</h2>
         <button
           onClick={onCancel}
-          className="text-gray-400 hover:text-white text-sm"
+          className="text-fg-muted hover:text-fg-bright text-sm"
         >
           Annuler
         </button>
@@ -48,23 +48,23 @@ export default function AppForm({ onGenerate, onCancel }: Props) {
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Nom *</label>
+            <label className="block text-sm text-fg-muted mb-1">Nom *</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+              className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
               placeholder="VLC"
               required
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Version</label>
+            <label className="block text-sm text-fg-muted mb-1">Version</label>
             <input
               type="text"
               value={version}
               onChange={(e) => setVersion(e.target.value)}
-              className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+              className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
               placeholder="3.0.20"
             />
           </div>
@@ -72,73 +72,73 @@ export default function AppForm({ onGenerate, onCancel }: Props) {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
+            <label className="block text-sm text-fg-muted mb-1">
               Développeur
             </label>
             <input
               type="text"
               value={developer}
               onChange={(e) => setDeveloper(e.target.value)}
-              className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+              className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
               placeholder="VideoLAN"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Licence</label>
+            <label className="block text-sm text-fg-muted mb-1">Licence</label>
             <input
               type="text"
               value={license}
               onChange={(e) => setLicense(e.target.value)}
-              className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+              className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
               placeholder="GPLv2"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Site web</label>
+          <label className="block text-sm text-fg-muted mb-1">Site web</label>
           <input
             type="text"
             value={website}
             onChange={(e) => setWebsite(e.target.value)}
-            className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+            className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
             placeholder="https://www.videolan.org"
           />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
+          <label className="block text-sm text-fg-muted mb-1">
             Plateformes (séparées par des virgules)
           </label>
           <input
             type="text"
             value={platforms}
             onChange={(e) => setPlatforms(e.target.value)}
-            className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+            className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
             placeholder="Windows, macOS, Linux"
           />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">URL logo</label>
+          <label className="block text-sm text-fg-muted mb-1">URL logo</label>
           <input
             type="text"
             value={logoUrl}
             onChange={(e) => setLogoUrl(e.target.value)}
-            className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
+            className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
             placeholder="https://..."
           />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
+          <label className="block text-sm text-fg-muted mb-1">
             Description
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
-            className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500 resize-y"
+            className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500 resize-y"
             placeholder="Description de l'application..."
           />
         </div>

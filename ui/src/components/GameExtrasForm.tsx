@@ -82,16 +82,16 @@ function LanguageDropdown({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500 text-left truncate"
+        className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500 text-left truncate"
       >
         {display}
       </button>
       {open && (
-        <div className="absolute z-10 mt-1 w-full bg-[#16213e] border border-[#2a2a4a] rounded shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-10 mt-1 w-full bg-input border border-edge rounded shadow-lg max-h-48 overflow-y-auto">
           {LANGUAGES.map((lang) => (
             <label
               key={lang}
-              className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#2a2a4a] cursor-pointer text-sm"
+              className="flex items-center gap-2 px-3 py-1.5 hover:bg-edge cursor-pointer text-sm"
             >
               <input
                 type="checkbox"
@@ -109,7 +109,7 @@ function LanguageDropdown({
 }
 
 const inputClass =
-  "w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500";
+  "w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500";
 
 function ReqsFields({
   label,
@@ -125,7 +125,7 @@ function ReqsFields({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm text-gray-300 font-medium">{label}</p>
+      <p className="text-sm text-fg font-medium">{label}</p>
       <div className="grid grid-cols-2 gap-2">
         <input
           type="text"
@@ -241,7 +241,7 @@ export default function GameExtrasForm({
         <h2 className="text-xl font-semibold">{game.title}</h2>
         <button
           onClick={onCancel}
-          className="text-gray-400 hover:text-white text-sm"
+          className="text-fg-muted hover:text-fg-bright text-sm"
         >
           Annuler
         </button>
@@ -249,33 +249,33 @@ export default function GameExtrasForm({
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
+          <label className="block text-sm text-fg-muted mb-1">
             Description
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={6}
-            className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500 resize-y"
+            className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500 resize-y"
             placeholder="Description du jeu en français..."
           />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
+          <label className="block text-sm text-fg-muted mb-1">
             Installation (etapes numerotees, une par ligne)
           </label>
           <textarea
             value={installation}
             onChange={(e) => setInstallation(e.target.value)}
             rows={4}
-            className="w-full bg-[#16213e] text-white border border-[#2a2a4a] rounded px-3 py-2 text-sm outline-none focus:border-blue-500 resize-y"
+            className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500 resize-y"
             placeholder={"1. Extraire l'archive\n2. Lancer le setup\n3. Jouer"}
           />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
+          <label className="block text-sm text-fg-muted mb-1">
             Plateforme
           </label>
           <div className="flex flex-wrap gap-2">
@@ -285,7 +285,7 @@ export default function GameExtrasForm({
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm cursor-pointer border transition-colors ${
                   platform === p
                     ? "bg-blue-600/30 border-blue-500 text-blue-300"
-                    : "bg-[#16213e] border-[#2a2a4a] text-gray-400 hover:border-gray-500"
+                    : "bg-input border-edge text-fg-muted hover:border-gray-500"
                 }`}
               >
                 <input
@@ -303,7 +303,7 @@ export default function GameExtrasForm({
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
+          <label className="block text-sm text-fg-muted mb-1">
             Langue(s)
           </label>
           <LanguageDropdown
@@ -314,7 +314,7 @@ export default function GameExtrasForm({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Taille</label>
+            <label className="block text-sm text-fg-muted mb-1">Taille</label>
             <input
               type="text"
               value={size}
@@ -324,7 +324,7 @@ export default function GameExtrasForm({
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Taille d'installation</label>
+            <label className="block text-sm text-fg-muted mb-1">Taille d'installation</label>
             <input
               type="text"
               value={installSize}
@@ -339,7 +339,7 @@ export default function GameExtrasForm({
           <button
             type="button"
             onClick={() => setShowReqs(!showReqs)}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-sm text-fg-muted hover:text-fg-bright transition-colors"
           >
             <svg
               className={`w-4 h-4 transition-transform ${showReqs ? "rotate-90" : ""}`}
@@ -359,7 +359,7 @@ export default function GameExtrasForm({
             )}
           </button>
           {showReqs && (
-            <div className="mt-3 space-y-4 pl-2 border-l-2 border-[#2a2a4a]">
+            <div className="mt-3 space-y-4 pl-2 border-l-2 border-edge">
               <ReqsFields label="Minimum" reqs={minReqs} onChange={setMinReqs} />
               <ReqsFields label="Recommandee" reqs={recReqs} onChange={setRecReqs} />
             </div>

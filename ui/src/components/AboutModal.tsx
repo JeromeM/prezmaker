@@ -65,12 +65,12 @@ export default function AboutModal({ onClose }: Props) {
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg w-full max-w-md mx-4 shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2a4a]">
-          <h2 className="text-white text-lg font-medium">A propos</h2>
+      <div className="bg-surface border border-edge rounded-lg w-full max-w-md mx-4 shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-edge">
+          <h2 className="text-fg-bright text-lg font-medium">A propos</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors text-xl leading-none"
+            className="text-fg-muted hover:text-fg-bright transition-colors text-xl leading-none"
           >
             &times;
           </button>
@@ -78,17 +78,17 @@ export default function AboutModal({ onClose }: Props) {
 
         <div className="px-6 py-6 space-y-5">
           <div className="text-center">
-            <h3 className="text-2xl font-bold text-white mb-1">PrezMaker</h3>
-            <p className="text-gray-400 text-sm">v{version}</p>
-            <p className="text-gray-500 text-xs mt-2">
+            <h3 className="text-2xl font-bold text-fg-bright mb-1">PrezMaker</h3>
+            <p className="text-fg-muted text-sm">v{version}</p>
+            <p className="text-fg-dim text-xs mt-2">
               Generateur de presentations BBCode pour films, series, jeux et applications.
             </p>
           </div>
 
-          <div className="text-center text-sm text-gray-400">
+          <div className="text-center text-sm text-fg-muted">
             <p>
               Developpe par{" "}
-              <span className="text-white font-medium">Grommey</span>
+              <span className="text-fg-bright font-medium">Grommey</span>
             </p>
           </div>
 
@@ -118,12 +118,12 @@ export default function AboutModal({ onClose }: Props) {
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-[#2a2a4a] space-y-3">
+        <div className="px-6 py-4 border-t border-edge space-y-3">
           {/* Update section */}
           {updateState.step === "idle" && (
             <button
               onClick={checkForUpdate}
-              className="w-full flex items-center justify-center gap-2 bg-[#16213e] hover:bg-[#1e2d4d] border border-[#2a2a4a] text-gray-300 hover:text-white rounded px-4 py-2 text-sm transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-input hover:bg-input-hover border border-edge text-fg hover:text-fg-bright rounded px-4 py-2 text-sm transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                 <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m0 0a9 9 0 0 1 9-9m-9 9a9 9 0 0 0 9 9" />
@@ -133,7 +133,7 @@ export default function AboutModal({ onClose }: Props) {
           )}
 
           {updateState.step === "checking" && (
-            <div className="flex items-center justify-center gap-2 text-gray-400 text-sm py-2">
+            <div className="flex items-center justify-center gap-2 text-fg-muted text-sm py-2">
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -150,8 +150,8 @@ export default function AboutModal({ onClose }: Props) {
 
           {updateState.step === "available" && (
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-300">
-                Version <span className="text-white font-semibold">{updateState.version}</span> disponible
+              <p className="text-sm text-fg">
+                Version <span className="text-fg-bright font-semibold">{updateState.version}</span> disponible
               </p>
               <button
                 onClick={() => startUpdate(updateState.update)}
@@ -164,13 +164,13 @@ export default function AboutModal({ onClose }: Props) {
 
           {updateState.step === "downloading" && (
             <div className="space-y-2">
-              <div className="w-full bg-[#2a2a4a] rounded-full h-2">
+              <div className="w-full bg-edge rounded-full h-2">
                 <div
                   className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: updateState.total > 0 ? `${Math.min((updateState.downloaded / updateState.total) * 100, 100)}%` : "0%" }}
                 />
               </div>
-              <p className="text-gray-400 text-xs text-center">
+              <p className="text-fg-muted text-xs text-center">
                 {updateState.total > 0
                   ? `${(updateState.downloaded / 1024 / 1024).toFixed(1)} / ${(updateState.total / 1024 / 1024).toFixed(1)} Mo`
                   : `${(updateState.downloaded / 1024 / 1024).toFixed(1)} Mo`}

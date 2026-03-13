@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
 import { usePrezMaker } from "./hooks/usePrezMaker";
+import { useTheme } from "./hooks/useTheme";
 import TopBar from "./components/TopBar";
 import ResultSelector from "./components/ResultSelector";
 import GameExtrasForm from "./components/GameExtrasForm";
@@ -34,6 +35,7 @@ function App() {
     reset,
   } = usePrezMaker();
 
+  const { theme, toggle: toggleTheme } = useTheme();
   const [dragging, setDragging] = useState(false);
 
   // Global drag-drop listener for .torrent files
@@ -72,7 +74,7 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#0f0f23]">
+    <div className="flex flex-col h-screen bg-base">
       <UpdateChecker />
       <TopBar
         onSearch={search}
@@ -82,6 +84,8 @@ function App() {
         onImportTorrent={importTorrent}
         onOpenTemplateEditor={() => setShowTemplateEditor(true)}
         onOpenAbout={() => setShowAbout(true)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       <main className="flex-1 flex flex-col min-h-0">
@@ -104,7 +108,7 @@ function App() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className={`w-12 h-12 mx-auto mb-4 transition-colors ${
-                  dragging ? "text-blue-400" : "text-gray-600"
+                  dragging ? "text-blue-400" : "text-fg-faint"
                 }`}
               >
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -112,13 +116,13 @@ function App() {
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
               <p className={`text-lg mb-2 transition-colors ${
-                dragging ? "text-blue-400" : "text-gray-500"
+                dragging ? "text-blue-400" : "text-fg-dim"
               }`}>
                 {dragging
                   ? "Déposez le fichier .torrent"
                   : "Glissez un .torrent ici ou cliquez pour importer"}
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-fg-faint">
                 ou lancez une recherche depuis la barre ci-dessus
               </p>
             </div>
@@ -127,7 +131,7 @@ function App() {
 
         {state.step === "searching" && (
           <div className="flex-1 flex items-center justify-center">
-            <div className="flex items-center gap-3 text-gray-400">
+            <div className="flex items-center gap-3 text-fg-muted">
               <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
@@ -151,7 +155,7 @@ function App() {
 
         {state.step === "generating" && (
           <div className="flex-1 flex items-center justify-center">
-            <div className="flex items-center gap-3 text-gray-400">
+            <div className="flex items-center gap-3 text-fg-muted">
               <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
@@ -245,7 +249,7 @@ function App() {
         )}
       </main>
       {dragging && state.step !== "idle" && (
-        <div className="absolute inset-0 z-50 bg-[#0f0f23]/80 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 z-50 bg-base/80 flex items-center justify-center pointer-events-none">
           <div className="border-2 border-dashed border-blue-500 rounded-xl p-12 text-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
