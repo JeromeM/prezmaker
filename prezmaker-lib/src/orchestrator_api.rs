@@ -733,7 +733,7 @@ impl OrchestratorApi {
         // 1. LLM API (si configuré)
         if let (Some(provider), Some(api_key)) = (
             self.config.llm.provider.as_deref(),
-            self.config.llm.api_key.as_deref(),
+            self.config.llm.resolve_api_key(),
         ) {
             if !provider.is_empty() && !api_key.is_empty() {
                 info!("Generation description via LLM ({})...", provider);

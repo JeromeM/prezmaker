@@ -20,6 +20,26 @@ pub struct Config {
 pub struct LlmConfig {
     pub provider: Option<String>,
     pub api_key: Option<String>,
+    pub groq_api_key: Option<String>,
+    pub mistral_api_key: Option<String>,
+    pub gemini_api_key: Option<String>,
+}
+
+impl LlmConfig {
+    /// Returns the API key for the currently selected provider.
+    /// Checks provider-specific key first, falls back to generic `api_key`.
+    pub fn resolve_api_key(&self) -> Option<&str> {
+        let provider = self.provider.as_deref().unwrap_or("");
+        let specific = match provider {
+            "groq" => self.groq_api_key.as_deref(),
+            "mistral" => self.mistral_api_key.as_deref(),
+            "gemini" => self.gemini_api_key.as_deref(),
+            _ => None,
+        };
+        specific
+            .or(self.api_key.as_deref())
+            .filter(|k| !k.is_empty())
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
