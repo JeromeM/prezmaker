@@ -520,3 +520,24 @@ pub fn duplicate_template(name: String, new_name: String) -> Result<(), String> 
     std::fs::copy(&src, &dst).map_err(|e| format!("Cannot duplicate template: {}", e))?;
     Ok(())
 }
+
+#[tauri::command]
+pub fn export_template(content_type: String, name: String, path: String) -> Result<(), String> {
+    let tpl = template_engine::get_template(&content_type, &name)?;
+    let json = serde_json::to_string_pretty(&tpl)
+        .map_err(|e| format!("Serialization error: {}", e))?;
+    std::fs::write(&path, json).map_err(|e| format!("Cannot write file: {}", e))
+}
+
+#[tauri::command]
+pub fn import_template(path: String) -> Result<ContentTemplate, String> {
+    let json = std::fs::read_to_string(&path)
+        .map_err(|e| format!("Cannot read file: {}", e))?;
+    let tpl: ContentTemplate = serde_json::from_str(&json)
+        .map_err(|e| format!("Invalid template file: {}", e))?;
+    template_engine::save_template(&tpl.content_type, &tpl.name, &tpl.body)?;
+    if let Some(ref color) = tpl.title_color {
+        template_engine::save_template_meta(&tpl.content_type, &tpl.name, Some(color.clone()))?;
+    }
+    Ok(tpl)
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { ContentType, ContentTemplate, TemplateTag, SettingsPayload } from "../types/api";
 
@@ -494,6 +495,41 @@ export default function TemplateEditor({ onClose }: Props) {
     }
   };
 
+  const handleExport = async () => {
+    const path = await save({
+      defaultPath: `${selected}.json`,
+      filters: [{ name: "Template", extensions: ["json"] }],
+    });
+    if (!path) return;
+    try {
+      await invoke("export_template", { contentType, name: selected, path });
+    } catch (e) {
+      alert("Erreur export: " + e);
+    }
+  };
+
+  const handleImport = async () => {
+    const path = await open({
+      filters: [{ name: "Template", extensions: ["json"] }],
+      multiple: false,
+    });
+    if (!path) return;
+    try {
+      const tpl = await invoke<ContentTemplate>("import_template", { path });
+      // Switch to the imported template's content type if different
+      if (tpl.content_type !== contentType) {
+        setContentType(tpl.content_type as ContentType);
+      }
+      setSelected(tpl.name);
+      await loadTemplates(tpl.content_type);
+      setBody(autoIndent(tpl.body));
+      setCustomColor(tpl.title_color ?? null);
+      setDirty(false);
+    } catch (e) {
+      alert("Erreur import: " + e);
+    }
+  };
+
   const insertTag = (tagName: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -663,6 +699,22 @@ export default function TemplateEditor({ onClose }: Props) {
               Supprimer
             </button>
           )}
+
+          <button
+            onClick={handleExport}
+            className="bg-[#16213e] hover:bg-[#1e2d4d] border border-[#2a2a4a] text-gray-300 hover:text-white px-3 py-1 rounded text-sm"
+            title="Exporter le template"
+          >
+            Exporter
+          </button>
+
+          <button
+            onClick={handleImport}
+            className="bg-[#16213e] hover:bg-[#1e2d4d] border border-[#2a2a4a] text-gray-300 hover:text-white px-3 py-1 rounded text-sm"
+            title="Importer un template"
+          >
+            Importer
+          </button>
 
           {dirty && <span className="text-yellow-400 text-xs">modifié</span>}
 
