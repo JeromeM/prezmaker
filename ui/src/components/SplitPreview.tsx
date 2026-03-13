@@ -250,25 +250,23 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
                 >
                   {saved ? "Sauvegardé !" : "Sauvegarder"}
                 </button>
-                {(meta.contentType === "film" || meta.contentType === "serie") && (
-                  <button
-                    onClick={handleGenerateNfo}
-                    disabled={nfoLoading}
-                    className={`text-xs px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
-                      nfoLoading
-                        ? "bg-blue-600 text-white cursor-wait"
-                        : "bg-edge hover:bg-edge-hover text-fg disabled:opacity-50"
-                    }`}
-                  >
-                    {nfoLoading && (
-                      <span
-                        className="inline-block h-3 w-3 border-2 border-white/30 border-t-white rounded-full"
-                        style={{ animation: "spin 1s linear infinite" }}
-                      />
-                    )}
-                    {nfoLoading ? "Analyse MediaInfo..." : "NFO"}
-                  </button>
-                )}
+                <button
+                  onClick={handleGenerateNfo}
+                  disabled={nfoLoading}
+                  className={`text-xs px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
+                    nfoLoading
+                      ? "bg-blue-600 text-white cursor-wait"
+                      : "bg-edge hover:bg-edge-hover text-fg disabled:opacity-50"
+                  }`}
+                >
+                  {nfoLoading && (
+                    <span
+                      className="inline-block h-3 w-3 border-2 border-white/30 border-t-white rounded-full"
+                      style={{ animation: "spin 1s linear infinite" }}
+                    />
+                  )}
+                  {nfoLoading ? "Analyse MediaInfo..." : "NFO"}
+                </button>
               </>
             }
           />
