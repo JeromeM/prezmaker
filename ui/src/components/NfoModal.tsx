@@ -4,10 +4,11 @@ import { save } from "@tauri-apps/plugin-dialog";
 
 interface Props {
   content: string;
+  title: string;
   onClose: () => void;
 }
 
-export default function NfoModal({ content, onClose }: Props) {
+export default function NfoModal({ content, title, onClose }: Props) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -22,7 +23,7 @@ export default function NfoModal({ content, onClose }: Props) {
 
   const handleDownload = async () => {
     const path = await save({
-      defaultPath: "info.nfo",
+      defaultPath: `${title.replace(/[/\\:*?"<>|]/g, "_")}.nfo`,
       filters: [{ name: "NFO", extensions: ["nfo", "txt"] }],
     });
     if (!path) return;

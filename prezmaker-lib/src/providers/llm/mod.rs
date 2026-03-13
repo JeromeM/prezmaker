@@ -8,41 +8,54 @@ Tu ne traduis pas : tu ecris ta propre description a partir de tes connaissances
 Tu reponds UNIQUEMENT en francais. \
 Tu retournes uniquement la description (2-3 paragraphes), sans titre, sans commentaire, sans explication.";
 
-const NFO_SYSTEM_PROMPT: &str = r#"Tu es un generateur de fichiers NFO pour des releases de contenus multimedia.
-A partir du BBCode fourni, genere un fichier NFO en texte brut avec un style ASCII art.
+const NFO_SYSTEM_PROMPT: &str = r#"Tu es un generateur de fichiers NFO au format MediaInfo pour des releases multimedia.
+A partir du BBCode fourni, genere un NFO au format MediaInfo standard, tel qu'attendu sur les trackers francophones (C411).
 
 Regles :
-- Utilise des separateurs avec des caracteres === ou --- pour delimiter les sections
-- Aligne le texte proprement (largeur ~70 caracteres)
-- Extrais les informations du BBCode : titre, description, infos techniques, etc.
-- Le resultat doit etre du texte brut uniquement, pas de BBCode, pas de HTML
+- Le format DOIT ressembler a une sortie MediaInfo : sections General, Video, Audio, Text (sous-titres)
+- Chaque champ sur sa propre ligne, aligne avec des espaces : "Nom du champ                             : Valeur"
+- Sections separees par une ligne vide
+- Extrais TOUTES les informations techniques du BBCode : codec, qualite, audio, langues, sous-titres, taille, etc.
+- Si des informations manquent dans le BBCode, ne les invente PAS
 - Retourne UNIQUEMENT le contenu NFO, sans commentaire ni explication
-- Le texte doit rester en francais
+- Le texte doit rester en francais pour les labels
 
-Exemple de structure :
-======================================================================
-                         TITRE DU CONTENU
-======================================================================
+Champs obligatoires pour Films & Videos (si disponibles dans le BBCode) :
+General : Titre complet, Format conteneur, Duree, Taille, Nombre de fichiers
+Video : Source, Codec video, Debit video, Resolution
+Audio : Codec(s) audio, Bitrate(s), Canaux, Langue(s)
+Text : Format sous-titres, Types (COMPLET/FORCE), Langue(s)
 
-  Type ........... : Film / Serie / Jeu / Application
-  Genre .......... : Action, Aventure
-  Annee .......... : 2024
-  Langue ......... : Francais
+Exemple de format attendu :
+General
+Complete name                            : Film.2024.MULTi.1080p.WEB.H264-GROUP.mkv
+Format                                   : Matroska
+File size                                : 9.33 GiB
+Duration                                 : 2 h 0 min
+Overall bit rate                         : 11.0 Mb/s
 
-======================================================================
-                           DESCRIPTION
-======================================================================
+Video
+Format                                   : AVC
+Bit rate                                 : 9 115 kb/s
+Width                                    : 1 920 pixels
+Height                                   : 1 080 pixels
+Frame rate                               : 24.000 FPS
 
-  Description du contenu extraite du BBCode...
+Audio #1
+Format                                   : E-AC-3
+Bit rate                                 : 640 kb/s
+Channel(s)                               : 6 channels
+Language                                 : French
 
-======================================================================
-                        INFOS TECHNIQUES
-======================================================================
+Audio #2
+Format                                   : E-AC-3
+Bit rate                                 : 640 kb/s
+Channel(s)                               : 6 channels
+Language                                 : English
 
-  Format ......... : MKV
-  Taille ......... : 4.2 Go
-
-======================================================================
+Text #1
+Format                                   : UTF-8
+Language                                 : French
 "#;
 
 pub struct LlmClient {
