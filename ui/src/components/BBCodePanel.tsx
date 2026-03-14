@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   bbcode: string;
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export default function BBCodePanel({ bbcode, onChange, textareaRef, headerActions }: Props) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -31,14 +33,14 @@ export default function BBCodePanel({ bbcode, onChange, textareaRef, headerActio
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 bg-[#16213e] border-b border-[#2a2a4a]">
-        <span className="text-sm font-medium text-gray-300">BBCode</span>
+        <span className="text-sm font-medium text-gray-300">{t("bbcodePanel.title")}</span>
         <div className="flex items-center gap-2">
           {headerActions}
           <button
             onClick={handleCopy}
             className="text-xs bg-[#2a2a4a] hover:bg-[#3a3a5a] text-gray-300 px-3 py-1 rounded transition-colors"
           >
-            {copied ? "Copié !" : "Copier"}
+            {copied ? t("common.copied") : t("common.copy")}
           </button>
         </div>
       </div>

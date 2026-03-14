@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { check, Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
@@ -11,6 +12,7 @@ type UpdateState =
   | { step: "dismissed" };
 
 export default function UpdateChecker() {
+  const { t } = useTranslation();
   const [state, setState] = useState<UpdateState>({ step: "checking" });
 
   useEffect(() => {
@@ -77,16 +79,12 @@ export default function UpdateChecker() {
           <>
             <div className="px-6 py-4 border-b border-edge">
               <h2 className="text-fg-bright text-lg font-medium">
-                Mise a jour disponible
+                {t("update.title")}
               </h2>
             </div>
             <div className="px-6 py-6 space-y-4">
               <p className="text-fg">
-                La version{" "}
-                <span className="text-fg-bright font-semibold">
-                  {state.version}
-                </span>{" "}
-                est disponible.
+                {t("update.versionAvailable", { version: state.version })}
               </p>
               {state.body && (
                 <p className="text-fg-muted text-sm whitespace-pre-line max-h-40 overflow-y-auto">
@@ -99,13 +97,13 @@ export default function UpdateChecker() {
                 onClick={() => setState({ step: "dismissed" })}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors"
               >
-                Plus tard
+                {t("update.later")}
               </button>
               <button
                 onClick={() => startUpdate(state.update)}
                 className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm transition-colors"
               >
-                Mettre a jour
+                {t("update.update")}
               </button>
             </div>
           </>
@@ -114,7 +112,7 @@ export default function UpdateChecker() {
         {state.step === "downloading" && (
           <div className="px-6 py-6 space-y-4">
             <p className="text-fg-bright font-medium">
-              Telechargement en cours...
+              {t("update.downloading")}
             </p>
             <div className="w-full bg-edge rounded-full h-3">
               <div
@@ -157,7 +155,7 @@ export default function UpdateChecker() {
               />
             </svg>
             <p className="text-fg-bright font-medium">
-              Installation et redemarrage...
+              {t("update.installing")}
             </p>
           </div>
         )}
@@ -165,14 +163,14 @@ export default function UpdateChecker() {
         {state.step === "error" && (
           <div className="px-6 py-6 space-y-4">
             <p className="text-red-400">
-              Erreur lors de la mise a jour : {state.message}
+              {t("update.error")} {state.message}
             </p>
             <div className="flex justify-end">
               <button
                 onClick={() => setState({ step: "dismissed" })}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors"
               >
-                Fermer
+                {t("common.close")}
               </button>
             </div>
           </div>

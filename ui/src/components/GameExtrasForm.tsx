@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import type { Game, TechInfo, SystemReqs, TorrentInfo } from "../types/api";
 
@@ -75,7 +76,8 @@ function LanguageDropdown({
     }
   };
 
-  const display = selected.length === 0 ? "Aucune" : selected.join(", ");
+  const { t } = useTranslation();
+  const display = selected.length === 0 ? t("gameExtras.none") : selected.join(", ");
 
   return (
     <div className="relative" ref={ref}>
@@ -120,6 +122,7 @@ function ReqsFields({
   reqs: SystemReqs;
   onChange: (reqs: SystemReqs) => void;
 }) {
+  const { t } = useTranslation();
   const set = (field: keyof SystemReqs, value: string) =>
     onChange({ ...reqs, [field]: value });
 
@@ -132,35 +135,35 @@ function ReqsFields({
           value={reqs.os}
           onChange={(e) => set("os", e.target.value)}
           className={inputClass}
-          placeholder="OS (ex: Windows 10 64-bit)"
+          placeholder={t("gameExtras.os")}
         />
         <input
           type="text"
           value={reqs.cpu}
           onChange={(e) => set("cpu", e.target.value)}
           className={inputClass}
-          placeholder="CPU (ex: Intel i5-3570K)"
+          placeholder={t("gameExtras.cpu")}
         />
         <input
           type="text"
           value={reqs.ram}
           onChange={(e) => set("ram", e.target.value)}
           className={inputClass}
-          placeholder="RAM (ex: 8 Go)"
+          placeholder={t("gameExtras.ram")}
         />
         <input
           type="text"
           value={reqs.gpu}
           onChange={(e) => set("gpu", e.target.value)}
           className={inputClass}
-          placeholder="GPU (ex: GTX 970)"
+          placeholder={t("gameExtras.gpu")}
         />
         <input
           type="text"
           value={reqs.storage}
           onChange={(e) => set("storage", e.target.value)}
           className={inputClass}
-          placeholder="Stockage (ex: 70 Go SSD)"
+          placeholder={t("gameExtras.storage")}
         />
       </div>
     </div>
@@ -174,6 +177,7 @@ export default function GameExtrasForm({
   onCancel,
   torrentInfo,
 }: Props) {
+  const { t } = useTranslation();
   const [description, setDescription] = useState(
     claudeDescription || game.synopsis || ""
   );
@@ -243,40 +247,40 @@ export default function GameExtrasForm({
           onClick={onCancel}
           className="text-fg-muted hover:text-fg-bright text-sm"
         >
-          Annuler
+          {t("common.cancel")}
         </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm text-fg-muted mb-1">
-            Description
+            {t("gameExtras.description")}
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={6}
             className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500 resize-y"
-            placeholder="Description du jeu en français..."
+            placeholder={t("gameExtras.descriptionPlaceholder")}
           />
         </div>
 
         <div>
           <label className="block text-sm text-fg-muted mb-1">
-            Installation (etapes numerotees, une par ligne)
+            {t("gameExtras.installation")}
           </label>
           <textarea
             value={installation}
             onChange={(e) => setInstallation(e.target.value)}
             rows={4}
             className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500 resize-y"
-            placeholder={"1. Extraire l'archive\n2. Lancer le setup\n3. Jouer"}
+            placeholder={t("gameExtras.installationPlaceholder")}
           />
         </div>
 
         <div>
           <label className="block text-sm text-fg-muted mb-1">
-            Plateforme
+            {t("gameExtras.platform")}
           </label>
           <div className="flex flex-wrap gap-2">
             {PLATFORMS.map((p) => (
@@ -304,7 +308,7 @@ export default function GameExtrasForm({
 
         <div>
           <label className="block text-sm text-fg-muted mb-1">
-            Langue(s)
+            {t("gameExtras.languages")}
           </label>
           <LanguageDropdown
             selected={selectedLanguages}
@@ -314,7 +318,7 @@ export default function GameExtrasForm({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm text-fg-muted mb-1">Taille</label>
+            <label className="block text-sm text-fg-muted mb-1">{t("gameExtras.size")}</label>
             <input
               type="text"
               value={size}
@@ -324,7 +328,7 @@ export default function GameExtrasForm({
             />
           </div>
           <div>
-            <label className="block text-sm text-fg-muted mb-1">Taille d'installation</label>
+            <label className="block text-sm text-fg-muted mb-1">{t("gameExtras.installSize")}</label>
             <input
               type="text"
               value={installSize}
@@ -350,7 +354,7 @@ export default function GameExtrasForm({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
-            Configuration requise (min / recommandée)
+            {t("gameExtras.systemReqs")}
             {loadingReqs && (
               <svg className="animate-spin h-4 w-4 text-blue-400" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -360,8 +364,8 @@ export default function GameExtrasForm({
           </button>
           {showReqs && (
             <div className="mt-3 space-y-4 pl-2 border-l-2 border-edge">
-              <ReqsFields label="Minimum" reqs={minReqs} onChange={setMinReqs} />
-              <ReqsFields label="Recommandee" reqs={recReqs} onChange={setRecReqs} />
+              <ReqsFields label={t("gameExtras.minimum")} reqs={minReqs} onChange={setMinReqs} />
+              <ReqsFields label={t("gameExtras.recommended")} reqs={recReqs} onChange={setRecReqs} />
             </div>
           )}
         </div>
@@ -370,7 +374,7 @@ export default function GameExtrasForm({
           type="submit"
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded text-sm font-medium transition-colors"
         >
-          Generer le BBCode
+          {t("common.generate")}
         </button>
       </form>
     </div>

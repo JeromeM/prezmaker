@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
 import { usePrezMaker } from "./hooks/usePrezMaker";
@@ -19,6 +20,7 @@ import UpdateChecker from "./components/UpdateChecker";
 import CollectionBrowser from "./components/CollectionBrowser";
 
 function App() {
+  const { t } = useTranslation();
   const [showSettings, setShowSettings] = useState(false);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
   const [showCollections, setShowCollections] = useState(false);
@@ -123,11 +125,11 @@ function App() {
                 dragging ? "text-blue-400" : "text-fg-dim"
               }`}>
                 {dragging
-                  ? "Déposez le fichier .torrent"
-                  : "Glissez un .torrent ici ou cliquez pour importer"}
+                  ? t("app.dropTorrent")
+                  : t("app.dragOrClick")}
               </p>
               <p className="text-sm text-fg-faint">
-                ou lancez une recherche depuis la barre ci-dessus
+                {t("app.orSearchAbove")}
               </p>
             </div>
           </div>
@@ -152,7 +154,7 @@ function App() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                 />
               </svg>
-              Recherche en cours...
+              {t("app.searching")}
             </div>
           </div>
         )}
@@ -177,7 +179,7 @@ function App() {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                   />
                 </svg>
-                Génération en cours...
+                {t("app.generating")}
               </div>
               {state.message && (
                 <p className="text-sm text-fg-faint">{state.message}</p>
@@ -265,7 +267,7 @@ function App() {
                 onClick={reset}
                 className="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded text-sm transition-colors"
               >
-                Réessayer
+                {t("common.retry")}
               </button>
             </div>
           </div>
@@ -288,7 +290,7 @@ function App() {
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            <p className="text-blue-400 text-lg">Déposez le fichier .torrent</p>
+            <p className="text-blue-400 text-lg">{t("app.dropTorrent")}</p>
           </div>
         </div>
       )}

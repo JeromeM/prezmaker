@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function NfoModal({ content, title, onClose }: Props) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -44,25 +46,25 @@ export default function NfoModal({ content, title, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2a4a]">
-          <span className="text-sm font-medium text-gray-200">NFO</span>
+          <span className="text-sm font-medium text-gray-200">{t("collections.nfo")}</span>
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
               className="text-xs bg-[#2a2a4a] hover:bg-[#3a3a5a] text-gray-300 px-3 py-1 rounded transition-colors"
             >
-              {copied ? "Copié !" : "Copier"}
+              {copied ? t("common.copied") : t("common.copy")}
             </button>
             <button
               onClick={handleDownload}
               className="text-xs bg-[#2a2a4a] hover:bg-[#3a3a5a] text-gray-300 px-3 py-1 rounded transition-colors"
             >
-              Télécharger
+              {t("common.download")}
             </button>
             <button
               onClick={onClose}
               className="text-xs bg-[#2a2a4a] hover:bg-[#3a3a5a] text-gray-300 px-3 py-1 rounded transition-colors"
             >
-              Fermer
+              {t("common.close")}
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import type { Collection } from "../types/api";
 
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export default function CollectionSaveDialog({ onSave, onClose }: Props) {
+  const { t } = useTranslation();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
@@ -45,7 +47,7 @@ export default function CollectionSaveDialog({ onSave, onClose }: Props) {
     >
       <div className="bg-surface border border-edge rounded-lg w-full max-w-sm mx-4 shadow-2xl">
         <div className="flex items-center justify-between px-5 py-3 border-b border-edge">
-          <h3 className="text-fg-bright font-medium">Enregistrer dans...</h3>
+          <h3 className="text-fg-bright font-medium">{t("collections.saveTitle")}</h3>
           <button onClick={onClose} className="text-fg-muted hover:text-fg-bright text-xl leading-none">
             &times;
           </button>
@@ -53,7 +55,7 @@ export default function CollectionSaveDialog({ onSave, onClose }: Props) {
 
         <div className="p-5 space-y-3">
           {collections.length === 0 && !creating ? (
-            <p className="text-fg-dim text-sm">Aucune collection. Créez-en une !</p>
+            <p className="text-fg-dim text-sm">{t("collections.noCollectionCreate")}</p>
           ) : (
             <div className="space-y-1 max-h-48 overflow-y-auto">
               {collections.map((col) => (
@@ -83,7 +85,7 @@ export default function CollectionSaveDialog({ onSave, onClose }: Props) {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                placeholder="Nom de la collection"
+                placeholder={t("collections.collectionName")}
                 className="flex-1 bg-input border border-edge rounded px-2 py-1.5 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus:border-blue-500"
                 autoFocus
               />
@@ -92,13 +94,13 @@ export default function CollectionSaveDialog({ onSave, onClose }: Props) {
                 disabled={!newName.trim()}
                 className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded transition-colors disabled:opacity-50"
               >
-                Créer
+                {t("common.create")}
               </button>
               <button
                 onClick={() => { setCreating(false); setNewName(""); }}
                 className="text-fg-muted hover:text-fg text-sm px-2"
               >
-                Annuler
+                {t("common.cancel")}
               </button>
             </div>
           ) : (
@@ -106,7 +108,7 @@ export default function CollectionSaveDialog({ onSave, onClose }: Props) {
               onClick={() => setCreating(true)}
               className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
             >
-              + Nouvelle collection
+              {t("collections.newCollection")}
             </button>
           )}
         </div>
@@ -116,14 +118,14 @@ export default function CollectionSaveDialog({ onSave, onClose }: Props) {
             onClick={onClose}
             className="text-sm text-fg-muted hover:text-fg px-3 py-1.5 transition-colors"
           >
-            Annuler
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleConfirm}
             disabled={!selectedId}
             className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded transition-colors disabled:opacity-50"
           >
-            Enregistrer
+            {t("common.save")}
           </button>
         </div>
       </div>

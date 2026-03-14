@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { useTranslation } from "react-i18next";
 import type { ContentType, ContentTemplate, TemplateTag, SettingsPayload } from "../types/api";
 
 interface Props {
@@ -288,6 +289,7 @@ function ColorPickerPopup({ value, onChange, onClose }: {
 // --- Main component ---
 
 export default function TemplateEditor({ onClose }: Props) {
+  const { t } = useTranslation();
   const [contentType, setContentType] = useState<ContentType>("film");
   const [templates, setTemplates] = useState<ContentTemplate[]>([]);
   const [selected, setSelected] = useState<string>("default");
@@ -431,7 +433,7 @@ export default function TemplateEditor({ onClose }: Props) {
   }, [tagsByCategory, tagSearch]);
 
   const handleSelectTemplate = async (name: string) => {
-    if (dirty && !confirm("Modifications non sauvegardées. Continuer ?")) return;
+    if (dirty && !confirm(t("templateEditor.unsavedChanges"))) return;
     try {
       const tpl = await invoke<ContentTemplate>("get_content_template", {
         contentType,
@@ -485,7 +487,7 @@ export default function TemplateEditor({ onClose }: Props) {
 
   const handleDelete = async () => {
     if (selected === "default") return;
-    if (!confirm(`Supprimer le template "${selected}" ?`)) return;
+    if (!confirm(t("templateEditor.confirmDelete", { name: selected }))) return;
     try {
       await invoke("delete_content_template", { contentType, name: selected });
       setSelected("default");
@@ -615,11 +617,11 @@ export default function TemplateEditor({ onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-edge">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold">Editeur de templates</h2>
+            <h2 className="text-lg font-semibold">{t("templateEditor.title")}</h2>
             <select
               value={contentType}
               onChange={(e) => {
-                if (dirty && !confirm("Modifications non sauvegardées. Continuer ?")) return;
+                if (dirty && !confirm(t("templateEditor.unsavedChanges"))) return;
                 setContentType(e.target.value as ContentType);
                 setSelected("default");
                 setDirty(false);
@@ -655,7 +657,7 @@ export default function TemplateEditor({ onClose }: Props) {
               await invoke("set_default_template", { contentType, templateName: newFav });
               setFavoriteName(newFav || null);
             }}
-            title={selected === favoriteName ? "Retirer des favoris" : "Définir comme template par défaut"}
+            title={selected === favoriteName ? t("templateEditor.unsetDefault") : t("templateEditor.setDefault")}
             className={`p-1.5 rounded transition-colors ${
               selected === favoriteName
                 ? "text-yellow-400 hover:text-yellow-300"
@@ -680,7 +682,7 @@ export default function TemplateEditor({ onClose }: Props) {
             onClick={() => setShowNewDialog(true)}
             className="bg-green-700 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
           >
-            Nouveau
+            {t("common.new")}
           </button>
 
           <button
@@ -688,7 +690,7 @@ export default function TemplateEditor({ onClose }: Props) {
             disabled={!dirty || saving}
             className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-sm"
           >
-            {saving ? "..." : "Sauvegarder"}
+            {saving ? "..." : t("common.save")}
           </button>
 
           {selected !== "default" && (
@@ -696,31 +698,31 @@ export default function TemplateEditor({ onClose }: Props) {
               onClick={handleDelete}
               className="bg-red-700 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
             >
-              Supprimer
+              {t("common.delete")}
             </button>
           )}
 
           <button
             onClick={handleExport}
             className="bg-input hover:bg-input-hover border border-edge text-fg hover:text-fg-bright px-3 py-1 rounded text-sm"
-            title="Exporter le template"
+            title={t("common.export")}
           >
-            Exporter
+            {t("common.export")}
           </button>
 
           <button
             onClick={handleImport}
             className="bg-input hover:bg-input-hover border border-edge text-fg hover:text-fg-bright px-3 py-1 rounded text-sm"
-            title="Importer un template"
+            title={t("common.import")}
           >
-            Importer
+            {t("common.import")}
           </button>
 
-          {dirty && <span className="text-yellow-400 text-xs">modifié</span>}
+          {dirty && <span className="text-yellow-400 text-xs">{t("templateEditor.modified")}</span>}
 
           {/* Per-template title color picker — right-aligned */}
           <div className="relative flex items-center gap-1 ml-auto">
-            <span className="text-xs text-fg-muted">Couleur titre</span>
+            <span className="text-xs text-fg-muted">{t("templateEditor.titleColor")}</span>
             <button
               onClick={() => setShowTitleColorPicker(!showTitleColorPicker)}
               className="w-6 h-6 rounded border border-edge cursor-pointer"
@@ -731,9 +733,9 @@ export default function TemplateEditor({ onClose }: Props) {
               <button
                 onClick={() => { setCustomColor(null); setDirty(true); }}
                 className="text-[10px] text-fg-dim hover:text-fg"
-                title="Utiliser la couleur par défaut"
+                title={t("templateEditor.resetColor")}
               >
-                reset
+                {t("templateEditor.resetColor")}
               </button>
             )}
             {!customColor && (
@@ -756,19 +758,19 @@ export default function TemplateEditor({ onClose }: Props) {
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="Nom du nouveau template..."
+              placeholder={t("templateEditor.templateName")}
               className="bg-input text-fg-bright border border-edge rounded px-2 py-1 text-sm flex-1 max-w-xs"
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && handleNew()}
             />
             <button onClick={handleNew} className="bg-green-700 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">
-              Créer
+              {t("common.create")}
             </button>
             <button
               onClick={() => { setShowNewDialog(false); setNewName(""); }}
               className="text-fg-muted hover:text-fg-bright text-sm"
             >
-              Annuler
+              {t("common.cancel")}
             </button>
           </div>
         )}
@@ -782,7 +784,7 @@ export default function TemplateEditor({ onClose }: Props) {
                 type="text"
                 value={tagSearch}
                 onChange={(e) => setTagSearch(e.target.value)}
-                placeholder="Rechercher une balise..."
+                placeholder={t("templateEditor.searchTags")}
                 className="w-full bg-base text-fg-bright border border-edge rounded px-2 py-1 text-xs outline-none focus:border-blue-500 placeholder-fg-faint"
               />
             </div>
@@ -941,7 +943,7 @@ export default function TemplateEditor({ onClose }: Props) {
           {/* Preview */}
           <div className="flex-1 flex flex-col min-w-0">
             <div className="px-3 py-2 border-b border-edge bg-input">
-              <span className="text-sm font-medium text-fg">Aperçu (données fictives)</span>
+              <span className="text-sm font-medium text-fg">{t("templateEditor.preview")}</span>
             </div>
             <div className="flex-1 bg-surface">
               <iframe

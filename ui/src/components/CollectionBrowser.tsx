@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import type { Collection, SavedPresentation, PresentationMeta, ContentType } from "../types/api";
 
@@ -7,11 +8,11 @@ interface Props {
   onLoad: (bbcode: string, html: string, meta: PresentationMeta) => void;
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  film: "Film",
-  serie: "Série",
-  jeu: "Jeu",
-  app: "Application",
+const TYPE_LABEL_KEYS: Record<string, string> = {
+  film: "common.film",
+  serie: "common.serie",
+  jeu: "common.jeu",
+  app: "common.app",
 };
 
 type SortField = "date" | "title" | "type";
@@ -23,6 +24,7 @@ function MoveMenu({ collections, currentColId, onMove, onClose }: {
   onMove: (colId: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const targets = collections.filter((c) => c.id !== currentColId);
 
@@ -37,7 +39,7 @@ function MoveMenu({ collections, currentColId, onMove, onClose }: {
   if (targets.length === 0) {
     return (
       <div ref={ref} className="absolute right-0 top-full mt-1 z-10 bg-surface border border-edge rounded shadow-lg py-1 px-3 whitespace-nowrap">
-        <p className="text-xs text-fg-dim py-1">Aucune autre collection</p>
+        <p className="text-xs text-fg-dim py-1">{t("collections.noOtherCollection")}</p>
       </div>
     );
   }
@@ -58,6 +60,7 @@ function MoveMenu({ collections, currentColId, onMove, onClose }: {
 }
 
 export default function CollectionBrowser({ onClose, onLoad }: Props) {
+  const { t } = useTranslation();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCol, setSelectedCol] = useState<string | null>(null);
   const [entries, setEntries] = useState<SavedPresentation[]>([]);
@@ -146,7 +149,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
 
   const handleDeleteCollection = async (id: string) => {
     const col = collections.find((c) => c.id === id);
-    if (!confirm(`Supprimer la collection "${col?.name}" et tout son contenu ?`)) return;
+    if (!confirm(t("collections.confirmDelete", { name: col?.name }))) return;
     try {
       await invoke("delete_collection", { id });
       const remaining = collections.filter((c) => c.id !== id);
@@ -160,7 +163,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
   };
 
   const handleDeleteEntry = async (entryId: string) => {
-    if (!selectedCol || !confirm("Supprimer cette présentation ?")) return;
+    if (!selectedCol || !confirm(t("collections.confirmDeleteEntry"))) return;
     try {
       await invoke("delete_collection_entry", { collectionId: selectedCol, id: entryId });
       setEntries((prev) => prev.filter((e) => e.id !== entryId));
@@ -238,7 +241,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-edge shrink-0">
-          <h2 className="text-fg-bright text-lg font-medium">Collections</h2>
+          <h2 className="text-fg-bright text-lg font-medium">{t("collections.title")}</h2>
           <button
             onClick={onClose}
             className="text-fg-muted hover:text-fg-bright transition-colors text-xl leading-none"
@@ -253,9 +256,9 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
           <div className="w-56 shrink-0 border-r border-edge flex flex-col">
             <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
               {loading ? (
-                <p className="text-fg-dim text-sm px-2 py-4 text-center">Chargement...</p>
+                <p className="text-fg-dim text-sm px-2 py-4 text-center">{t("common.loading")}</p>
               ) : collections.length === 0 ? (
-                <p className="text-fg-dim text-sm px-2 py-4 text-center">Aucune collection</p>
+                <p className="text-fg-dim text-sm px-2 py-4 text-center">{t("collections.noCollections")}</p>
               ) : (
                 collections.map((col) => (
                   <div
@@ -294,7 +297,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                               setRenameValue(col.name);
                             }}
                             className="p-1 text-fg-faint hover:text-fg-muted transition-colors"
-                            title="Renommer"
+                            title={t("common.rename")}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
                               <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
@@ -303,7 +306,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                           <button
                             onClick={() => handleDeleteCollection(col.id)}
                             className="p-1 text-fg-faint hover:text-red-400 transition-colors"
-                            title="Supprimer"
+                            title={t("common.delete")}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
                               <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
@@ -329,7 +332,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                       if (e.key === "Enter") handleCreateCollection();
                       if (e.key === "Escape") { setCreatingNew(false); setNewName(""); }
                     }}
-                    placeholder="Nom..."
+                    placeholder={t("collections.collectionName")}
                     className="flex-1 bg-input border border-edge rounded px-2 py-1 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus:border-blue-500 min-w-0"
                     autoFocus
                   />
@@ -346,7 +349,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                   onClick={() => setCreatingNew(true)}
                   className="w-full text-sm text-blue-400 hover:text-blue-300 transition-colors py-1"
                 >
-                  + Nouvelle collection
+                  {t("collections.newCollection")}
                 </button>
               )}
             </div>
@@ -361,7 +364,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                   type="text"
                   value={filterSearch}
                   onChange={(e) => setFilterSearch(e.target.value)}
-                  placeholder="Rechercher..."
+                  placeholder={t("collections.searchPlaceholder")}
                   className="bg-input border border-edge rounded px-2 py-1 text-xs text-fg placeholder:text-fg-faint focus:outline-none focus:border-blue-500 w-40"
                 />
                 <select
@@ -369,32 +372,32 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                   onChange={(e) => setFilterType(e.target.value)}
                   className="bg-input border border-edge rounded px-2 py-1 text-xs text-fg focus:outline-none focus:border-blue-500"
                 >
-                  <option value="">Tous les types</option>
-                  <option value="film">Film</option>
-                  <option value="serie">Série</option>
-                  <option value="jeu">Jeu</option>
-                  <option value="app">Application</option>
+                  <option value="">{t("collections.allTypes")}</option>
+                  <option value="film">{t("common.film")}</option>
+                  <option value="serie">{t("common.serie")}</option>
+                  <option value="jeu">{t("common.jeu")}</option>
+                  <option value="app">{t("common.app")}</option>
                 </select>
                 <div className="flex-1" />
                 <div className="flex items-center gap-1 text-xs text-fg-dim">
-                  <span>Tri :</span>
+                  <span>{t("collections.sortLabel")}</span>
                   <button
                     onClick={() => toggleSort("date")}
                     className={`px-1.5 py-0.5 rounded transition-colors ${sortBy === "date" ? "bg-blue-600/20 text-blue-400" : "hover:bg-input"}`}
                   >
-                    Date{sortArrow("date")}
+                    {t("collections.sortDate")}{sortArrow("date")}
                   </button>
                   <button
                     onClick={() => toggleSort("title")}
                     className={`px-1.5 py-0.5 rounded transition-colors ${sortBy === "title" ? "bg-blue-600/20 text-blue-400" : "hover:bg-input"}`}
                   >
-                    Titre{sortArrow("title")}
+                    {t("collections.sortTitle")}{sortArrow("title")}
                   </button>
                   <button
                     onClick={() => toggleSort("type")}
                     className={`px-1.5 py-0.5 rounded transition-colors ${sortBy === "type" ? "bg-blue-600/20 text-blue-400" : "hover:bg-input"}`}
                   >
-                    Type{sortArrow("type")}
+                    {t("collections.sortType")}{sortArrow("type")}
                   </button>
                 </div>
               </div>
@@ -404,15 +407,15 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
             <div className="flex-1 overflow-y-auto">
               {!selectedCol ? (
                 <div className="flex items-center justify-center h-full text-fg-dim text-sm">
-                  Sélectionnez ou créez une collection
+                  {t("collections.selectOrCreate")}
                 </div>
               ) : entries.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-fg-dim">
-                  <p>Aucune présentation</p>
+                  <p>{t("collections.noEntries")}</p>
                   <p className="text-sm mt-1 text-fg-faint">
                     {filterSearch || filterType
-                      ? "Aucun résultat pour ces filtres"
-                      : "Générez une présentation puis cliquez sur \"Sauvegarder\""}
+                      ? t("collections.noFilterResults")
+                      : t("collections.noEntriesHint")}
                   </p>
                 </div>
               ) : (
@@ -440,7 +443,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                         </div>
                         <div className="text-xs text-fg-dim flex items-center gap-2">
                           <span className="bg-input px-1.5 py-0.5 rounded">
-                            {TYPE_LABELS[entry.content_type] ?? entry.content_type}
+                            {TYPE_LABEL_KEYS[entry.content_type] ? t(TYPE_LABEL_KEYS[entry.content_type]) : entry.content_type}
                           </span>
                           <span>{formatDate(entry.saved_at)}</span>
                         </div>
@@ -451,15 +454,15 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                           onClick={() => handleLoad(entry)}
                           className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded transition-colors"
                         >
-                          Charger
+                          {t("common.load")}
                         </button>
                         <div className="relative">
                           <button
                             onClick={() => setMovingEntryId(movingEntryId === entry.id ? null : entry.id)}
                             className="bg-input hover:bg-input-hover border border-edge text-fg text-xs px-2 py-1 rounded transition-colors"
-                            title="Déplacer vers une autre collection"
+                            title={t("common.move")}
                           >
-                            Déplacer
+                            {t("common.move")}
                           </button>
                           {movingEntryId === entry.id && selectedCol && (
                             <MoveMenu
@@ -473,15 +476,15 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
                         <button
                           onClick={() => navigator.clipboard.writeText(entry.bbcode)}
                           className="bg-input hover:bg-input-hover border border-edge text-fg text-xs px-2 py-1 rounded transition-colors"
-                          title="Copier le BBCode"
+                          title={t("common.copy")}
                         >
-                          Copier
+                          {t("common.copy")}
                         </button>
                         <button
                           onClick={() => handleDeleteEntry(entry.id)}
                           className="text-red-400 hover:text-red-300 text-xs px-2 py-1 transition-colors"
                         >
-                          Suppr.
+                          {t("common.delete")}
                         </button>
                       </div>
                     </div>
