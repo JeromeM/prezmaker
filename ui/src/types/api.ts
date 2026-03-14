@@ -153,6 +153,7 @@ export interface AudioTrack {
   codec: string;
   channels: string;
   sample_rate: string | null;
+  bitrate: string | null;
   language: string | null;
   is_default: boolean;
 }
@@ -160,6 +161,7 @@ export interface AudioTrack {
 export interface SubtitleTrack {
   format: string;
   language: string | null;
+  title: string | null;
   is_default: boolean;
   is_forced: boolean;
 }

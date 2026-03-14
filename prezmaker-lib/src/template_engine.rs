@@ -1268,6 +1268,55 @@ pub fn render_cover_info_block(
     out
 }
 
+/// Returns a country code for flagcdn.com from a French language name
+fn language_to_country_code(lang: &str) -> Option<&'static str> {
+    match lang {
+        "Français" => Some("fr"),
+        "Anglais" => Some("gb"),
+        "Espagnol" => Some("es"),
+        "Allemand" => Some("de"),
+        "Italien" => Some("it"),
+        "Portugais" => Some("pt"),
+        "Japonais" => Some("jp"),
+        "Coréen" => Some("kr"),
+        "Chinois" => Some("cn"),
+        "Russe" => Some("ru"),
+        "Arabe" => Some("sa"),
+        "Néerlandais" => Some("nl"),
+        "Polonais" => Some("pl"),
+        "Suédois" => Some("se"),
+        "Norvégien" => Some("no"),
+        "Danois" => Some("dk"),
+        "Finnois" => Some("fi"),
+        "Turc" => Some("tr"),
+        "Hindi" => Some("in"),
+        "Thaï" => Some("th"),
+        "Vietnamien" => Some("vn"),
+        "Hébreu" => Some("il"),
+        "Grec" => Some("gr"),
+        "Tchèque" => Some("cz"),
+        "Hongrois" => Some("hu"),
+        "Roumain" => Some("ro"),
+        "Croate" => Some("hr"),
+        "Serbe" => Some("rs"),
+        "Bulgare" => Some("bg"),
+        "Ukrainien" => Some("ua"),
+        "Catalan" => Some("es"),
+        "Indonésien" => Some("id"),
+        "Malais" => Some("my"),
+        _ => None,
+    }
+}
+
+/// BBCode cell content with flag + language name
+fn language_with_flag(lang: &str) -> String {
+    if let Some(code) = language_to_country_code(lang) {
+        format!("[img]https://flagcdn.com/w20/{}.png[/img] {}", code, lang)
+    } else {
+        lang.to_string()
+    }
+}
+
 pub fn render_mediainfo_block(
     ma: &crate::models::MediaAnalysis,
     title_color: &str,
@@ -1312,45 +1361,67 @@ pub fn render_mediainfo_block(
         out.push_str(&bbcode::table(&table));
     }
 
-    // Audio tracks table
+    // Audio/Langues table: # | Langue | Canaux | Codec | Bitrate
     if !ma.audio.is_empty() {
         out.push('\n');
-        out.push_str(&bbcode::sub_heading("Pistes audio", title_color));
+        out.push_str(&bbcode::sub_heading("Langues", title_color));
         out.push('\n');
         let mut table = String::new();
         let mut hrow = String::new();
         hrow.push_str(&bbcode::th("#"));
-        hrow.push_str(&bbcode::th("Codec"));
-        hrow.push_str(&bbcode::th("Canaux"));
         hrow.push_str(&bbcode::th("Langue"));
+        hrow.push_str(&bbcode::th("Canaux"));
+        hrow.push_str(&bbcode::th("Codec"));
+        hrow.push_str(&bbcode::th("Bitrate"));
         table.push_str(&bbcode::tr(&hrow));
         for (i, a) in ma.audio.iter().enumerate() {
             let mut row = String::new();
             row.push_str(&bbcode::td(&bbcode::center(&format!("{}", i + 1))));
-            row.push_str(&bbcode::td(&bbcode::center(&a.codec)));
+            let lang_cell = match a.language.as_deref() {
+                Some(l) => language_with_flag(l),
+                None => "-".to_string(),
+            };
+            row.push_str(&bbcode::td(&lang_cell));
             row.push_str(&bbcode::td(&bbcode::center(&a.channels)));
-            row.push_str(&bbcode::td(&bbcode::center(a.language.as_deref().unwrap_or("-"))));
+            row.push_str(&bbcode::td(&bbcode::center(&a.codec)));
+            row.push_str(&bbcode::td(&bbcode::center(a.bitrate.as_deref().unwrap_or("-"))));
             table.push_str(&bbcode::tr(&row));
         }
         out.push_str(&bbcode::table(&table));
     }
 
-    // Subtitle tracks table
+    // Subtitle table: # | Langue | Format | Type
     if !ma.subtitles.is_empty() {
         out.push('\n');
-        out.push_str(&bbcode::sub_heading("Sous-titres", title_color));
+        out.push_str(&bbcode::sub_heading("Sous-Titres", title_color));
         out.push('\n');
         let mut table = String::new();
         let mut hrow = String::new();
         hrow.push_str(&bbcode::th("#"));
-        hrow.push_str(&bbcode::th("Format"));
         hrow.push_str(&bbcode::th("Langue"));
+        hrow.push_str(&bbcode::th("Format"));
+        hrow.push_str(&bbcode::th("Type"));
         table.push_str(&bbcode::tr(&hrow));
         for (i, s) in ma.subtitles.iter().enumerate() {
+            let sub_type = if s.is_forced {
+                "FORCED"
+            } else if let Some(ref t) = s.title {
+                let tl = t.to_uppercase();
+                if tl.contains("SDH") { "SDH" }
+                else if tl.contains("FORCED") || tl.contains("FORCE") { "FORCED" }
+                else { "FULL" }
+            } else {
+                "FULL"
+            };
             let mut row = String::new();
             row.push_str(&bbcode::td(&bbcode::center(&format!("{}", i + 1))));
+            let lang_cell = match s.language.as_deref() {
+                Some(l) => language_with_flag(l),
+                None => "-".to_string(),
+            };
+            row.push_str(&bbcode::td(&lang_cell));
             row.push_str(&bbcode::td(&bbcode::center(&s.format)));
-            row.push_str(&bbcode::td(&bbcode::center(s.language.as_deref().unwrap_or("-"))));
+            row.push_str(&bbcode::td(&bbcode::center(sub_type)));
             table.push_str(&bbcode::tr(&row));
         }
         out.push_str(&bbcode::table(&table));
@@ -1720,30 +1791,41 @@ fn build_sample_media_analysis() -> crate::models::MediaAnalysis {
         }],
         audio: vec![
             AudioTrack {
-                codec: "DTS-HD Master Audio".into(),
-                channels: "6 channels (5.1)".into(),
+                codec: "EAC3".into(),
+                channels: "5.1".into(),
                 sample_rate: Some("48.0 kHz".into()),
-                language: Some("French".into()),
+                bitrate: Some("640 kb/s".into()),
+                language: Some("Français".into()),
                 is_default: true,
             },
             AudioTrack {
-                codec: "DTS-HD Master Audio".into(),
-                channels: "6 channels (5.1)".into(),
+                codec: "EAC3".into(),
+                channels: "5.1".into(),
                 sample_rate: Some("48.0 kHz".into()),
-                language: Some("English".into()),
+                bitrate: Some("640 kb/s".into()),
+                language: Some("Anglais".into()),
                 is_default: false,
             },
         ],
         subtitles: vec![
             SubtitleTrack {
-                format: "UTF-8 (SRT)".into(),
-                language: Some("French".into()),
+                format: "SRT".into(),
+                language: Some("Français".into()),
+                title: Some("Forced".into()),
                 is_default: true,
+                is_forced: true,
+            },
+            SubtitleTrack {
+                format: "SRT".into(),
+                language: Some("Français".into()),
+                title: None,
+                is_default: false,
                 is_forced: false,
             },
             SubtitleTrack {
-                format: "UTF-8 (SRT)".into(),
-                language: Some("English".into()),
+                format: "SRT".into(),
+                language: Some("Anglais".into()),
+                title: None,
                 is_default: false,
                 is_forced: false,
             },

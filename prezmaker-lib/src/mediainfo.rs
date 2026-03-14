@@ -280,6 +280,7 @@ fn analyze_matroska_structured(path: &str, file_name: &str, file_size: u64) -> R
             codec: mkv_codec_name(&track.codec_id).to_string(),
             channels,
             sample_rate,
+            bitrate: None,
             language: lang,
             is_default: track.default,
         });
@@ -303,9 +304,11 @@ fn analyze_matroska_structured(path: &str, file_name: &str, file_size: u64) -> R
         field(&mut out, "Default", if track.default { "Yes" } else { "No" });
         field(&mut out, "Forced", if track.forced { "Yes" } else { "No" });
 
+        let sub_title = track.name.clone();
         subtitle_tracks.push(SubtitleTrack {
             format: mkv_codec_name(&track.codec_id).to_string(),
             language: lang,
+            title: sub_title,
             is_default: track.default,
             is_forced: track.forced,
         });
@@ -437,10 +440,12 @@ fn analyze_mp4_structured(path: &str, file_name: &str, file_size: u64) -> Result
                 field(&mut out, "Language", lang);
                 let lang_opt = if lang_raw != "und" { Some(lang.to_string()) } else { None };
 
+                let audio_bitrate = if br > 0 { Some(format!("{} kb/s", br / 1000)) } else { None };
                 audio_tracks.push(AudioTrack {
                     codec: media_type_str.to_string(),
                     channels,
                     sample_rate,
+                    bitrate: audio_bitrate,
                     language: lang_opt,
                     is_default: audio_idx == 1,
                 });
@@ -458,6 +463,7 @@ fn analyze_mp4_structured(path: &str, file_name: &str, file_size: u64) -> Result
                 subtitle_tracks.push(SubtitleTrack {
                     format: media_type_str.to_string(),
                     language: lang_opt,
+                    title: None,
                     is_default: text_idx == 1,
                     is_forced: false,
                 });
