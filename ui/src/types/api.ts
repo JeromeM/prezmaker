@@ -223,7 +223,7 @@ export type AppState =
   | { step: "movie_extras"; contentType: ContentType; tmdbId: number; title?: string; tech?: MediaTechInfo | null; torrentInfo?: TorrentInfo }
   | { step: "app_form" }
   | { step: "template_pick"; pending: PendingGeneration }
-  | { step: "generating" }
+  | { step: "generating"; message?: string }
   | { step: "done"; bbcode: string; html: string; meta: PresentationMeta; nfoText?: string | null; mediaAnalysis?: MediaAnalysis | null }
   | { step: "error"; message: string }
   | { step: "torrent_parsed"; torrentInfo: TorrentInfo }

@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AppState,
   ContentType,
@@ -41,11 +42,26 @@ function torrentContentTypeToContentType(t: DetectedContentType): ContentType | 
 export function usePrezMaker() {
   const [state, setState] = useState<AppState>({ step: "idle" });
   const [titleColor, setTitleColor] = useState<string>("");
+  const unlistenRef = useRef<UnlistenFn | null>(null);
 
   useEffect(() => {
     invoke<SettingsPayload>("get_settings").then((s) => {
       setTitleColor(s.title_color || "");
     });
+    // Listen for progress events from backend
+    listen<string>("generation-progress", (event) => {
+      setState((prev) => {
+        if (prev.step === "generating") {
+          return { step: "generating", message: event.payload };
+        }
+        return prev;
+      });
+    }).then((unlisten) => {
+      unlistenRef.current = unlisten;
+    });
+    return () => {
+      unlistenRef.current?.();
+    };
   }, []);
 
   // --- Helper: generate via template ---
