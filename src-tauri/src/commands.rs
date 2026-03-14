@@ -1,7 +1,7 @@
 use crate::bbcode_to_html;
 use prezmaker_lib::cache::ApiCache;
-use prezmaker_lib::collections::{self, Collection, SavedPresentation};
 use prezmaker_lib::config::Config;
+use prezmaker_lib::db::{self, Database};
 use prezmaker_lib::models::{Application, Game, MediaAnalysis, MediaTechInfo, SystemReqs, TechInfo};
 use prezmaker_lib::orchestrator_api::{GameDetailsResponse, GenerationResult, OrchestratorApi, SearchResult};
 use prezmaker_lib::torrent::{self, TorrentInfo};
@@ -15,6 +15,7 @@ use tauri::Emitter;
 pub struct AppState {
     pub config: Arc<Mutex<Config>>,
     pub cache: ApiCache,
+    pub db: Database,
 }
 
 fn make_api(config: &Config, title_color: Option<&str>, cache: &ApiCache) -> OrchestratorApi {
@@ -569,35 +570,36 @@ pub fn import_template(path: String) -> Result<ContentTemplate, String> {
 // --- Collections ---
 
 #[tauri::command]
-pub fn create_collection(name: String) -> Result<Collection, String> {
-    collections::create_collection(&name)
+pub fn create_collection(state: tauri::State<'_, AppState>, name: String) -> Result<db::Collection, String> {
+    state.db.create_collection(&name)
 }
 
 #[tauri::command]
-pub fn list_collections() -> Result<Vec<Collection>, String> {
-    collections::list_collections()
+pub fn list_collections(state: tauri::State<'_, AppState>) -> Result<Vec<db::Collection>, String> {
+    state.db.list_collections()
 }
 
 #[tauri::command]
-pub fn rename_collection(id: String, name: String) -> Result<(), String> {
-    collections::rename_collection(&id, &name)
+pub fn rename_collection(state: tauri::State<'_, AppState>, id: String, name: String) -> Result<(), String> {
+    state.db.rename_collection(&id, &name)
 }
 
 #[tauri::command]
-pub fn delete_collection(id: String) -> Result<(), String> {
-    collections::delete_collection(&id)
+pub fn delete_collection(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
+    state.db.delete_collection(&id)
 }
 
 #[tauri::command]
 pub fn save_to_collection(
+    state: tauri::State<'_, AppState>,
     collection_id: String,
     entry_id: Option<String>,
     title: String,
     content_type: String,
     bbcode: String,
     poster_url: Option<String>,
-) -> Result<SavedPresentation, String> {
-    collections::save_presentation(
+) -> Result<db::SavedPresentation, String> {
+    state.db.save_presentation(
         &collection_id,
         entry_id.as_deref(),
         &title,
@@ -608,21 +610,34 @@ pub fn save_to_collection(
 }
 
 #[tauri::command]
-pub fn list_collection(collection_id: String) -> Result<Vec<SavedPresentation>, String> {
-    collections::list_presentations(&collection_id)
+pub fn list_collection(
+    state: tauri::State<'_, AppState>,
+    collection_id: String,
+    sort_by: Option<String>,
+    sort_order: Option<String>,
+    filter_type: Option<String>,
+    filter_search: Option<String>,
+) -> Result<Vec<db::SavedPresentation>, String> {
+    state.db.list_presentations(
+        &collection_id,
+        sort_by.as_deref(),
+        sort_order.as_deref(),
+        filter_type.as_deref(),
+        filter_search.as_deref(),
+    )
 }
 
 #[tauri::command]
-pub fn get_collection_entry(collection_id: String, id: String) -> Result<SavedPresentation, String> {
-    collections::get_presentation(&collection_id, &id)
+pub fn get_collection_entry(state: tauri::State<'_, AppState>, collection_id: String, id: String) -> Result<db::SavedPresentation, String> {
+    state.db.get_presentation(&collection_id, &id)
 }
 
 #[tauri::command]
-pub fn delete_collection_entry(collection_id: String, id: String) -> Result<(), String> {
-    collections::delete_presentation(&collection_id, &id)
+pub fn delete_collection_entry(state: tauri::State<'_, AppState>, collection_id: String, id: String) -> Result<(), String> {
+    state.db.delete_presentation(&collection_id, &id)
 }
 
 #[tauri::command]
-pub fn move_collection_entry(from_collection: String, to_collection: String, id: String) -> Result<(), String> {
-    collections::move_presentation(&from_collection, &to_collection, &id)
+pub fn move_collection_entry(state: tauri::State<'_, AppState>, from_collection: String, to_collection: String, id: String) -> Result<(), String> {
+    state.db.move_presentation(&from_collection, &to_collection, &id)
 }

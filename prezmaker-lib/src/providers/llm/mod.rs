@@ -176,6 +176,16 @@ impl LlmClient {
         }
     }
 
+    pub async fn translate_text(&self, text: &str, target_lang: &str) -> anyhow::Result<String> {
+        let system = format!(
+            "Tu es un traducteur professionnel. Traduis le texte fourni en {}. \
+             Retourne UNIQUEMENT la traduction, sans commentaire, sans explication, sans guillemets.",
+            target_lang
+        );
+        let user = text.to_string();
+        self.generate_with_prompt(&system, &user).await
+    }
+
     pub async fn generate_nfo(&self, bbcode: &str) -> anyhow::Result<String> {
         let system = NFO_SYSTEM_PROMPT;
         let user = format!(

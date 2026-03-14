@@ -202,6 +202,7 @@ export interface SavedPresentation {
   bbcode: string;
   poster_url: string | null;
   saved_at: string;
+  updated_at: string;
 }
 
 export interface PendingGeneration {

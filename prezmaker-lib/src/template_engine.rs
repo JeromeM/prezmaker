@@ -1809,17 +1809,6 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
         tag_ex("td:contenu", "Cellule de tableau", tables, "{{td:contenu}}"),
         tag_ex("th:contenu", "En-tête de tableau", tables, "{{th:Titre}}"),
 
-        // --- Raccourcis composites ---
-        tag("poster_info", "Bloc poster + infos (film/série)", shortcuts),
-        tag("cover_info", "Bloc jaquette + infos (jeu)", shortcuts),
-        tag("logo_info", "Bloc logo + infos (app)", shortcuts),
-        tag("ratings_table", "Tableau des notes formaté", shortcuts),
-        tag("tech_table", "Tableau infos techniques (film/série)", shortcuts),
-        tag("mediainfo_table", "Tableau MediaInfo complet (vidéo, audio, sous-titres)", shortcuts),
-        tag("game_tech_table", "Tableau infos techniques (jeu)", shortcuts),
-        tag("game_reqs_table", "Tableau configuration requise min/rec (jeu)", shortcuts),
-        tag("screenshots_grid", "Grille de screenshots (jeu)", shortcuts),
-
         // --- Conditionnel ---
         tag_ex("#if tag", "Affiche le bloc si la balise a une valeur", cond_cat, "{{#if synopsis}}...{{/if}}"),
         tag_ex("#if tag > valeur", "Condition avec comparaison (>, >=, <, <=, ==, !=)", cond_cat, "{{#if ratings_count > 0}}...{{/if}}"),
@@ -1865,6 +1854,11 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tmdb_link", "Lien vers la page TMDB", links_cat),
                 tag("imdb_link", "Lien vers la page IMDb", links_cat),
                 tag("allocine_link", "Lien vers la page Allocine", links_cat),
+                // Raccourcis
+                tag("poster_info", "Bloc poster + infos", shortcuts),
+                tag("ratings_table", "Tableau des notes formaté", shortcuts),
+                tag("tech_table", "Tableau infos techniques", shortcuts),
+                tag("mediainfo_table", "Tableau MediaInfo complet (vidéo, audio, sous-titres)", shortcuts),
             ]);
         }
         "serie" => {
@@ -1908,6 +1902,11 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tmdb_link", "Lien vers la page TMDB", links_cat),
                 tag("imdb_link", "Lien vers la page IMDb", links_cat),
                 tag("allocine_link", "Lien vers la page Allocine", links_cat),
+                // Raccourcis
+                tag("poster_info", "Bloc poster + infos", shortcuts),
+                tag("ratings_table", "Tableau des notes formaté", shortcuts),
+                tag("tech_table", "Tableau infos techniques", shortcuts),
+                tag("mediainfo_table", "Tableau MediaInfo complet (vidéo, audio, sous-titres)", shortcuts),
             ]);
         }
         "jeu" => {
@@ -1936,6 +1935,12 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag_ex("link", "Lien principal (IGDB ou Steam)", links_cat, "{{#if link}}{{field:Lien:{{link}}}}{{/if}}"),
                 tag("igdb_link", "Lien vers la page IGDB", links_cat),
                 tag("steam_link", "Lien vers la page Steam", links_cat),
+                // Raccourcis
+                tag("cover_info", "Bloc jaquette + infos", shortcuts),
+                tag("ratings_table", "Tableau des notes formaté", shortcuts),
+                tag("game_tech_table", "Tableau infos techniques", shortcuts),
+                tag("game_reqs_table", "Tableau configuration requise min/rec", shortcuts),
+                tag("screenshots_grid", "Grille de screenshots", shortcuts),
             ]);
         }
         "app" => {
@@ -1952,6 +1957,8 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("info_bbcode", "Contenu info auto-généré (nom, version, licence...)", data_cat),
                 // Liens
                 tag_ex("link", "Lien principal (site web)", links_cat, "{{#if link}}{{field:Lien:{{link}}}}{{/if}}"),
+                // Raccourcis
+                tag("logo_info", "Bloc logo + infos", shortcuts),
             ]);
         }
         _ => {}
