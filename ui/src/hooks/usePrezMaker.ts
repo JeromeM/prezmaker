@@ -17,6 +17,8 @@ import type {
   PresentationMeta,
   SettingsPayload,
   TorrentInfo,
+  TorrentCreateOptions,
+  TorrentCreateProgress,
 } from "../types/api";
 
 function buildMediaTech(parsed: TorrentInfo["parsed"], sizeFormatted: string): MediaTechInfo {
@@ -44,6 +46,8 @@ export function usePrezMaker() {
   const [titleColor, setTitleColor] = useState<string>("");
   const unlistenRef = useRef<UnlistenFn | null>(null);
 
+  const unlistenCreationRef = useRef<UnlistenFn | null>(null);
+
   useEffect(() => {
     invoke<SettingsPayload>("get_settings").then((s) => {
       setTitleColor(s.title_color || "");
@@ -59,8 +63,20 @@ export function usePrezMaker() {
     }).then((unlisten) => {
       unlistenRef.current = unlisten;
     });
+    // Listen for torrent creation progress
+    listen<TorrentCreateProgress>("torrent-creation-progress", (event) => {
+      setState((prev) => {
+        if (prev.step === "torrent_creating") {
+          return { step: "torrent_creating", progress: event.payload };
+        }
+        return prev;
+      });
+    }).then((unlisten) => {
+      unlistenCreationRef.current = unlisten;
+    });
     return () => {
       unlistenRef.current?.();
+      unlistenCreationRef.current?.();
     };
   }, []);
 
@@ -337,6 +353,28 @@ export function usePrezMaker() {
     }
   }, []);
 
+  const openTorrentCreator = useCallback((initialPath?: string | null) => {
+    setState({ step: "torrent_creator", initialPath: initialPath ?? null });
+  }, []);
+
+  const createTorrent = useCallback(
+    async (opts: TorrentCreateOptions) => {
+      setState({ step: "torrent_creating", progress: null });
+      try {
+        const info = await invoke<TorrentInfo>("create_torrent", { payload: opts });
+        const ct = torrentContentTypeToContentType(info.parsed.content_type);
+        if (ct) {
+          await searchForTorrent(info, ct);
+        } else {
+          setState({ step: "torrent_parsed", torrentInfo: info });
+        }
+      } catch (e) {
+        setState({ step: "error", message: String(e) });
+      }
+    },
+    [titleColor, searchForTorrent]
+  );
+
   const loadPresentation = useCallback((bbcode: string, html: string, meta?: PresentationMeta) => {
     setState({
       step: "done",
@@ -357,6 +395,8 @@ export function usePrezMaker() {
     selectTorrentResult,
     importTorrent,
     confirmTorrentContentType,
+    openTorrentCreator,
+    createTorrent,
     generateMovie,
     generateGame,
     generateApp,

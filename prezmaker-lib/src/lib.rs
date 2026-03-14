@@ -8,6 +8,7 @@ pub mod models;
 pub mod orchestrator_api;
 pub mod providers;
 pub mod torrent;
+pub mod torrent_creator;
 pub mod template_engine;
 pub mod default_templates;
 pub mod mediainfo;

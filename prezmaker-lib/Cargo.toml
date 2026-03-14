@@ -1,6 +1,6 @@
 [package]
 name = "prezmaker-lib"
-version = "1.19.0"
+version = "1.20.0"
 edition = "2021"
 description = "Shared library for PrezMaker BBCode presentation generator"
 
@@ -24,3 +24,4 @@ chrono = "0.4"
 matroska = "0.23"
 mp4 = "0.14"
 rusqlite = { version = "0.31", features = ["bundled"] }
+sha1 = "0.10"

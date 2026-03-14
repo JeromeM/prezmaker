@@ -5,6 +5,7 @@ use prezmaker_lib::db::{self, Database};
 use prezmaker_lib::models::{Application, Game, MediaAnalysis, MediaTechInfo, SystemReqs, TechInfo};
 use prezmaker_lib::orchestrator_api::{GameDetailsResponse, GenerationResult, OrchestratorApi, SearchResult};
 use prezmaker_lib::torrent::{self, TorrentInfo};
+use prezmaker_lib::torrent_creator::{self, TorrentCreateOptions};
 use prezmaker_lib::template_engine::{self, ContentTemplate, TemplateTag};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -196,6 +197,40 @@ pub async fn generate_app(
 #[tauri::command]
 pub fn parse_torrent(path: String) -> Result<TorrentInfo, String> {
     torrent::analyze_torrent(Path::new(&path))
+}
+
+#[derive(Deserialize)]
+pub struct CreateTorrentPayload {
+    pub source_path: String,
+    pub output_path: String,
+    pub piece_size: Option<u32>,
+    pub private: bool,
+    pub trackers: Vec<String>,
+    pub comment: Option<String>,
+}
+
+#[tauri::command]
+pub async fn create_torrent(
+    app: tauri::AppHandle,
+    payload: CreateTorrentPayload,
+) -> Result<TorrentInfo, String> {
+    let output_path = PathBuf::from(&payload.output_path);
+    let opts = TorrentCreateOptions {
+        source_path: payload.source_path,
+        piece_size: payload.piece_size,
+        private: payload.private,
+        trackers: payload.trackers,
+        comment: payload.comment,
+    };
+
+    tokio::task::spawn_blocking(move || {
+        torrent_creator::create_torrent(&opts, &output_path, |progress| {
+            let _ = app.emit("torrent-creation-progress", &progress);
+        })?;
+        torrent::analyze_torrent(&output_path)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 #[tauri::command]
