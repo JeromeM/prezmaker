@@ -6,6 +6,7 @@ import type {
   DetectedContentType,
   SearchResult,
   GameDetailsResponse,
+  GenerationResult,
   Game,
   TechInfo,
   MediaTechInfo,
@@ -61,7 +62,7 @@ export function usePrezMaker() {
     ) => {
       setState({ step: "generating" });
       try {
-        const bbcode = await invoke<string>("generate_from_template", {
+        const result = await invoke<GenerationResult>("generate_from_template", {
           contentType,
           tmdbId: tmdbId ?? null,
           titleColor: titleColor || null,
@@ -71,13 +72,13 @@ export function usePrezMaker() {
           gamePayload: gamePayload ?? null,
           appPayload: appPayload ?? null,
         });
-        const html = await invoke<string>("convert_bbcode", { bbcode });
+        const html = await invoke<string>("convert_bbcode", { bbcode: result.bbcode });
         const presentationMeta: PresentationMeta = meta ?? {
           title: "Présentation",
           contentType,
           posterUrl: null,
         };
-        setState({ step: "done", bbcode, html, meta: presentationMeta, mediaAnalysis: mediaAnalysis ?? null });
+        setState({ step: "done", bbcode: result.bbcode, html, meta: presentationMeta, nfoText: result.nfo_text, mediaAnalysis: mediaAnalysis ?? null });
       } catch (e) {
         setState({ step: "error", message: String(e) });
       }

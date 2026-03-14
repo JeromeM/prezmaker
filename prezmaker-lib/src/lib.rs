@@ -10,3 +10,4 @@ pub mod torrent;
 pub mod template_engine;
 pub mod default_templates;
 pub mod mediainfo;
+pub mod nfo;

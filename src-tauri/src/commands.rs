@@ -3,7 +3,7 @@ use prezmaker_lib::cache::ApiCache;
 use prezmaker_lib::collections::{self, Collection, SavedPresentation};
 use prezmaker_lib::config::Config;
 use prezmaker_lib::models::{Application, Game, MediaAnalysis, MediaTechInfo, SystemReqs, TechInfo};
-use prezmaker_lib::orchestrator_api::{GameDetailsResponse, OrchestratorApi, SearchResult};
+use prezmaker_lib::orchestrator_api::{GameDetailsResponse, GenerationResult, OrchestratorApi, SearchResult};
 use prezmaker_lib::torrent::{self, TorrentInfo};
 use prezmaker_lib::template_engine::{self, ContentTemplate, TemplateTag};
 use serde::{Deserialize, Serialize};
@@ -279,7 +279,7 @@ pub async fn generate_from_template(
     media_analysis: Option<MediaAnalysis>,
     game_payload: Option<GenerateJeuPayload>,
     app_payload: Option<GenerateAppPayload>,
-) -> Result<String, String> {
+) -> Result<GenerationResult, String> {
     let config = state.config.lock().unwrap().clone();
     // Per-template title_color overrides global
     let tpl_meta = template_engine::get_template(&content_type, &template_name).ok();
