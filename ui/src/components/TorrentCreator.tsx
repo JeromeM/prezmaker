@@ -80,7 +80,7 @@ export default function TorrentCreator({ initialPath, onCreateTorrent, onCancel 
     });
   };
 
-  const inputClass = "w-full bg-surface-raised border border-border rounded px-3 py-2 text-sm text-fg focus:outline-none focus:border-blue-500";
+  const inputClass = "w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500";
 
   return (
     <div className="flex-1 flex items-center justify-center p-6">
@@ -98,10 +98,10 @@ export default function TorrentCreator({ initialPath, onCreateTorrent, onCancel 
               placeholder={t("torrentCreator.noSource")}
               className={`${inputClass} flex-1 cursor-default`}
             />
-            <button onClick={browseFile} className="px-3 py-2 bg-surface-raised border border-border rounded text-sm text-fg hover:bg-surface-hover transition-colors whitespace-nowrap">
+            <button onClick={browseFile} className="px-3 py-2 bg-input border border-edge rounded text-sm text-fg-bright hover:border-blue-500 transition-colors whitespace-nowrap">
               {t("torrentCreator.browseFile")}
             </button>
-            <button onClick={browseFolder} className="px-3 py-2 bg-surface-raised border border-border rounded text-sm text-fg hover:bg-surface-hover transition-colors whitespace-nowrap">
+            <button onClick={browseFolder} className="px-3 py-2 bg-input border border-edge rounded text-sm text-fg-bright hover:border-blue-500 transition-colors whitespace-nowrap">
               {t("torrentCreator.browseFolder")}
             </button>
           </div>
@@ -115,9 +115,9 @@ export default function TorrentCreator({ initialPath, onCreateTorrent, onCancel 
             onChange={(e) => setPieceSize(e.target.value === "auto" ? null : Number(e.target.value))}
             className={inputClass}
           >
-            <option value="auto">{t("torrentCreator.pieceSizeAuto")}</option>
+            <option value="auto" className="bg-[var(--color-input)] text-[var(--color-fg-bright)]">{t("torrentCreator.pieceSizeAuto")}</option>
             {PIECE_SIZES.map((ps) => (
-              <option key={ps.value} value={ps.value}>{ps.label}</option>
+              <option key={ps.value} value={ps.value} className="bg-[var(--color-input)] text-[var(--color-fg-bright)]">{ps.label}</option>
             ))}
           </select>
         </div>
@@ -188,7 +188,7 @@ export default function TorrentCreator({ initialPath, onCreateTorrent, onCancel 
           </button>
           <button
             onClick={onCancel}
-            className="px-4 py-2.5 bg-surface-raised border border-border rounded text-sm text-fg hover:bg-surface-hover transition-colors"
+            className="px-4 py-2.5 bg-input border border-edge rounded text-sm text-fg-bright hover:border-blue-500 transition-colors"
           >
             {t("common.cancel")}
           </button>
