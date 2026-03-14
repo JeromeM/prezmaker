@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { ContentType, MediaTechInfo, MediaAnalysis } from "../types/api";
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export default function MovieExtrasForm({ contentType, tmdbId, title, tech, onGenerate, onCancel }: Props) {
+  const { t } = useTranslation();
   const [analysis, setAnalysis] = useState<MediaAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,14 +57,14 @@ export default function MovieExtrasForm({ contentType, tmdbId, title, tech, onGe
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold">{title || "Presentation"}</h2>
         <button onClick={onCancel} className="text-fg-muted hover:text-fg-bright text-sm">
-          Annuler
+          {t("common.cancel")}
         </button>
       </div>
 
       <div className="space-y-6">
         {/* File picker section */}
         <div className="bg-surface border border-edge rounded-lg p-5">
-          <h3 className="text-sm font-medium text-fg mb-3">Analyse du fichier media</h3>
+          <h3 className="text-sm font-medium text-fg mb-3">{t("movieExtras.mediaAnalysis")}</h3>
           <p className="text-xs text-fg-muted mb-4">
             Selectionnez le fichier video pour {typeLabel} afin d'extraire les informations MediaInfo
             (codec, pistes audio, sous-titres...) et les inclure dans la presentation.
@@ -88,7 +90,7 @@ export default function MovieExtrasForm({ contentType, tmdbId, title, tech, onGe
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
             </svg>
-            {loading ? "Analyse en cours..." : analysis ? "Changer de fichier" : "Ouvrir un fichier video"}
+            {loading ? t("movieExtras.analyzing") : analysis ? t("movieExtras.changeFile") : t("movieExtras.openFile")}
           </button>
 
           {error && (
@@ -101,7 +103,7 @@ export default function MovieExtrasForm({ contentType, tmdbId, title, tech, onGe
           <div className="space-y-4">
             {/* General info */}
             <div className="bg-surface border border-edge rounded-lg p-4">
-              <h4 className="text-sm font-medium text-fg-bright mb-3">Informations generales</h4>
+              <h4 className="text-sm font-medium text-fg-bright mb-3">{t("movieExtras.generalInfo")}</h4>
               <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
                 <Field label="Fichier" value={analysis.file_name} />
                 <Field label="Format" value={analysis.format} />
@@ -110,9 +112,9 @@ export default function MovieExtrasForm({ contentType, tmdbId, title, tech, onGe
                 {analysis.bitrate && <Field label="Debit" value={analysis.bitrate} />}
                 {analysis.video[0] && (
                   <>
-                    <Field label="Codec video" value={analysis.video[0].codec} />
-                    <Field label="Resolution" value={`${analysis.video[0].width}x${analysis.video[0].height}`} />
-                    {analysis.video[0].fps && <Field label="FPS" value={analysis.video[0].fps} />}
+                    <Field label={t("movieExtras.videoCodec")} value={analysis.video[0].codec} />
+                    <Field label={t("movieExtras.resolution")} value={`${analysis.video[0].width}x${analysis.video[0].height}`} />
+                    {analysis.video[0].fps && <Field label={t("movieExtras.fps")} value={analysis.video[0].fps} />}
                   </>
                 )}
               </div>
@@ -122,15 +124,15 @@ export default function MovieExtrasForm({ contentType, tmdbId, title, tech, onGe
             {analysis.audio.length > 0 && (
               <div className="bg-surface border border-edge rounded-lg p-4">
                 <h4 className="text-sm font-medium text-fg-bright mb-3">
-                  Pistes audio ({analysis.audio.length})
+                  {t("movieExtras.audioTracks")} ({analysis.audio.length})
                 </h4>
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-fg-muted border-b border-edge">
                       <th className="text-left py-1.5 pr-3">#</th>
                       <th className="text-left py-1.5 pr-3">Codec</th>
-                      <th className="text-left py-1.5 pr-3">Canaux</th>
-                      <th className="text-left py-1.5">Langue</th>
+                      <th className="text-left py-1.5 pr-3">{t("movieExtras.channels")}</th>
+                      <th className="text-left py-1.5">{t("movieExtras.language")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -151,14 +153,14 @@ export default function MovieExtrasForm({ contentType, tmdbId, title, tech, onGe
             {analysis.subtitles.length > 0 && (
               <div className="bg-surface border border-edge rounded-lg p-4">
                 <h4 className="text-sm font-medium text-fg-bright mb-3">
-                  Sous-titres ({analysis.subtitles.length})
+                  {t("movieExtras.subtitles")} ({analysis.subtitles.length})
                 </h4>
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-fg-muted border-b border-edge">
                       <th className="text-left py-1.5 pr-3">#</th>
-                      <th className="text-left py-1.5 pr-3">Format</th>
-                      <th className="text-left py-1.5">Langue</th>
+                      <th className="text-left py-1.5 pr-3">{t("movieExtras.format")}</th>
+                      <th className="text-left py-1.5">{t("movieExtras.language")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -182,7 +184,7 @@ export default function MovieExtrasForm({ contentType, tmdbId, title, tech, onGe
             onClick={handleSubmit}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded text-sm font-medium transition-colors"
           >
-            {analysis ? "Generer le BBCode" : "Continuer sans MediaInfo"}
+            {analysis ? t("common.generate") : t("movieExtras.continueWithout")}
           </button>
           {!analysis && (
             <p className="text-xs text-fg-dim self-center">

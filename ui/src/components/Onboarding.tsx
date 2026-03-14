@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { SettingsPayload } from "../types/api";
@@ -26,6 +27,7 @@ type Step = "welcome" | "tmdb" | "igdb" | "llm" | "tour" | "done";
 const STEPS: Step[] = ["welcome", "tmdb", "igdb", "llm", "tour", "done"];
 
 export default function Onboarding({ onComplete }: Props) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>("welcome");
   const [settings, setSettings] = useState<SettingsPayload>({
     tmdb_api_key: null,
@@ -92,14 +94,14 @@ export default function Onboarding({ onComplete }: Props) {
             setSettings((s) => ({ ...s, [key]: e.target.value || null }))
           }
           className="flex-1 bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
-          placeholder={placeholder ?? "Coller votre cle ici"}
+          placeholder={placeholder ?? t("onboarding.pasteKeyHere")}
         />
         <button
           type="button"
           onClick={() => toggleShow(fieldKey)}
           className="bg-input border border-edge rounded px-3 py-2 text-xs text-fg-muted hover:text-fg-bright transition-colors"
         >
-          {showKeys[fieldKey] ? "Masquer" : "Afficher"}
+          {showKeys[fieldKey] ? t("common.hide") : t("common.show")}
         </button>
       </div>
     </div>
@@ -126,7 +128,7 @@ export default function Onboarding({ onComplete }: Props) {
             onClick={prev}
             className="text-fg-muted hover:text-fg-bright text-sm transition-colors"
           >
-            Retour
+            {t("common.back")}
           </button>
         )}
       </div>
@@ -144,7 +146,7 @@ export default function Onboarding({ onComplete }: Props) {
             onClick={next}
             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded text-sm font-medium transition-colors"
           >
-            Suivant
+            {t("common.next")}
           </button>
         )}
       </div>
@@ -161,29 +163,29 @@ export default function Onboarding({ onComplete }: Props) {
           {step === "welcome" && (
             <div>
               <h1 className="text-3xl font-bold text-fg-bright mb-2 text-center">
-                Bienvenue sur PrezMaker
+                {t("onboarding.welcome")}
               </h1>
               <p className="text-fg-muted text-center mb-8">
-                Generateur de presentations BBCode
+                {t("onboarding.subtitle")}
               </p>
 
               <div className="space-y-4 text-sm text-fg">
                 <div className="flex gap-3">
                   <span className="text-blue-400 text-lg">1.</span>
-                  <span>Recherchez un <strong>film</strong>, une <strong>serie</strong>, un <strong>jeu</strong> ou une <strong>application</strong></span>
+                  <span>{t("onboarding.step1")}</span>
                 </div>
                 <div className="flex gap-3">
                   <span className="text-blue-400 text-lg">2.</span>
-                  <span>Selectionnez le bon resultat parmi les propositions</span>
+                  <span>{t("onboarding.step2")}</span>
                 </div>
                 <div className="flex gap-3">
                   <span className="text-blue-400 text-lg">3.</span>
-                  <span>Obtenez une presentation BBCode complete, prete a copier</span>
+                  <span>{t("onboarding.step3")}</span>
                 </div>
               </div>
 
               <div className="mt-6 flex flex-col gap-1">
-                <label className="text-sm text-fg-muted">Votre pseudo (pour la signature des presentations)</label>
+                <label className="text-sm text-fg-muted">{t("onboarding.pseudoLabel")}</label>
                 <input
                   type="text"
                   value={settings.pseudo}
@@ -191,12 +193,12 @@ export default function Onboarding({ onComplete }: Props) {
                     setSettings((s) => ({ ...s, pseudo: e.target.value }))
                   }
                   className="bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
-                  placeholder="Laisser vide pour ne pas afficher de footer"
+                  placeholder={t("onboarding.pseudoHint")}
                 />
               </div>
 
               <p className="text-fg-dim text-xs text-center mt-4">
-                Commençons par configurer les cles API necessaires.
+                {t("onboarding.apiIntro")}
               </p>
 
               {navButtons()}
@@ -207,25 +209,25 @@ export default function Onboarding({ onComplete }: Props) {
           {step === "tmdb" && (
             <div>
               <h2 className="text-xl font-semibold text-fg-bright mb-1">
-                TMDB - Films et Series
+                {t("onboarding.tmdbTitle")}
               </h2>
               <p className="text-fg-muted text-sm mb-6">
-                Pour rechercher des films et series, vous avez besoin d'une cle API TMDB (gratuite).
+                {t("onboarding.tmdbDescription")}
               </p>
 
               <div className="bg-base rounded-lg p-4 mb-4 text-sm text-fg-muted">
-                <p className="mb-2 font-medium text-fg">Comment obtenir une cle :</p>
+                <p className="mb-2 font-medium text-fg">{t("onboarding.howToGetKey")}</p>
                 <ol className="list-decimal list-inside space-y-1">
-                  <li>Creez un compte sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://www.themoviedb.org/signup"); }} className="text-blue-400 hover:underline">themoviedb.org</a></li>
-                  <li>Allez dans Parametres &gt; API</li>
-                  <li>Demandez une cle API (usage personnel)</li>
-                  <li>Copiez la cle "API Key (v3 auth)"</li>
+                  <li>{t("onboarding.tmdbStep1")}<a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://www.themoviedb.org/signup"); }} className="text-blue-400 hover:underline">themoviedb.org</a></li>
+                  <li>{t("onboarding.tmdbStep2")}</li>
+                  <li>{t("onboarding.tmdbStep3")}</li>
+                  <li>{t("onboarding.tmdbStep4")}</li>
                 </ol>
               </div>
 
-              {secretInput("Cle API TMDB", "tmdb_api_key", "tmdb")}
+              {secretInput(t("onboarding.tmdbApiKey"), "tmdb_api_key", "tmdb")}
 
-              {navButtons("Passer")}
+              {navButtons(t("common.skip"))}
             </div>
           )}
 
@@ -233,27 +235,27 @@ export default function Onboarding({ onComplete }: Props) {
           {step === "igdb" && (
             <div>
               <h2 className="text-xl font-semibold text-fg-bright mb-1">
-                IGDB - Jeux video
+                {t("onboarding.igdbTitle")}
               </h2>
               <p className="text-fg-muted text-sm mb-6">
-                Pour rechercher des jeux, vous avez besoin d'identifiants Twitch/IGDB (gratuits).
+                {t("onboarding.igdbDescription")}
               </p>
 
               <div className="bg-base rounded-lg p-4 mb-4 text-sm text-fg-muted">
-                <p className="mb-2 font-medium text-fg">Comment obtenir les cles :</p>
+                <p className="mb-2 font-medium text-fg">{t("onboarding.howToGetKeys")}</p>
                 <ol className="list-decimal list-inside space-y-1">
-                  <li>Connectez-vous sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://dev.twitch.tv/console/apps"); }} className="text-blue-400 hover:underline">dev.twitch.tv</a></li>
-                  <li>Creez une application (nom libre, URL: <code className="text-xs bg-input px-1 rounded">http://localhost</code>)</li>
-                  <li>Copiez le Client ID et generez un Client Secret</li>
+                  <li>{t("onboarding.igdbStep1")}<a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://dev.twitch.tv/console/apps"); }} className="text-blue-400 hover:underline">dev.twitch.tv</a></li>
+                  <li>{t("onboarding.igdbStep2")}<code className="text-xs bg-input px-1 rounded">http://localhost</code>)</li>
+                  <li>{t("onboarding.igdbStep3")}</li>
                 </ol>
               </div>
 
               <div className="space-y-3">
-                {secretInput("Client ID", "igdb_client_id", "igdb_id")}
-                {secretInput("Client Secret", "igdb_client_secret", "igdb_secret")}
+                {secretInput(t("onboarding.clientId"), "igdb_client_id", "igdb_id")}
+                {secretInput(t("onboarding.clientSecret"), "igdb_client_secret", "igdb_secret")}
               </div>
 
-              {navButtons("Passer")}
+              {navButtons(t("common.skip"))}
             </div>
           )}
 
@@ -261,16 +263,15 @@ export default function Onboarding({ onComplete }: Props) {
           {step === "llm" && (
             <div>
               <h2 className="text-xl font-semibold text-fg-bright mb-1">
-                LLM - Descriptions IA (optionnel)
+                {t("onboarding.llmTitle")}
               </h2>
               <p className="text-fg-muted text-sm mb-6">
-                Un LLM peut generer des descriptions en français pour les jeux et creer des NFO.
-                C'est totalement optionnel.
+                {t("onboarding.llmDescription")}
               </p>
 
               <div className="space-y-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm text-fg-muted">Provider</label>
+                  <label className="text-sm text-fg-muted">{t("settings.provider")}</label>
                   <select
                     value={settings.llm_provider ?? ""}
                     onChange={(e) =>
@@ -282,7 +283,7 @@ export default function Onboarding({ onComplete }: Props) {
                     }
                     className="bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500"
                   >
-                    <option value="">(Aucun)</option>
+                    <option value="">{t("common.none")}</option>
                     <option value="groq">Groq</option>
                     <option value="mistral">Mistral</option>
                     <option value="gemini">Gemini</option>
@@ -291,23 +292,23 @@ export default function Onboarding({ onComplete }: Props) {
 
                 {settings.llm_provider && (
                   <>
-                    {secretInput("Cle API", "llm_api_key", "llm")}
+                    {secretInput(t("onboarding.apiKey"), "llm_api_key", "llm")}
                     <p className="text-xs text-fg-dim mt-1">
                       {settings.llm_provider === "groq" && (
-                        <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.groq.com/keys"); }} className="text-blue-400 hover:underline">console.groq.com</a></>
+                        <>{t("settings.freeKeyOn")}<a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.groq.com/keys"); }} className="text-blue-400 hover:underline">console.groq.com</a></>
                       )}
                       {settings.llm_provider === "mistral" && (
-                        <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.mistral.ai/api-keys"); }} className="text-blue-400 hover:underline">console.mistral.ai</a></>
+                        <>{t("settings.freeKeyOn")}<a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.mistral.ai/api-keys"); }} className="text-blue-400 hover:underline">console.mistral.ai</a></>
                       )}
                       {settings.llm_provider === "gemini" && (
-                        <>Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://aistudio.google.com/apikey"); }} className="text-blue-400 hover:underline">aistudio.google.com</a></>
+                        <>{t("settings.freeKeyOn")}<a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://aistudio.google.com/apikey"); }} className="text-blue-400 hover:underline">aistudio.google.com</a></>
                       )}
                     </p>
                   </>
                 )}
               </div>
 
-              {navButtons("Passer")}
+              {navButtons(t("common.skip"))}
             </div>
           )}
 
@@ -315,19 +316,19 @@ export default function Onboarding({ onComplete }: Props) {
           {step === "tour" && (
             <div>
               <h2 className="text-xl font-semibold text-fg-bright mb-1">
-                Tour de l'interface
+                {t("onboarding.tourTitle")}
               </h2>
               <p className="text-fg-muted text-sm mb-6">
-                Voici les elements principaux de la barre d'outils :
+                {t("onboarding.tourIntro")}
               </p>
 
               <div className="space-y-4">
                 <div className="flex items-start gap-4 bg-base rounded-lg p-4">
                   <div className="bg-input border border-edge rounded px-3 py-1.5 text-sm text-fg-bright shrink-0">
-                    Film / Serie / Jeu
+                    {t("onboarding.tourContentType")}
                   </div>
                   <p className="text-sm text-fg-muted">
-                    Selectionnez le type de contenu a rechercher. Le champ de recherche s'adapte automatiquement.
+                    {t("onboarding.tourContentTypeDesc")}
                   </p>
                 </div>
 
@@ -340,7 +341,7 @@ export default function Onboarding({ onComplete }: Props) {
                     </svg>
                   </div>
                   <p className="text-sm text-fg-muted">
-                    <strong className="text-fg">Import torrent</strong> - Importez un fichier .torrent pour detecter automatiquement le contenu et pre-remplir les infos techniques.
+                    <strong className="text-fg">{t("onboarding.tourTorrent")}</strong> - {t("onboarding.tourTorrentDesc")}
                   </p>
                 </div>
 
@@ -354,7 +355,7 @@ export default function Onboarding({ onComplete }: Props) {
                     </svg>
                   </div>
                   <p className="text-sm text-fg-muted">
-                    <strong className="text-fg">Editeur de templates</strong> - Personnalisez les templates BBCode avec des balises dynamiques et un apercu en temps reel.
+                    <strong className="text-fg">{t("onboarding.tourTemplateEditor")}</strong> - {t("onboarding.tourTemplateEditorDesc")}
                   </p>
                 </div>
 
@@ -366,7 +367,7 @@ export default function Onboarding({ onComplete }: Props) {
                     </svg>
                   </div>
                   <p className="text-sm text-fg-muted">
-                    <strong className="text-fg">Parametres</strong> - Modifiez vos cles API, la couleur des titres, et les preferences.
+                    <strong className="text-fg">{t("onboarding.tourSettings")}</strong> - {t("onboarding.tourSettingsDesc")}
                   </p>
                 </div>
               </div>
@@ -385,13 +386,13 @@ export default function Onboarding({ onComplete }: Props) {
                 </svg>
               </div>
               <h2 className="text-2xl font-bold text-fg-bright mb-2">
-                Vous etes pret !
+                {t("onboarding.ready")}
               </h2>
               <p className="text-fg-muted mb-2">
-                La configuration est terminee.
+                {t("onboarding.readyDesc")}
               </p>
               <p className="text-fg-dim text-sm mb-8">
-                Vous pouvez modifier vos parametres a tout moment via l'icone engrenage.
+                {t("onboarding.readyHint")}
               </p>
 
               <button
@@ -399,7 +400,7 @@ export default function Onboarding({ onComplete }: Props) {
                 disabled={saving}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-8 py-3 rounded-lg text-sm font-medium transition-colors"
               >
-                {saving ? "Sauvegarde..." : "Commencer"}
+                {saving ? t("common.saving") : t("onboarding.start")}
               </button>
             </div>
           )}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { AppPayload } from "../types/api";
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export default function AppForm({ onGenerate, onCancel }: Props) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [version, setVersion] = useState("");
   const [developer, setDeveloper] = useState("");
@@ -36,19 +38,19 @@ export default function AppForm({ onGenerate, onCancel }: Props) {
   return (
     <div className="max-w-2xl mx-auto p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">Nouvelle application</h2>
+        <h2 className="text-xl font-semibold">{t("appForm.title")}</h2>
         <button
           onClick={onCancel}
           className="text-fg-muted hover:text-fg-bright text-sm"
         >
-          Annuler
+          {t("common.cancel")}
         </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm text-fg-muted mb-1">Nom *</label>
+            <label className="block text-sm text-fg-muted mb-1">{t("appForm.name")}</label>
             <input
               type="text"
               value={name}
@@ -59,7 +61,7 @@ export default function AppForm({ onGenerate, onCancel }: Props) {
             />
           </div>
           <div>
-            <label className="block text-sm text-fg-muted mb-1">Version</label>
+            <label className="block text-sm text-fg-muted mb-1">{t("appForm.version")}</label>
             <input
               type="text"
               value={version}
@@ -73,7 +75,7 @@ export default function AppForm({ onGenerate, onCancel }: Props) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm text-fg-muted mb-1">
-              Développeur
+              {t("appForm.developer")}
             </label>
             <input
               type="text"
@@ -84,7 +86,7 @@ export default function AppForm({ onGenerate, onCancel }: Props) {
             />
           </div>
           <div>
-            <label className="block text-sm text-fg-muted mb-1">Licence</label>
+            <label className="block text-sm text-fg-muted mb-1">{t("appForm.license")}</label>
             <input
               type="text"
               value={license}
@@ -96,7 +98,7 @@ export default function AppForm({ onGenerate, onCancel }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm text-fg-muted mb-1">Site web</label>
+          <label className="block text-sm text-fg-muted mb-1">{t("appForm.website")}</label>
           <input
             type="text"
             value={website}
@@ -108,7 +110,7 @@ export default function AppForm({ onGenerate, onCancel }: Props) {
 
         <div>
           <label className="block text-sm text-fg-muted mb-1">
-            Plateformes (séparées par des virgules)
+            {t("appForm.platforms")}
           </label>
           <input
             type="text"
@@ -120,7 +122,7 @@ export default function AppForm({ onGenerate, onCancel }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm text-fg-muted mb-1">URL logo</label>
+          <label className="block text-sm text-fg-muted mb-1">{t("appForm.logoUrl")}</label>
           <input
             type="text"
             value={logoUrl}
@@ -132,14 +134,14 @@ export default function AppForm({ onGenerate, onCancel }: Props) {
 
         <div>
           <label className="block text-sm text-fg-muted mb-1">
-            Description
+            {t("appForm.description")}
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
             className="w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500 resize-y"
-            placeholder="Description de l'application..."
+            placeholder={t("appForm.descriptionPlaceholder")}
           />
         </div>
 
@@ -148,7 +150,7 @@ export default function AppForm({ onGenerate, onCancel }: Props) {
           disabled={!name.trim()}
           className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-6 py-2 rounded text-sm font-medium transition-colors"
         >
-          Générer le BBCode
+          {t("common.generate")}
         </button>
       </form>
     </div>

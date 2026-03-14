@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { SettingsPayload } from "../types/api";
@@ -12,16 +13,19 @@ interface Props {
 
 type Tab = "general" | "api" | "llm";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "general", label: "General" },
-  { id: "api", label: "Cles API" },
-  { id: "llm", label: "IA / LLM" },
-];
+const TAB_IDS: Tab[] = ["general", "api", "llm"];
 
 const inputClass =
   "w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500";
 
+const TAB_LABELS: Record<Tab, string> = {
+  general: "settings.general",
+  api: "settings.apiKeys",
+  llm: "settings.aiLlm",
+};
+
 export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
+  const { t, i18n } = useTranslation();
   const [tab, setTab] = useState<Tab>("general");
   const [settings, setSettings] = useState<SettingsPayload>({
     tmdb_api_key: null,
@@ -81,14 +85,14 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
             }))
           }
           className={inputClass}
-          placeholder={placeholder ?? "Non configure"}
+          placeholder={placeholder ?? t("settings.notConfigured")}
         />
         <button
           type="button"
           onClick={() => toggleShow(fieldKey)}
           className="bg-input border border-edge rounded px-3 py-2 text-xs text-fg-muted hover:text-fg-bright transition-colors shrink-0"
         >
-          {showKeys[fieldKey] ? "Masquer" : "Afficher"}
+          {showKeys[fieldKey] ? t("common.hide") : t("common.show")}
         </button>
       </div>
     </div>
@@ -102,7 +106,7 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
       <div className="bg-surface border border-edge rounded-lg w-full max-w-2xl mx-4 shadow-2xl flex flex-col" style={{ height: "min(620px, 85vh)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-edge shrink-0">
-          <h2 className="text-fg-bright text-lg font-medium">Parametres</h2>
+          <h2 className="text-fg-bright text-lg font-medium">{t("settings.title")}</h2>
           <button
             onClick={onClose}
             className="text-fg-muted hover:text-fg-bright transition-colors text-xl leading-none"
@@ -115,17 +119,17 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
         <div className="flex flex-1 min-h-0">
           {/* Tab sidebar */}
           <nav className="w-40 border-r border-edge py-2 shrink-0">
-            {TABS.map((t) => (
+            {TAB_IDS.map((tabId) => (
               <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
+                key={tabId}
+                onClick={() => setTab(tabId)}
                 className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                  tab === t.id
+                  tab === tabId
                     ? "bg-blue-600/20 text-blue-300 border-r-2 border-blue-500"
                     : "text-fg-muted hover:text-fg-bright hover:bg-input"
                 }`}
               >
-                {t.label}
+                {t(TAB_LABELS[tabId])}
               </button>
             ))}
           </nav>
@@ -135,19 +139,34 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
             {tab === "general" && (
               <div className="space-y-4">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-fg-muted">Thème</label>
+                  <label className="text-xs text-fg-muted">{t("settings.theme")}</label>
                   <select
                     value={theme}
                     onChange={(e) => onSetTheme(e.target.value as "dark" | "light")}
                     className={inputClass}
                   >
-                    <option value="dark">Sombre</option>
-                    <option value="light">Clair</option>
+                    <option value="dark">{t("settings.dark")}</option>
+                    <option value="light">{t("settings.light")}</option>
                   </select>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-fg-muted">Langue</label>
+                  <label className="text-xs text-fg-muted">{t("settings.uiLanguage")}</label>
+                  <select
+                    value={i18n.language.startsWith("fr") ? "fr" : "en"}
+                    onChange={(e) => {
+                      i18n.changeLanguage(e.target.value);
+                      localStorage.setItem("prezmaker_ui_lang", e.target.value);
+                    }}
+                    className={inputClass}
+                  >
+                    <option value="fr">Français</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-fg-muted">{t("settings.language")}</label>
                   <select
                     value={settings.language}
                     onChange={(e) =>
@@ -155,13 +174,13 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
                     }
                     className={inputClass}
                   >
-                    <option value="fr-FR">Francais (fr-FR)</option>
+                    <option value="fr-FR">Français (fr-FR)</option>
                     <option value="en-US">English (en-US)</option>
                   </select>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-fg-muted">Pseudo (signature footer)</label>
+                  <label className="text-xs text-fg-muted">{t("settings.pseudo")}</label>
                   <input
                     type="text"
                     value={settings.pseudo}
@@ -169,13 +188,13 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
                       setSettings((s) => ({ ...s, pseudo: e.target.value }))
                     }
                     className={inputClass}
-                    placeholder="Laisser vide pour ne pas afficher de footer"
+                    placeholder={t("settings.pseudoHint")}
                   />
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-fg-muted">
-                    Couleur titre par defaut
+                    {t("settings.defaultTitleColor")}
                   </label>
                   <div className="flex items-center gap-2">
                     <label className="relative w-8 h-8 rounded border border-edge cursor-pointer shrink-0 overflow-hidden">
@@ -203,7 +222,7 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
                       maxLength={6}
                     />
                     <span className="text-[11px] text-fg-dim">
-                      Utilisee si le template n'a pas de couleur personnalisee
+                      {t("settings.colorHint")}
                     </span>
                   </div>
                 </div>
@@ -221,7 +240,7 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
                     className="accent-blue-500"
                   />
                   <span className="text-sm text-fg">
-                    Copier automatiquement dans le presse-papier
+                    {t("settings.autoClipboard")}
                   </span>
                 </label>
 
@@ -234,7 +253,7 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
                     }}
                     className="text-xs text-fg-dim hover:text-fg underline transition-colors"
                   >
-                    Relancer le tutoriel de premiere utilisation
+                    {t("settings.restartOnboarding")}
                   </button>
                 </div>
               </div>
@@ -243,7 +262,7 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
             {tab === "api" && (
               <div className="space-y-4">
                 <p className="text-xs text-fg-dim mb-2">
-                  Cles necessaires pour la recherche de films, series et jeux.
+                  {t("settings.apiKeysDescription")}
                 </p>
                 {secretInput("TMDB API Key", "tmdb_api_key", "tmdb")}
                 {secretInput("IGDB Client ID", "igdb_client_id", "igdb_id")}
@@ -254,10 +273,10 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
             {tab === "llm" && (
               <div className="space-y-4">
                 <p className="text-xs text-fg-dim mb-2">
-                  Un LLM peut generer automatiquement les descriptions de jeux en francais.
+                  {t("settings.llmDescription")}
                 </p>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-fg-muted">Provider</label>
+                  <label className="text-xs text-fg-muted">{t("settings.provider")}</label>
                   <select
                     value={settings.llm_provider ?? ""}
                     onChange={(e) =>
@@ -268,26 +287,26 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
                     }
                     className={inputClass}
                   >
-                    <option value="">(Aucun)</option>
+                    <option value="">{t("common.none")}</option>
                     <option value="groq">Groq</option>
                     <option value="mistral">Mistral</option>
                     <option value="gemini">Gemini</option>
                   </select>
                 </div>
 
-                {secretInput("Cle API Groq", "groq_api_key", "groq")}
+                {secretInput(t("settings.groqApiKey"), "groq_api_key", "groq")}
                 <p className="text-xs text-fg-dim -mt-2">
-                  Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.groq.com/keys"); }} className="text-blue-400 hover:underline">console.groq.com</a>
+                  {t("settings.freeKeyOn")} <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.groq.com/keys"); }} className="text-blue-400 hover:underline">console.groq.com</a>
                 </p>
 
-                {secretInput("Cle API Mistral", "mistral_api_key", "mistral")}
+                {secretInput(t("settings.mistralApiKey"), "mistral_api_key", "mistral")}
                 <p className="text-xs text-fg-dim -mt-2">
-                  Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.mistral.ai/api-keys"); }} className="text-blue-400 hover:underline">console.mistral.ai</a>
+                  {t("settings.freeKeyOn")} <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://console.mistral.ai/api-keys"); }} className="text-blue-400 hover:underline">console.mistral.ai</a>
                 </p>
 
-                {secretInput("Cle API Gemini", "gemini_api_key", "gemini")}
+                {secretInput(t("settings.geminiApiKey"), "gemini_api_key", "gemini")}
                 <p className="text-xs text-fg-dim -mt-2">
-                  Cle gratuite sur <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://aistudio.google.com/apikey"); }} className="text-blue-400 hover:underline">aistudio.google.com</a>
+                  {t("settings.freeKeyOn")} <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://aistudio.google.com/apikey"); }} className="text-blue-400 hover:underline">aistudio.google.com</a>
                 </p>
               </div>
             )}
@@ -304,14 +323,14 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
             onClick={onClose}
             className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors"
           >
-            Annuler
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
             className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
           >
-            {saving ? "Sauvegarde..." : "Sauvegarder"}
+            {saving ? t("common.saving") : t("common.save")}
           </button>
         </div>
       </div>

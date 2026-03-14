@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ContentType } from "../types/api";
 import TorrentImport from "./TorrentImport";
 
@@ -23,6 +24,7 @@ export default function TopBar({
   onOpenCollections,
   onOpenAbout,
 }: Props) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [contentType, setContentType] = useState<ContentType>("film");
 
@@ -43,10 +45,10 @@ export default function TopBar({
           onChange={(e) => setContentType(e.target.value as ContentType)}
           className="bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm focus:border-blue-500 outline-none"
         >
-          <option value="film">Film</option>
-          <option value="serie">Série</option>
-          <option value="jeu">Jeu</option>
-          <option value="app">Application</option>
+          <option value="film">{t("common.film")}</option>
+          <option value="serie">{t("common.serie")}</option>
+          <option value="jeu">{t("common.jeu")}</option>
+          <option value="app">{t("common.app")}</option>
         </select>
 
         {contentType !== "app" && (
@@ -54,7 +56,7 @@ export default function TopBar({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher..."
+            placeholder={t("topBar.searchPlaceholder")}
             className="bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm flex-1 min-w-[200px] focus:border-blue-500 outline-none placeholder-fg-dim"
             disabled={loading}
           />
@@ -71,12 +73,12 @@ export default function TopBar({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Chargement...
+              {t("common.loading")}
             </span>
           ) : contentType === "app" ? (
-            "Créer"
+            t("common.create")
           ) : (
-            "Rechercher"
+            t("common.search")
           )}
         </button>
 
@@ -95,7 +97,7 @@ export default function TopBar({
             type="button"
             onClick={onOpenTemplateEditor}
             className="text-fg-muted hover:text-fg-bright transition-colors p-2"
-            title="Editeur de templates"
+            title={t("topBar.templateEditor")}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -110,7 +112,7 @@ export default function TopBar({
             type="button"
             onClick={onOpenCollections}
             className="text-fg-muted hover:text-fg-bright transition-colors p-2"
-            title="Collections"
+            title={t("topBar.collections")}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -121,7 +123,7 @@ export default function TopBar({
             type="button"
             onClick={onOpenSettings}
             className="text-fg-muted hover:text-fg-bright transition-colors p-2"
-            title="Parametres"
+            title={t("topBar.settings")}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
               <circle cx="12" cy="12" r="3" />
@@ -133,7 +135,7 @@ export default function TopBar({
             type="button"
             onClick={onOpenAbout}
             className="text-fg-muted hover:text-fg-bright transition-colors p-2"
-            title="A propos"
+            title={t("topBar.about")}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
               <circle cx="12" cy="12" r="10" />

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { TemplateInfo } from "../types/api";
 
 interface Props {
@@ -20,6 +21,7 @@ export default function TemplateManager({
   onRename,
   onDuplicate,
 }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [renamingIdx, setRenamingIdx] = useState<number | null>(null);
@@ -54,7 +56,7 @@ export default function TemplateManager({
   };
 
   const handleDuplicate = (name: string) => {
-    const newName = `${name} (copie)`;
+    const newName = `${name} ${t("templateManager.copyLabel")}`;
     onDuplicate(name, newName);
   };
 
@@ -64,7 +66,7 @@ export default function TemplateManager({
         onClick={() => setOpen(!open)}
         className="text-xs bg-[#2a2a4a] hover:bg-[#3a3a5a] text-gray-300 px-3 py-1 rounded transition-colors"
       >
-        Templates
+        {t("templateManager.title")}
       </button>
 
       {open && (
@@ -76,7 +78,7 @@ export default function TemplateManager({
               value={saveName}
               onChange={(e) => setSaveName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSave()}
-              placeholder="Nom du template..."
+              placeholder={t("templateManager.namePlaceholder")}
               className="flex-1 bg-[#0a0a1a] text-gray-200 text-xs px-2 py-1 rounded border border-[#2a2a4a] outline-none focus:border-blue-500"
             />
             <button
@@ -84,21 +86,21 @@ export default function TemplateManager({
               disabled={!saveName.trim()}
               className="text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white px-2 py-1 rounded transition-colors"
             >
-              Sauver
+              {t("common.save")}
             </button>
           </div>
 
           {/* Template list */}
           <div className="max-h-64 overflow-y-auto">
             {loading && (
-              <div className="text-xs text-gray-500 p-3 text-center">Chargement...</div>
+              <div className="text-xs text-gray-500 p-3 text-center">{t("common.loading")}</div>
             )}
             {!loading && templates.length === 0 && (
-              <div className="text-xs text-gray-500 p-3 text-center">Aucun template</div>
+              <div className="text-xs text-gray-500 p-3 text-center">{t("templateManager.noTemplates")}</div>
             )}
-            {templates.map((t, i) => (
+            {templates.map((tpl, i) => (
               <div
-                key={t.name}
+                key={tpl.name}
                 className="flex items-center gap-1 px-2 py-1.5 hover:bg-[#2a2a4a] group"
               >
                 {renamingIdx === i ? (
@@ -107,46 +109,46 @@ export default function TemplateManager({
                     value={renameValue}
                     onChange={(e) => setRenameValue(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") handleRenameSubmit(t.name);
+                      if (e.key === "Enter") handleRenameSubmit(tpl.name);
                       if (e.key === "Escape") setRenamingIdx(null);
                     }}
-                    onBlur={() => handleRenameSubmit(t.name)}
+                    onBlur={() => handleRenameSubmit(tpl.name)}
                     className="flex-1 bg-[#0a0a1a] text-gray-200 text-xs px-1 py-0.5 rounded border border-blue-500 outline-none"
                   />
                 ) : (
                   <button
                     onClick={() => {
-                      onLoad(t.name);
+                      onLoad(tpl.name);
                       setOpen(false);
                     }}
                     className="flex-1 text-left text-xs text-gray-300 hover:text-white truncate"
-                    title={`Charger "${t.name}"`}
+                    title={`${t("common.load")} "${tpl.name}"`}
                   >
-                    {t.name}
+                    {tpl.name}
                   </button>
                 )}
                 <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                   <button
                     onClick={() => {
                       setRenamingIdx(i);
-                      setRenameValue(t.name);
+                      setRenameValue(tpl.name);
                     }}
                     className="text-[10px] text-gray-500 hover:text-yellow-400 px-1"
-                    title="Renommer"
+                    title={t("common.rename")}
                   >
                     ✎
                   </button>
                   <button
-                    onClick={() => handleDuplicate(t.name)}
+                    onClick={() => handleDuplicate(tpl.name)}
                     className="text-[10px] text-gray-500 hover:text-blue-400 px-1"
-                    title="Dupliquer"
+                    title={t("common.duplicate")}
                   >
                     ⧉
                   </button>
                   <button
-                    onClick={() => onDelete(t.name)}
+                    onClick={() => onDelete(tpl.name)}
                     className="text-[10px] text-gray-500 hover:text-red-400 px-1"
-                    title="Supprimer"
+                    title={t("common.delete")}
                   >
                     ✕
                   </button>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import BBCodePanel from "./BBCodePanel";
@@ -22,6 +23,7 @@ interface Props {
 const PALETTE_KEY = "prezmaker_palette_collapsed";
 
 export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml, onConvert, meta, nfoText, mediaAnalysis: existingAnalysis }: Props) {
+  const { t } = useTranslation();
   const [bbcode, setBBCode] = useState(initialBBCode);
   const [html, setHtml] = useState(initialHtml);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -254,7 +256,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
                       : "bg-edge hover:bg-edge-hover text-fg disabled:opacity-50"
                   }`}
                 >
-                  {saved ? "Sauvegardé !" : "Sauvegarder"}
+                  {saved ? t("collections.saved") : t("splitPreview.save")}
                 </button>
                 <button
                   onClick={handleGenerateNfo}
@@ -271,7 +273,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
                       style={{ animation: "spin 1s linear infinite" }}
                     />
                   )}
-                  {nfoLoading ? "Analyse MediaInfo..." : "NFO"}
+                  {nfoLoading ? t("collections.analyzingMedia") : t("collections.nfo")}
                 </button>
               </>
             }

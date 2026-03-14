@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { SearchResult, ContentType } from "../types/api";
 
 interface Props {
@@ -8,11 +9,12 @@ interface Props {
 }
 
 export default function ResultSelector({ results, contentType, onSelect, onCancel }: Props) {
+  const { t } = useTranslation();
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div className="bg-surface border border-edge rounded-lg w-full max-w-md mx-4 shadow-xl">
         <div className="px-4 py-3 border-b border-edge flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Sélectionnez un résultat</h2>
+          <h2 className="text-lg font-semibold">{t("resultSelector.title")}</h2>
           <button
             onClick={onCancel}
             className="text-fg-muted hover:text-fg-bright text-xl leading-none"
