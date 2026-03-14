@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use tauri::Emitter;
 
 pub struct AppState {
     pub config: Arc<Mutex<Config>>,
@@ -24,6 +25,14 @@ fn make_api(config: &Config, title_color: Option<&str>, cache: &ApiCache) -> Orc
             api.set_title_color(color.to_string());
         }
     }
+    api
+}
+
+fn make_api_with_progress(config: &Config, title_color: Option<&str>, cache: &ApiCache, app: tauri::AppHandle) -> OrchestratorApi {
+    let mut api = make_api(config, title_color, cache);
+    api = api.with_progress(move |msg| {
+        let _ = app.emit("generation-progress", msg);
+    });
     api
 }
 
@@ -73,13 +82,14 @@ pub async fn generate_serie(
 
 #[tauri::command]
 pub async fn fetch_game_details(
+    app: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
     game_id: u64,
     source: Option<String>,
     title_color: Option<String>,
 ) -> Result<GameDetailsResponse, String> {
     let config = state.config.lock().unwrap().clone();
-    let api = make_api(&config, title_color.as_deref(), &state.cache);
+    let api = make_api_with_progress(&config, title_color.as_deref(), &state.cache, app);
     api.fetch_game_details(game_id, source.as_deref())
         .await
         .map_err(|e| e.to_string())
@@ -270,6 +280,7 @@ pub fn get_template_tags(content_type: String) -> Vec<TemplateTag> {
 
 #[tauri::command]
 pub async fn generate_from_template(
+    app: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
     content_type: String,
     tmdb_id: Option<u64>,
@@ -284,7 +295,7 @@ pub async fn generate_from_template(
     // Per-template title_color overrides global
     let tpl_meta = template_engine::get_template(&content_type, &template_name).ok();
     let effective_color = tpl_meta.and_then(|t| t.title_color).or(title_color);
-    let api = make_api(&config, effective_color.as_deref(), &state.cache);
+    let api = make_api_with_progress(&config, effective_color.as_deref(), &state.cache, app);
 
     match content_type.as_str() {
         "film" => {

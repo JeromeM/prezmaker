@@ -46,6 +46,7 @@ pub struct OrchestratorApi {
     title_color: String,
     pseudo: String,
     cache: ApiCache,
+    on_progress: Option<Box<dyn Fn(&str) + Send + Sync>>,
 }
 
 const SEARCH_TTL: Duration = Duration::from_secs(3600); // 1h
@@ -66,6 +67,7 @@ impl OrchestratorApi {
             title_color: color,
             pseudo,
             cache: ApiCache::new(),
+            on_progress: None,
         }
     }
 
@@ -76,6 +78,17 @@ impl OrchestratorApi {
 
     pub fn set_title_color(&mut self, color: String) {
         self.title_color = color;
+    }
+
+    pub fn with_progress(mut self, callback: impl Fn(&str) + Send + Sync + 'static) -> Self {
+        self.on_progress = Some(Box::new(callback));
+        self
+    }
+
+    fn progress(&self, msg: &str) {
+        if let Some(ref cb) = self.on_progress {
+            cb(msg);
+        }
     }
 
     pub async fn search_film(&self, query: &str) -> Result<Vec<SearchResult>, PrezError> {
@@ -343,6 +356,7 @@ impl OrchestratorApi {
 
         let mut game = match src {
             "steam" => {
+                self.progress("Récupération des détails Steam...");
                 info!("Recuperation details Steam : {}", game_id);
                 let steam = SteamClient::new(self.language.clone());
                 steam
@@ -351,6 +365,7 @@ impl OrchestratorApi {
                     .map_err(|e| PrezError::Other(format!("Erreur details Steam : {}", e)))?
             }
             _ => {
+                self.progress("Récupération des détails IGDB...");
                 info!("Recuperation details IGDB : {}", game_id);
                 let (client_id, client_secret) = self.config.igdb_credentials()?;
                 let igdb = IgdbClient::new(client_id.to_string(), client_secret.to_string());
@@ -364,6 +379,7 @@ impl OrchestratorApi {
         let needs_reqs = game.min_reqs.is_none() && game.rec_reqs.is_none();
         let needs_screenshots = game.screenshots.len() < 3;
         if needs_reqs || needs_screenshots {
+            self.progress("Récupération des données Steam (screenshots, config requise)...");
             let steam = SteamClient::new(self.language.clone());
 
             // Try by Steam App ID first (from IGDB external_games)
@@ -417,6 +433,7 @@ impl OrchestratorApi {
             }
         }
 
+        self.progress("Génération de la description...");
         let claude_description = self
             .resolve_description(&game.title, game.synopsis.as_deref())
             .await;
@@ -467,17 +484,20 @@ impl OrchestratorApi {
         media_analysis: Option<&MediaAnalysis>,
         template_name: &str,
     ) -> Result<GenerationResult, PrezError> {
+        self.progress("Récupération des détails TMDB...");
         let api_key = self.config.tmdb_api_key()?;
         let tmdb = TmdbClient::new(api_key.to_string(), self.language.clone());
         let mut movie = tmdb.get_movie_details(tmdb_id).await
             .map_err(|e| PrezError::Other(format!("Erreur details TMDB : {}", e)))?;
         if !no_allocine {
+            self.progress("Récupération des notes Allociné...");
             match Self::enrich_movie_allocine(&mut movie).await {
                 Ok(_) => info!("Notes Allocine recuperees"),
                 Err(e) => warn!("Allocine indisponible : {}", e),
             }
         }
 
+        self.progress("Génération de la présentation...");
         let tpl = template_engine::get_template("film", template_name)
             .map_err(|e| PrezError::Other(e))?;
         let mut data = template_engine::build_movie_data(&movie, tech.as_ref());
@@ -511,17 +531,20 @@ impl OrchestratorApi {
         media_analysis: Option<&MediaAnalysis>,
         template_name: &str,
     ) -> Result<GenerationResult, PrezError> {
+        self.progress("Récupération des détails TMDB...");
         let api_key = self.config.tmdb_api_key()?;
         let tmdb = TmdbClient::new(api_key.to_string(), self.language.clone());
         let mut series = tmdb.get_series_details(tmdb_id).await
             .map_err(|e| PrezError::Other(format!("Erreur details TMDB : {}", e)))?;
         if !no_allocine {
+            self.progress("Récupération des notes Allociné...");
             match Self::enrich_series_allocine(&mut series).await {
                 Ok(_) => info!("Notes Allocine recuperees"),
                 Err(e) => warn!("Allocine indisponible : {}", e),
             }
         }
 
+        self.progress("Génération de la présentation...");
         let tpl = template_engine::get_template("serie", template_name)
             .map_err(|e| PrezError::Other(e))?;
         let mut data = template_engine::build_series_data(&series, tech.as_ref());
@@ -553,6 +576,7 @@ impl OrchestratorApi {
         tech_info: TechInfo,
         template_name: &str,
     ) -> Result<GenerationResult, PrezError> {
+        self.progress("Génération de la présentation...");
         if let Some(desc) = description {
             game.synopsis = Some(desc);
         }
@@ -585,6 +609,7 @@ impl OrchestratorApi {
         app: Application,
         template_name: &str,
     ) -> Result<GenerationResult, PrezError> {
+        self.progress("Génération de la présentation...");
         let tpl = template_engine::get_template("app", template_name)
             .map_err(|e| PrezError::Other(e))?;
         let data = template_engine::build_app_data(&app);
