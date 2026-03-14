@@ -25,11 +25,19 @@ export default function TemplatePicker({
       invoke<ContentTemplate[]>("list_content_templates", { contentType }),
       invoke<string | null>("get_default_template", { contentType }),
     ]).then(([list, favName]) => {
-      setTemplates(list);
+      // Sort: default template first, then by order
+      const sorted = [...list].sort((a, b) => {
+        if (favName) {
+          if (a.name === favName) return -1;
+          if (b.name === favName) return 1;
+        }
+        return (a.order ?? 0) - (b.order ?? 0);
+      });
+      setTemplates(sorted);
       // Pre-select favorite if it exists, otherwise first
-      const initial = favName && list.some((t) => t.name === favName)
+      const initial = favName && sorted.some((t) => t.name === favName)
         ? favName
-        : list[0]?.name ?? "default";
+        : sorted[0]?.name ?? "default";
       setSelected(initial);
       setLoading(false);
     });
