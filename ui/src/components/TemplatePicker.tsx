@@ -27,12 +27,13 @@ export default function TemplatePicker({
       invoke<ContentTemplate[]>("list_content_templates", { contentType }),
       invoke<string | null>("get_default_template", { contentType }),
     ]).then(([list, favName]) => {
-      // Sort: default template first, then by order
+      // Sort: user favorite first, then is_default, then by order
       const sorted = [...list].sort((a, b) => {
         if (favName) {
           if (a.name === favName) return -1;
           if (b.name === favName) return 1;
         }
+        if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
         return (a.order ?? 0) - (b.order ?? 0);
       });
       setTemplates(sorted);
