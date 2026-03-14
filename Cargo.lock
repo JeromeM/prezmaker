@@ -3260,7 +3260,7 @@ dependencies = [
 
 [[package]]
 name = "prezmaker-cli"
-version = "1.18.1"
+version = "1.19.0"
 dependencies = [
  "anyhow",
  "arboard",
@@ -3274,7 +3274,7 @@ dependencies = [
 
 [[package]]
 name = "prezmaker-lib"
-version = "1.18.1"
+version = "1.19.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3289,6 +3289,7 @@ dependencies = [
  "serde",
  "serde_bencode",
  "serde_json",
+ "sha1",
  "thiserror 2.0.18",
  "tokio",
  "toml 0.8.2",
@@ -3299,7 +3300,7 @@ dependencies = [
 
 [[package]]
 name = "prezmaker-tauri"
-version = "1.18.1"
+version = "1.19.0"
 dependencies = [
  "dirs 5.0.1",
  "prezmaker-lib",
@@ -4308,6 +4309,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "170fb83ab34de17dc69aa7c67482b22218ddb85da56546f9bd6b929e32a05930"
 dependencies = [
  "stable_deref_trait",
+]
+
+[[package]]
+name = "sha1"
+version = "0.10.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3bf829a2d51ab4a5ddf1352d8470c140cadc8301b2ae1789db023f01cedd6ba"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "digest",
 ]
 
 [[package]]

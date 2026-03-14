@@ -18,6 +18,7 @@ import TorrentContentTypePicker from "./components/TorrentContentTypePicker";
 import Onboarding, { isOnboardingDone } from "./components/Onboarding";
 import UpdateChecker from "./components/UpdateChecker";
 import CollectionBrowser from "./components/CollectionBrowser";
+import TorrentCreator from "./components/TorrentCreator";
 
 function App() {
   const { t } = useTranslation();
@@ -33,6 +34,8 @@ function App() {
     selectTorrentResult,
     importTorrent,
     confirmTorrentContentType,
+    openTorrentCreator,
+    createTorrent,
     generateMovie,
     generateGame,
     generateApp,
@@ -45,26 +48,26 @@ function App() {
   const { theme, setTheme } = useTheme();
   const [dragging, setDragging] = useState(false);
 
-  // Global drag-drop listener for .torrent files
+  // Global drag-drop listener for files
   useEffect(() => {
     const unlisten = getCurrentWindow().onDragDropEvent((event) => {
       if (event.payload.type === "enter") {
-        const hasTorrent = event.payload.paths.some((p) =>
-          p.toLowerCase().endsWith(".torrent")
-        );
-        if (hasTorrent) setDragging(true);
+        setDragging(true);
       } else if (event.payload.type === "drop") {
         setDragging(false);
-        const torrent = event.payload.paths.find((p) =>
-          p.toLowerCase().endsWith(".torrent")
-        );
-        if (torrent) importTorrent(torrent);
+        const firstPath = event.payload.paths[0];
+        if (!firstPath) return;
+        if (firstPath.toLowerCase().endsWith(".torrent")) {
+          importTorrent(firstPath);
+        } else {
+          openTorrentCreator(firstPath);
+        }
       } else if (event.payload.type === "leave") {
         setDragging(false);
       }
     });
     return () => { unlisten.then((fn) => fn()); };
-  }, [importTorrent]);
+  }, [importTorrent, openTorrentCreator]);
 
   const handleIdleClick = useCallback(async () => {
     const path = await open({
@@ -96,41 +99,86 @@ function App() {
 
       <main className="flex-1 flex flex-col min-h-0">
         {state.step === "idle" && (
-          <div
-            onClick={handleIdleClick}
-            className={`flex-1 flex items-center justify-center cursor-pointer transition-colors ${
-              dragging
-                ? "bg-blue-600/10 border-2 border-dashed border-blue-500"
-                : ""
-            }`}
-          >
-            <div className="text-center pointer-events-none select-none">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={`w-12 h-12 mx-auto mb-4 transition-colors ${
-                  dragging ? "text-blue-400" : "text-fg-faint"
-                }`}
+          <div className={`flex-1 flex items-center justify-center transition-colors ${
+            dragging ? "bg-blue-600/10" : ""
+          }`}>
+            <div className="flex gap-6 max-w-2xl w-full px-6">
+              {/* Create torrent */}
+              <button
+                onClick={() => openTorrentCreator()}
+                className="flex-1 flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-border hover:border-blue-500/50 hover:bg-surface-raised/50 transition-all cursor-pointer group"
               >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <p className={`text-lg mb-2 transition-colors ${
-                dragging ? "text-blue-400" : "text-fg-dim"
-              }`}>
-                {dragging
-                  ? t("app.dropTorrent")
-                  : t("app.dragOrClick")}
-              </p>
-              <p className="text-sm text-fg-faint">
-                {t("app.orSearchAbove")}
-              </p>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10 text-fg-faint group-hover:text-blue-400 transition-colors">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="12" y1="18" x2="12" y2="12" />
+                  <line x1="9" y1="15" x2="15" y2="15" />
+                </svg>
+                <span className="text-base font-medium text-fg-dim group-hover:text-fg transition-colors">
+                  {t("app.createTorrent")}
+                </span>
+                <span className="text-xs text-fg-faint">
+                  {t("app.createTorrentHint")}
+                </span>
+              </button>
+
+              {/* Import torrent */}
+              <button
+                onClick={handleIdleClick}
+                className="flex-1 flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-border hover:border-blue-500/50 hover:bg-surface-raised/50 transition-all cursor-pointer group"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10 text-fg-faint group-hover:text-blue-400 transition-colors">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span className="text-base font-medium text-fg-dim group-hover:text-fg transition-colors">
+                  {t("app.importTorrent")}
+                </span>
+                <span className="text-xs text-fg-faint">
+                  {t("app.importTorrentHint")}
+                </span>
+              </button>
+            </div>
+            <p className="absolute bottom-6 text-sm text-fg-faint">
+              {t("app.orSearchAbove")}
+            </p>
+          </div>
+        )}
+
+        {state.step === "torrent_creator" && (
+          <TorrentCreator
+            initialPath={state.initialPath}
+            onCreateTorrent={createTorrent}
+            onCancel={reset}
+          />
+        )}
+
+        {state.step === "torrent_creating" && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3 max-w-sm w-full">
+              <div className="flex items-center gap-3 text-fg-muted">
+                <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                {t("torrentCreator.creating")}
+              </div>
+              {state.progress && (
+                <>
+                  <div className="w-full bg-surface-raised rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-blue-500 h-full transition-all duration-300"
+                      style={{ width: `${Math.min(state.progress.percent, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-sm text-fg-faint">
+                    {state.progress.phase === "scanning" && t("torrentCreator.scanning")}
+                    {state.progress.phase === "hashing" && t("torrentCreator.hashing", { percent: Math.round(state.progress.percent) })}
+                    {state.progress.phase === "writing" && t("torrentCreator.writing")}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         )}

@@ -218,8 +218,25 @@ export interface PendingGeneration {
   posterUrl?: string | null;
 }
 
+export interface TorrentCreateProgress {
+  phase: string;
+  percent: number;
+  message: string;
+}
+
+export interface TorrentCreateOptions {
+  source_path: string;
+  output_path: string;
+  piece_size: number | null;
+  private: boolean;
+  trackers: string[];
+  comment: string | null;
+}
+
 export type AppState =
   | { step: "idle" }
+  | { step: "torrent_creator"; initialPath?: string | null }
+  | { step: "torrent_creating"; progress: TorrentCreateProgress | null }
   | { step: "searching" }
   | { step: "selecting"; results: SearchResult[]; contentType: ContentType }
   | { step: "game_extras"; game: Game; claudeDescription: string | null; torrentInfo?: TorrentInfo }

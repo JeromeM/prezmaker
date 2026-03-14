@@ -46,7 +46,29 @@
     "orSearchAbove": "ou lancez une recherche depuis la barre ci-dessus",
     "searching": "Recherche en cours...",
     "generating": "Génération en cours...",
-    "generatingBBCode": "Génération du BBCode..."
+    "generatingBBCode": "Génération du BBCode...",
+    "createTorrent": "Créer un torrent",
+    "createTorrentHint": "À partir d'un fichier ou dossier",
+    "importTorrent": "Importer un .torrent",
+    "importTorrentHint": "Glissez un .torrent ou cliquez"
+  },
+  "torrentCreator": {
+    "title": "Créer un torrent",
+    "sourcePath": "Fichier / Dossier source",
+    "browseFile": "Fichier...",
+    "browseFolder": "Dossier...",
+    "pieceSize": "Taille des pièces",
+    "pieceSizeAuto": "Auto",
+    "private": "Torrent privé (désactive DHT)",
+    "trackers": "URL(s) des trackers",
+    "addTracker": "+ Ajouter un tracker",
+    "comment": "Commentaire",
+    "create": "Créer le torrent",
+    "creating": "Création du torrent en cours...",
+    "scanning": "Analyse des fichiers...",
+    "hashing": "Calcul des empreintes... {{percent}}%",
+    "writing": "Écriture du fichier .torrent...",
+    "noSource": "Veuillez sélectionner un fichier ou dossier source"
   },
   "settings": {
     "title": "Paramètres",

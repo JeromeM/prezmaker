@@ -44,6 +44,7 @@ pub fn run() {
             commands::generate_film,
             commands::generate_serie,
             commands::parse_torrent,
+            commands::create_torrent,
             commands::generate_film_with_tech,
             commands::generate_serie_with_tech,
             commands::fetch_game_details,
