@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
 import { usePrezMaker } from "./hooks/usePrezMaker";
@@ -20,7 +19,6 @@ import Onboarding, { isOnboardingDone } from "./components/Onboarding";
 import UpdateChecker from "./components/UpdateChecker";
 import CollectionBrowser from "./components/CollectionBrowser";
 import TorrentCreator from "./components/TorrentCreator";
-import type { SettingsPayload } from "./types/api";
 
 function App() {
   const { t } = useTranslation();
@@ -51,13 +49,6 @@ function App() {
 
   const { theme, setTheme } = useTheme();
   const [dragging, setDragging] = useState(false);
-  const [c411Enabled, setC411Enabled] = useState(false);
-
-  useEffect(() => {
-    invoke<SettingsPayload>("get_settings").then((s) => {
-      setC411Enabled(s.c411_enabled && !!s.c411_api_key);
-    });
-  }, []);
 
   // Global drag-drop listener for files
   useEffect(() => {
@@ -317,7 +308,6 @@ function App() {
             mediaAnalysis={state.mediaAnalysis}
             torrentFilePath={torrentFilePath}
             torrentInfo={torrentInfo}
-            c411Enabled={c411Enabled}
           />
         )}
 

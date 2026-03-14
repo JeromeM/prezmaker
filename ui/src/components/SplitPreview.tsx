@@ -6,11 +6,9 @@ import BBCodePanel from "./BBCodePanel";
 import BBCodePalette from "./BBCodePalette";
 import HtmlPreview from "./HtmlPreview";
 import NfoModal from "./NfoModal";
-import TemplateManager from "./TemplateManager";
 import CollectionSaveDialog from "./CollectionSaveDialog";
 import UploadDialog from "./UploadDialog";
-import { useTemplates } from "../hooks/useTemplates";
-import type { PresentationMeta, MediaAnalysis, SavedPresentation, TorrentInfo } from "../types/api";
+import type { PresentationMeta, MediaAnalysis, SavedPresentation, SettingsPayload, TorrentInfo } from "../types/api";
 
 interface Props {
   bbcode: string;
@@ -21,12 +19,11 @@ interface Props {
   mediaAnalysis?: MediaAnalysis | null;
   torrentFilePath?: string | null;
   torrentInfo?: TorrentInfo | null;
-  c411Enabled?: boolean;
 }
 
 const PALETTE_KEY = "prezmaker_palette_collapsed";
 
-export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml, onConvert, meta, nfoText, mediaAnalysis: existingAnalysis, torrentFilePath, torrentInfo, c411Enabled }: Props) {
+export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml, onConvert, meta, nfoText, mediaAnalysis: existingAnalysis, torrentFilePath, torrentInfo }: Props) {
   const { t } = useTranslation();
   const [bbcode, setBBCode] = useState(initialBBCode);
   const [html, setHtml] = useState(initialHtml);
@@ -36,6 +33,14 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
     return localStorage.getItem(PALETTE_KEY) === "true";
   });
 
+  const [c411Enabled, setC411Enabled] = useState(false);
+
+  useEffect(() => {
+    invoke<SettingsPayload>("get_settings").then((s) => {
+      setC411Enabled(s.c411_enabled && !!s.c411_api_key);
+    });
+  }, []);
+
   const [nfoContent, setNfoContent] = useState<string | null>(null);
   const [nfoLoading, setNfoLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -44,8 +49,6 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
   const [savedRef, setSavedRef] = useState<{ collectionId: string; entryId: string } | null>(
     meta.savedRef ?? null
   );
-
-  const { templates, loading, load, save, remove, rename, duplicate } = useTemplates();
 
   const handleChange = useCallback(
     (newBBCode: string) => {
@@ -130,46 +133,6 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
     [handleChange],
   );
 
-  const handleLoadTemplate = useCallback(
-    async (name: string) => {
-      try {
-        const content = await load(name);
-        handleChange(content);
-      } catch (e) {
-        console.error("Failed to load template:", e);
-      }
-    },
-    [load, handleChange],
-  );
-
-  const handleSaveTemplate = useCallback(
-    (name: string) => {
-      save(name, bbcode).catch((e) => console.error("Failed to save template:", e));
-    },
-    [save, bbcode],
-  );
-
-  const handleDeleteTemplate = useCallback(
-    (name: string) => {
-      remove(name).catch((e) => console.error("Failed to delete template:", e));
-    },
-    [remove],
-  );
-
-  const handleRenameTemplate = useCallback(
-    (oldName: string, newName: string) => {
-      rename(oldName, newName).catch((e) => console.error("Failed to rename template:", e));
-    },
-    [rename],
-  );
-
-  const handleDuplicateTemplate = useCallback(
-    (name: string, newName: string) => {
-      duplicate(name, newName).catch((e) => console.error("Failed to duplicate template:", e));
-    },
-    [duplicate],
-  );
-
   const handleGenerateNfo = useCallback(async () => {
     // If we have pre-generated NFO text, use it directly
     if (nfoText) {
@@ -224,18 +187,6 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
     }
   }, [savedRef, doSave]);
 
-  const templateActions = (
-    <TemplateManager
-      templates={templates}
-      loading={loading}
-      onSave={handleSaveTemplate}
-      onLoad={handleLoadTemplate}
-      onDelete={handleDeleteTemplate}
-      onRename={handleRenameTemplate}
-      onDuplicate={handleDuplicateTemplate}
-    />
-  );
-
   return (
     <div className="flex-1 flex min-h-0">
       <div className="w-1/2 flex border-r border-edge">
@@ -250,12 +201,12 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
             onChange={handleChange}
             textareaRef={textareaRef}
             headerActions={
-              <>
-                {templateActions}
+              <div className="flex items-center gap-1.5">
+                {/* Groupe : sauvegarde + NFO */}
                 <button
                   onClick={handleSaveToCollection}
                   disabled={saved || !bbcode.trim()}
-                  className={`text-xs px-3 py-1 rounded transition-colors ${
+                  className={`text-xs px-2.5 py-1 rounded transition-colors ${
                     saved
                       ? "bg-green-700 text-white"
                       : "bg-edge hover:bg-edge-hover text-fg disabled:opacity-50"
@@ -266,7 +217,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
                 <button
                   onClick={handleGenerateNfo}
                   disabled={nfoLoading}
-                  className={`text-xs px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
+                  className={`text-xs px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 ${
                     nfoLoading
                       ? "bg-blue-600 text-white cursor-wait"
                       : "bg-edge hover:bg-edge-hover text-fg disabled:opacity-50"
@@ -280,15 +231,24 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
                   )}
                   {nfoLoading ? t("collections.analyzingMedia") : t("collections.nfo")}
                 </button>
+
+                {/* Séparateur + Upload (style accentué) */}
                 {torrentFilePath && c411Enabled && (
-                  <button
-                    onClick={() => setShowUpload(true)}
-                    className="text-xs px-3 py-1 rounded transition-colors bg-edge hover:bg-edge-hover text-fg"
-                  >
-                    {t("upload.button")}
-                  </button>
+                  <>
+                    <span className="w-px h-4 bg-edge mx-0.5" />
+                    <button
+                      onClick={() => setShowUpload(true)}
+                      className="text-xs px-2.5 py-1 rounded transition-colors bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center gap-1.5"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                        <path d="M9.25 13.25a.75.75 0 0 0 1.5 0V4.636l2.955 3.129a.75.75 0 0 0 1.09-1.03l-4.25-4.5a.75.75 0 0 0-1.09 0l-4.25 4.5a.75.75 0 1 0 1.09 1.03L9.25 4.636v8.614Z" />
+                        <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+                      </svg>
+                      {t("upload.button")}
+                    </button>
+                  </>
                 )}
-              </>
+              </div>
             }
           />
         </div>
