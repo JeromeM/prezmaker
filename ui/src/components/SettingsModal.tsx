@@ -11,9 +11,9 @@ interface Props {
   onSetTheme: (theme: "dark" | "light") => void;
 }
 
-type Tab = "general" | "api" | "llm";
+type Tab = "general" | "api" | "llm" | "modules";
 
-const TAB_IDS: Tab[] = ["general", "api", "llm"];
+const TAB_IDS: Tab[] = ["general", "api", "llm", "modules"];
 
 const inputClass =
   "w-full bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm outline-none focus:border-blue-500";
@@ -22,6 +22,7 @@ const TAB_LABELS: Record<Tab, string> = {
   general: "settings.general",
   api: "settings.apiKeys",
   llm: "settings.aiLlm",
+  modules: "settings.modules",
 };
 
 export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
@@ -41,6 +42,8 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
     mistral_api_key: null,
     gemini_api_key: null,
     pseudo: "",
+    c411_enabled: false,
+    c411_api_key: null,
   });
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
@@ -308,6 +311,37 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
                 <p className="text-xs text-fg-dim -mt-2">
                   {t("settings.freeKeyOn")} <a href="#" onClick={(e) => { e.preventDefault(); openUrl("https://aistudio.google.com/apikey"); }} className="text-blue-400 hover:underline">aistudio.google.com</a>
                 </p>
+              </div>
+            )}
+
+            {tab === "modules" && (
+              <div className="space-y-6">
+                <p className="text-xs text-fg-dim mb-2">
+                  {t("settings.modulesDescription")}
+                </p>
+
+                {/* C411 */}
+                <div className="border border-edge rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-fg-bright">C411</h3>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={settings.c411_enabled}
+                        onChange={(e) =>
+                          setSettings((s) => ({
+                            ...s,
+                            c411_enabled: e.target.checked,
+                          }))
+                        }
+                        className="accent-blue-500"
+                      />
+                      <span className="text-xs text-fg-muted">{t("settings.enabled")}</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-fg-dim">{t("settings.c411Description")}</p>
+                  {secretInput(t("settings.c411ApiKey"), "c411_api_key", "c411")}
+                </div>
               </div>
             )}
 

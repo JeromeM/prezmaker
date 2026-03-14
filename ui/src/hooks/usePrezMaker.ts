@@ -44,6 +44,8 @@ function torrentContentTypeToContentType(t: DetectedContentType): ContentType | 
 export function usePrezMaker() {
   const [state, setState] = useState<AppState>({ step: "idle" });
   const [titleColor, setTitleColor] = useState<string>("");
+  const [torrentFilePath, setTorrentFilePath] = useState<string | null>(null);
+  const [torrentInfo, setTorrentInfo] = useState<TorrentInfo | null>(null);
   const unlistenRef = useRef<UnlistenFn | null>(null);
 
   const unlistenCreationRef = useRef<UnlistenFn | null>(null);
@@ -223,6 +225,8 @@ export function usePrezMaker() {
       setState({ step: "searching" });
       try {
         const info = await invoke<TorrentInfo>("parse_torrent", { path: filePath });
+        setTorrentFilePath(filePath);
+        setTorrentInfo(info);
         const ct = torrentContentTypeToContentType(info.parsed.content_type);
 
         if (!ct) {
@@ -362,6 +366,8 @@ export function usePrezMaker() {
       setState({ step: "torrent_creating", progress: null });
       try {
         const info = await invoke<TorrentInfo>("create_torrent", { payload: opts });
+        setTorrentFilePath(opts.output_path);
+        setTorrentInfo(info);
         const ct = torrentContentTypeToContentType(info.parsed.content_type);
         if (ct) {
           await searchForTorrent(info, ct);
@@ -386,6 +392,8 @@ export function usePrezMaker() {
 
   const reset = useCallback(() => {
     setState({ step: "idle" });
+    setTorrentFilePath(null);
+    setTorrentInfo(null);
   }, []);
 
   return {
@@ -404,5 +412,7 @@ export function usePrezMaker() {
     convertBBCode,
     loadPresentation,
     reset,
+    torrentFilePath,
+    torrentInfo,
   };
 }

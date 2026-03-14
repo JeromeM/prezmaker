@@ -86,6 +86,8 @@ export interface SettingsPayload {
   mistral_api_key: string | null;
   gemini_api_key: string | null;
   pseudo: string;
+  c411_enabled: boolean;
+  c411_api_key: string | null;
 }
 
 // Content Templates
@@ -216,6 +218,47 @@ export interface PendingGeneration {
   appPayload?: AppPayload;
   title?: string;
   posterUrl?: string | null;
+}
+
+// C411 Upload types
+
+export interface C411Category {
+  id: number;
+  name: string;
+  subcategories: C411Subcategory[];
+}
+
+export interface C411Subcategory {
+  id: number;
+  name: string;
+}
+
+export interface C411OptionType {
+  id: number;
+  name: string;
+  slug: string;
+  allowsMultiple: boolean;
+  isRequired: boolean;
+  sortOrder: number;
+  values: C411OptionValue[];
+}
+
+export interface C411OptionValue {
+  id: number;
+  value: string;
+  slug: string;
+  sortOrder: number;
+}
+
+export interface C411AutoMapResult {
+  categoryId: number;
+  subcategoryId: number;
+  options: Record<string, number | number[]>;
+}
+
+export interface C411UploadResult {
+  success: boolean;
+  message?: string;
 }
 
 export interface TorrentCreateProgress {

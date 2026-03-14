@@ -4,7 +4,10 @@ use prezmaker_lib::config::Config;
 use prezmaker_lib::db::{self, Database};
 use prezmaker_lib::models::{Application, Game, MediaAnalysis, MediaTechInfo, SystemReqs, TechInfo};
 use prezmaker_lib::orchestrator_api::{GameDetailsResponse, GenerationResult, OrchestratorApi, SearchResult};
-use prezmaker_lib::torrent::{self, TorrentInfo};
+use prezmaker_lib::torrent::{self, ReleaseParsed, TorrentInfo};
+use prezmaker_lib::upload::c411::{
+    self, C411Category, C411Client, C411OptionType, C411UploadResult,
+};
 use prezmaker_lib::torrent_creator::{self, TorrentCreateOptions};
 use prezmaker_lib::template_engine::{self, ContentTemplate, TemplateTag};
 use serde::{Deserialize, Serialize};
@@ -408,6 +411,9 @@ pub struct SettingsPayload {
     pub mistral_api_key: Option<String>,
     pub gemini_api_key: Option<String>,
     pub pseudo: String,
+    #[serde(default)]
+    pub c411_enabled: bool,
+    pub c411_api_key: Option<String>,
 }
 
 #[tauri::command]
@@ -427,6 +433,8 @@ pub fn get_settings(state: tauri::State<'_, AppState>) -> SettingsPayload {
         mistral_api_key: config.llm.mistral_api_key.clone(),
         gemini_api_key: config.llm.gemini_api_key.clone(),
         pseudo: config.preferences.pseudo.clone(),
+        c411_enabled: config.modules.c411.enabled,
+        c411_api_key: config.modules.c411.api_key.clone(),
     }
 }
 
@@ -449,6 +457,8 @@ pub fn save_settings(
     config.llm.gemini_api_key = settings.gemini_api_key;
     config.preferences.pseudo = settings.pseudo;
     config.preferences.default_templates = settings.default_templates;
+    config.modules.c411.enabled = settings.c411_enabled;
+    config.modules.c411.api_key = settings.c411_api_key;
     config.save().map_err(|e| e.to_string())
 }
 
@@ -600,6 +610,98 @@ pub fn import_template(path: String) -> Result<ContentTemplate, String> {
         template_engine::save_template_meta(&tpl.content_type, &tpl.name, Some(color.clone()))?;
     }
     Ok(tpl)
+}
+
+// --- C411 Upload ---
+
+#[tauri::command]
+pub async fn c411_fetch_categories(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<C411Category>, String> {
+    let api_key = {
+        let config = state.config.lock().unwrap();
+        config
+            .modules
+            .c411
+            .api_key
+            .clone()
+            .ok_or_else(|| "Clé API C411 non configurée".to_string())?
+    };
+    let client = C411Client::new(api_key);
+    client.fetch_categories().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn c411_fetch_options(
+    state: tauri::State<'_, AppState>,
+    subcategory_id: u32,
+) -> Result<Vec<C411OptionType>, String> {
+    let api_key = {
+        let config = state.config.lock().unwrap();
+        config
+            .modules
+            .c411
+            .api_key
+            .clone()
+            .ok_or_else(|| "Clé API C411 non configurée".to_string())?
+    };
+    let client = C411Client::new(api_key);
+    client
+        .fetch_options(subcategory_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn c411_auto_map(
+    content_type: String,
+    parsed: ReleaseParsed,
+    available_options: Vec<C411OptionType>,
+) -> serde_json::Value {
+    let (category_id, subcategory_id) = c411::auto_map_category(&content_type);
+    let options = c411::auto_map_options(&parsed, &available_options);
+    serde_json::json!({
+        "categoryId": category_id,
+        "subcategoryId": subcategory_id,
+        "options": options,
+    })
+}
+
+#[tauri::command]
+pub async fn c411_upload(
+    state: tauri::State<'_, AppState>,
+    torrent_path: String,
+    nfo_content: String,
+    title: String,
+    description: String,
+    category_id: u32,
+    subcategory_id: u32,
+    options_json: String,
+    uploader_note: Option<String>,
+) -> Result<C411UploadResult, String> {
+    let api_key = {
+        let config = state.config.lock().unwrap();
+        config
+            .modules
+            .c411
+            .api_key
+            .clone()
+            .ok_or_else(|| "Clé API C411 non configurée".to_string())?
+    };
+    let client = C411Client::new(api_key);
+    client
+        .upload(
+            Path::new(&torrent_path),
+            &nfo_content,
+            &title,
+            &description,
+            category_id,
+            subcategory_id,
+            &options_json,
+            uploader_note.as_deref(),
+        )
+        .await
+        .map_err(|e| e.to_string())
 }
 
 // --- Collections ---

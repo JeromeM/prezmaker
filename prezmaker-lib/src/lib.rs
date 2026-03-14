@@ -13,3 +13,4 @@ pub mod template_engine;
 pub mod default_templates;
 pub mod mediainfo;
 pub mod nfo;
+pub mod upload;

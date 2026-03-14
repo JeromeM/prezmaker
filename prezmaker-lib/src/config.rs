@@ -14,6 +14,21 @@ pub struct Config {
     pub preferences: Preferences,
     #[serde(default)]
     pub llm: LlmConfig,
+    #[serde(default)]
+    pub modules: ModulesConfig,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct ModulesConfig {
+    #[serde(default)]
+    pub c411: C411ModuleConfig,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct C411ModuleConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    pub api_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]

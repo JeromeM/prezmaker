@@ -29,6 +29,9 @@ pub enum PrezError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
+    #[error("Upload failed: {0}")]
+    Upload(String),
+
     #[error("{0}")]
     Other(String),
 }
