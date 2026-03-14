@@ -20,6 +20,7 @@ export default function TemplatePicker({
   const [templates, setTemplates] = useState<ContentTemplate[]>([]);
   const [selected, setSelected] = useState("default");
   const [loading, setLoading] = useState(true);
+  const [favoriteName, setFavoriteName] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -37,6 +38,7 @@ export default function TemplatePicker({
         return (a.order ?? 0) - (b.order ?? 0);
       });
       setTemplates(sorted);
+      setFavoriteName(favName);
       // Pre-select favorite if it exists, otherwise first
       const initial = favName && sorted.some((tpl) => tpl.name === favName)
         ? favName
@@ -85,7 +87,7 @@ export default function TemplatePicker({
           >
             <span className="text-sm font-medium">
               {tpl.name}
-              {tpl.is_default && (
+              {(favoriteName ? tpl.name === favoriteName : tpl.is_default) && (
                 <span className="text-fg-muted ml-2">{t("templatePicker.default")}</span>
               )}
             </span>
