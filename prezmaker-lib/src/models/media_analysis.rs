@@ -30,6 +30,7 @@ pub struct AudioTrack {
     pub codec: String,
     pub channels: String,
     pub sample_rate: Option<String>,
+    pub bitrate: Option<String>,
     pub language: Option<String>,
     pub is_default: bool,
 }
@@ -38,6 +39,7 @@ pub struct AudioTrack {
 pub struct SubtitleTrack {
     pub format: String,
     pub language: Option<String>,
+    pub title: Option<String>,
     pub is_default: bool,
     pub is_forced: bool,
 }
