@@ -1,7 +1,7 @@
 # Version Bumper - Mémoire
 
 ## Version actuelle
-- **1.4.0** (depuis feature release majeure : conditionals imbriquées, opérateurs de comparaison, indentation, syntax highlighting, color pickers, etc.)
+- **1.21.0** (depuis feature release : module d'upload C411 avec client API, auto-mapping et dialog)
 
 ## Fichiers de version à maintenir synchronisés
 1. `/apps/perso/PrezMaker/prezmaker-lib/Cargo.toml` (source de vérité)
@@ -13,6 +13,7 @@
 ## Historique des versions
 - 1.1.0 → 1.1.1 (2026-03-10) : bugfix Steam search retry en anglais pour certaines locales
 - 1.3.0 → 1.4.0 (2026-03-11) : feature release majeure (11 fonctionnalités + 10 tests)
+- 1.20.0 → 1.21.0 (2026-03-14) : feature release (module d'upload C411)
 
 ## Règles appliquées
 - **Feature terminée** : MINOR++ (PATCH→0)
@@ -21,3 +22,7 @@
 - **Feature + Fix ensemble** : MINOR++, PATCH++ (car mix)
 - **Plusieurs features** : MINOR++ seul
 - **Plusieurs fixes** : PATCH++ seul
+
+Notes:
+- Tous les 5 fichiers de version doivent rester synchronisés
+- Ne jamais modifier MAJOR sans instruction explicite
