@@ -15,12 +15,13 @@ interface Props {
   html: string;
   onConvert: (bbcode: string) => Promise<string>;
   meta: PresentationMeta;
+  nfoText?: string | null;
   mediaAnalysis?: MediaAnalysis | null;
 }
 
 const PALETTE_KEY = "prezmaker_palette_collapsed";
 
-export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml, onConvert, meta, mediaAnalysis: existingAnalysis }: Props) {
+export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml, onConvert, meta, nfoText, mediaAnalysis: existingAnalysis }: Props) {
   const [bbcode, setBBCode] = useState(initialBBCode);
   const [html, setHtml] = useState(initialHtml);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -163,12 +164,17 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
   );
 
   const handleGenerateNfo = useCallback(async () => {
-    // If we already have MediaInfo from the extras step, use it directly
+    // If we have pre-generated NFO text, use it directly
+    if (nfoText) {
+      setNfoContent(nfoText);
+      return;
+    }
+    // Fallback: if we have raw MediaInfo text from analysis
     if (existingAnalysis?.raw_text) {
       setNfoContent(existingAnalysis.raw_text);
       return;
     }
-    // Otherwise, pick a file and analyze
+    // Last resort: pick a file and get raw mediainfo
     const path = await open({
       filters: [{ name: "Media", extensions: ["mkv", "mp4", "avi", "wmv", "flv", "mov", "ts", "m2ts", "iso"] }],
       multiple: false,
@@ -183,7 +189,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
     } finally {
       setNfoLoading(false);
     }
-  }, [existingAnalysis]);
+  }, [nfoText, existingAnalysis]);
 
   const doSave = useCallback(async (collectionId: string, entryId?: string) => {
     try {

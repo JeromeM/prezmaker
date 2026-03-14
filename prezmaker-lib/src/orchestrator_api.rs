@@ -4,6 +4,7 @@ use crate::error::PrezError;
 use crate::formatters::{app_fmt, game_fmt, movie_fmt, series_fmt};
 use crate::formatters::bbcode;
 use crate::models::{Application, Game, MediaAnalysis, MediaTechInfo, Movie, Series, TechInfo};
+use crate::nfo;
 use crate::template_engine::{self, RenderContext};
 use crate::providers::allocine::AllocineClient;
 use crate::providers::igdb::IgdbClient;
@@ -31,6 +32,12 @@ pub struct SearchResult {
 pub struct GameDetailsResponse {
     pub game: Game,
     pub claude_description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenerationResult {
+    pub bbcode: String,
+    pub nfo_text: String,
 }
 
 pub struct OrchestratorApi {
@@ -353,8 +360,10 @@ impl OrchestratorApi {
             }
         };
 
-        // Cross-fetch Steam for system requirements if missing
-        if game.min_reqs.is_none() && game.rec_reqs.is_none() {
+        // Cross-fetch Steam for system requirements, screenshots, or ratings if missing
+        let needs_reqs = game.min_reqs.is_none() && game.rec_reqs.is_none();
+        let needs_screenshots = game.screenshots.len() < 3;
+        if needs_reqs || needs_screenshots {
             let steam = SteamClient::new(self.language.clone());
 
             // Try by Steam App ID first (from IGDB external_games)
@@ -386,10 +395,22 @@ impl OrchestratorApi {
             };
 
             if let Some(Ok(steam_game)) = steam_result {
-                game.min_reqs = steam_game.min_reqs;
-                game.rec_reqs = steam_game.rec_reqs;
+                if needs_reqs {
+                    game.min_reqs = steam_game.min_reqs;
+                    game.rec_reqs = steam_game.rec_reqs;
+                }
                 if game.ratings.is_empty() {
                     game.ratings = steam_game.ratings;
+                }
+                // Compléter les screenshots si moins de 3
+                if needs_screenshots && !steam_game.screenshots.is_empty() {
+                    let existing: std::collections::HashSet<String> =
+                        game.screenshots.iter().cloned().collect();
+                    let new_ss: Vec<String> = steam_game.screenshots.into_iter()
+                        .filter(|s| !existing.contains(s))
+                        .collect();
+                    game.screenshots.extend(new_ss);
+                    info!("Screenshots complétées depuis Steam: {} total", game.screenshots.len());
                 }
             } else if let Some(Err(e)) = steam_result {
                 warn!("Steam cross-fetch echoue: {}", e);
@@ -445,7 +466,7 @@ impl OrchestratorApi {
         tech: Option<MediaTechInfo>,
         media_analysis: Option<&MediaAnalysis>,
         template_name: &str,
-    ) -> Result<String, PrezError> {
+    ) -> Result<GenerationResult, PrezError> {
         let api_key = self.config.tmdb_api_key()?;
         let tmdb = TmdbClient::new(api_key.to_string(), self.language.clone());
         let mut movie = tmdb.get_movie_details(tmdb_id).await
@@ -477,7 +498,9 @@ impl OrchestratorApi {
             ..Default::default()
         };
 
-        Ok(template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo))
+        let bbcode = template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo);
+        let nfo_text = nfo::generate_movie_nfo(&movie, media_analysis, &self.pseudo);
+        Ok(GenerationResult { bbcode, nfo_text })
     }
 
     pub async fn generate_serie_from_template(
@@ -487,7 +510,7 @@ impl OrchestratorApi {
         tech: Option<MediaTechInfo>,
         media_analysis: Option<&MediaAnalysis>,
         template_name: &str,
-    ) -> Result<String, PrezError> {
+    ) -> Result<GenerationResult, PrezError> {
         let api_key = self.config.tmdb_api_key()?;
         let tmdb = TmdbClient::new(api_key.to_string(), self.language.clone());
         let mut series = tmdb.get_series_details(tmdb_id).await
@@ -517,7 +540,9 @@ impl OrchestratorApi {
             ..Default::default()
         };
 
-        Ok(template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo))
+        let bbcode = template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo);
+        let nfo_text = nfo::generate_series_nfo(&series, media_analysis, &self.pseudo);
+        Ok(GenerationResult { bbcode, nfo_text })
     }
 
     pub fn generate_jeu_from_template(
@@ -527,7 +552,7 @@ impl OrchestratorApi {
         installation: Option<String>,
         tech_info: TechInfo,
         template_name: &str,
-    ) -> Result<String, PrezError> {
+    ) -> Result<GenerationResult, PrezError> {
         if let Some(desc) = description {
             game.synopsis = Some(desc);
         }
@@ -550,14 +575,16 @@ impl OrchestratorApi {
             ..Default::default()
         };
 
-        Ok(template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo))
+        let bbcode = template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo);
+        let nfo_text = nfo::generate_game_nfo(&game, &self.pseudo);
+        Ok(GenerationResult { bbcode, nfo_text })
     }
 
     pub fn generate_app_from_template(
         &self,
         app: Application,
         template_name: &str,
-    ) -> Result<String, PrezError> {
+    ) -> Result<GenerationResult, PrezError> {
         let tpl = template_engine::get_template("app", template_name)
             .map_err(|e| PrezError::Other(e))?;
         let data = template_engine::build_app_data(&app);
@@ -569,7 +596,9 @@ impl OrchestratorApi {
             ..Default::default()
         };
 
-        Ok(template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo))
+        let bbcode = template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo);
+        let nfo_text = nfo::generate_app_nfo(&app, &self.pseudo);
+        Ok(GenerationResult { bbcode, nfo_text })
     }
 
     // --- Info BBCode builders (for poster_info/cover_info composites) ---

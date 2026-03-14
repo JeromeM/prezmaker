@@ -176,6 +176,11 @@ export interface MediaAnalysis {
   raw_text: string;
 }
 
+export interface GenerationResult {
+  bbcode: string;
+  nfo_text: string;
+}
+
 export interface PresentationMeta {
   title: string;
   contentType: ContentType;
@@ -219,7 +224,7 @@ export type AppState =
   | { step: "app_form" }
   | { step: "template_pick"; pending: PendingGeneration }
   | { step: "generating" }
-  | { step: "done"; bbcode: string; html: string; meta: PresentationMeta; mediaAnalysis?: MediaAnalysis | null }
+  | { step: "done"; bbcode: string; html: string; meta: PresentationMeta; nfoText?: string | null; mediaAnalysis?: MediaAnalysis | null }
   | { step: "error"; message: string }
   | { step: "torrent_parsed"; torrentInfo: TorrentInfo }
   | { step: "torrent_selecting"; results: SearchResult[]; contentType: ContentType; torrentInfo: TorrentInfo };

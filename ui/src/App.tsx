@@ -247,6 +247,7 @@ function App() {
             html={state.html}
             onConvert={convertBBCode}
             meta={state.meta}
+            nfoText={state.nfoText}
             mediaAnalysis={state.mediaAnalysis}
           />
         )}
