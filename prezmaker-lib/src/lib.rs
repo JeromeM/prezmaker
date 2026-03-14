@@ -1,6 +1,7 @@
 pub mod cache;
 pub mod collections;
 pub mod config;
+pub mod db;
 pub mod error;
 pub mod formatters;
 pub mod models;

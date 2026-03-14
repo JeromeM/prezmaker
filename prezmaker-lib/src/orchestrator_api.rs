@@ -433,6 +433,18 @@ impl OrchestratorApi {
             }
         }
 
+        // Translate synopsis from English if language is French and LLM is configured
+        if self.language.starts_with("fr") {
+            if let Some(ref synopsis) = game.synopsis {
+                if !synopsis.is_empty() && Self::looks_english(synopsis) {
+                    self.progress("Traduction du synopsis...");
+                    if let Some(translated) = self.translate_text(synopsis, "français").await {
+                        game.synopsis = Some(translated);
+                    }
+                }
+            }
+        }
+
         self.progress("Génération de la description...");
         let claude_description = self
             .resolve_description(&game.title, game.synopsis.as_deref())
@@ -842,6 +854,37 @@ impl OrchestratorApi {
         }
 
         // 4. Fallback → None (synopsis EN sera utilisé)
+        None
+    }
+
+    /// Simple heuristic: text looks English if it has common English words
+    fn looks_english(text: &str) -> bool {
+        let lower = text.to_lowercase();
+        let en_words = ["the ", " is ", " are ", " was ", " were ", " and ", " with ", " from ",
+                        " that ", " this ", " for ", " you ", " can ", " will ", " has ", " have ",
+                        " been ", " their ", " which ", " when ", " where ", " player ", " players "];
+        let count = en_words.iter().filter(|w| lower.contains(**w)).count();
+        count >= 3
+    }
+
+    async fn translate_text(&self, text: &str, target_lang: &str) -> Option<String> {
+        if let (Some(provider), Some(api_key)) = (
+            self.config.llm.provider.as_deref(),
+            self.config.llm.resolve_api_key(),
+        ) {
+            if !provider.is_empty() && !api_key.is_empty() {
+                info!("Traduction via LLM ({})...", provider);
+                let client = LlmClient::new(provider, api_key);
+                match client.translate_text(text, target_lang).await {
+                    Ok(translated) if !translated.is_empty() => {
+                        info!("Traduction réussie !");
+                        return Some(translated);
+                    }
+                    Ok(_) => warn!("LLM a retourné une traduction vide"),
+                    Err(e) => warn!("Erreur traduction LLM : {}", e),
+                }
+            }
+        }
         None
     }
 }

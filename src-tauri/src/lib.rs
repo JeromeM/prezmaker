@@ -4,6 +4,7 @@ mod commands;
 use commands::AppState;
 use prezmaker_lib::cache::ApiCache;
 use prezmaker_lib::config::Config;
+use prezmaker_lib::db::Database;
 use std::sync::{Arc, Mutex};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -12,6 +13,15 @@ pub fn run() {
         eprintln!("Config error: {}, using defaults", e);
         Config::default()
     });
+
+    let db = Database::open().expect("Cannot open database");
+
+    // Migrate old JSON data to SQLite on first run
+    match db.migrate_from_json() {
+        Ok(true) => eprintln!("Migrated existing data to SQLite database"),
+        Ok(false) => {}
+        Err(e) => eprintln!("Migration warning: {}", e),
+    }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -27,6 +37,7 @@ pub fn run() {
         .manage(AppState {
             config: Arc::new(Mutex::new(config)),
             cache: ApiCache::new(),
+            db,
         })
         .invoke_handler(tauri::generate_handler![
             commands::search,
