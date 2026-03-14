@@ -43,6 +43,8 @@ export default function Onboarding({ onComplete }: Props) {
     mistral_api_key: null,
     gemini_api_key: null,
     pseudo: "",
+    c411_enabled: false,
+    c411_api_key: null,
   });
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
