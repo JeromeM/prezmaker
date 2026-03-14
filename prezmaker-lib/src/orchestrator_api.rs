@@ -377,7 +377,7 @@ impl OrchestratorApi {
 
         // Cross-fetch Steam for system requirements, screenshots, or ratings if missing
         let needs_reqs = game.min_reqs.is_none() && game.rec_reqs.is_none();
-        let needs_screenshots = game.screenshots.len() < 3;
+        let needs_screenshots = game.screenshots.len() < 4;
         if needs_reqs || needs_screenshots {
             self.progress("Récupération des données Steam (screenshots, config requise)...");
             let steam = SteamClient::new(self.language.clone());
