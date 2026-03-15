@@ -19,6 +19,7 @@ pub struct SavedPresentation {
     pub bbcode: String,
     pub poster_url: Option<String>,
     pub torrent_path: Option<String>,
+    pub nfo_text: Option<String>,
     pub saved_at: String,
     pub updated_at: String,
 }
@@ -106,6 +107,7 @@ impl Database {
 
         // Migrations
         Self::migrate_add_torrent_path(&conn)?;
+        Self::migrate_add_nfo_text(&conn)?;
 
         Ok(())
     }
@@ -119,6 +121,19 @@ impl Database {
                 "ALTER TABLE saved_presentations ADD COLUMN torrent_path TEXT;",
             )
             .map_err(|e| format!("Migration torrent_path failed: {}", e))?;
+        }
+        Ok(())
+    }
+
+    fn migrate_add_nfo_text(conn: &Connection) -> Result<(), String> {
+        let has_column: bool = conn
+            .prepare("SELECT nfo_text FROM saved_presentations LIMIT 0")
+            .is_ok();
+        if !has_column {
+            conn.execute_batch(
+                "ALTER TABLE saved_presentations ADD COLUMN nfo_text TEXT;",
+            )
+            .map_err(|e| format!("Migration nfo_text failed: {}", e))?;
         }
         Ok(())
     }
@@ -195,6 +210,7 @@ impl Database {
         bbcode: &str,
         poster_url: Option<&str>,
         torrent_path: Option<&str>,
+        nfo_text: Option<&str>,
     ) -> Result<SavedPresentation, String> {
         let now = chrono::Utc::now().to_rfc3339();
         let conn = self.conn.lock().unwrap();
@@ -203,8 +219,8 @@ impl Database {
             // Upsert: try update first
             let updated = conn
                 .execute(
-                    "UPDATE saved_presentations SET title=?1, content_type=?2, bbcode=?3, poster_url=?4, updated_at=?5, collection_id=?6, torrent_path=?7 WHERE id=?8",
-                    params![title, content_type, bbcode, poster_url, now, collection_id, torrent_path, eid],
+                    "UPDATE saved_presentations SET title=?1, content_type=?2, bbcode=?3, poster_url=?4, updated_at=?5, collection_id=?6, torrent_path=?7, nfo_text=?8 WHERE id=?9",
+                    params![title, content_type, bbcode, poster_url, now, collection_id, torrent_path, nfo_text, eid],
                 )
                 .map_err(|e| format!("Cannot update presentation: {}", e))?;
 
@@ -225,6 +241,7 @@ impl Database {
                     bbcode: bbcode.to_string(),
                     poster_url: poster_url.map(|s| s.to_string()),
                     torrent_path: torrent_path.map(|s| s.to_string()),
+                    nfo_text: nfo_text.map(|s| s.to_string()),
                     saved_at,
                     updated_at: now,
                 });
@@ -232,8 +249,8 @@ impl Database {
             // If not found, fall through to insert with this ID
             let id = eid.to_string();
             conn.execute(
-                "INSERT INTO saved_presentations (id, collection_id, title, content_type, bbcode, poster_url, torrent_path, saved_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-                params![id, collection_id, title, content_type, bbcode, poster_url, torrent_path, now, now],
+                "INSERT INTO saved_presentations (id, collection_id, title, content_type, bbcode, poster_url, torrent_path, nfo_text, saved_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                params![id, collection_id, title, content_type, bbcode, poster_url, torrent_path, nfo_text, now, now],
             )
             .map_err(|e| format!("Cannot insert presentation: {}", e))?;
             return Ok(SavedPresentation {
@@ -244,6 +261,7 @@ impl Database {
                 bbcode: bbcode.to_string(),
                 poster_url: poster_url.map(|s| s.to_string()),
                 torrent_path: torrent_path.map(|s| s.to_string()),
+                nfo_text: nfo_text.map(|s| s.to_string()),
                 saved_at: now.clone(),
                 updated_at: now,
             });
@@ -251,8 +269,8 @@ impl Database {
 
         let id = uuid::Uuid::new_v4().to_string();
         conn.execute(
-            "INSERT INTO saved_presentations (id, collection_id, title, content_type, bbcode, poster_url, torrent_path, saved_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-            params![id, collection_id, title, content_type, bbcode, poster_url, torrent_path, now, now],
+            "INSERT INTO saved_presentations (id, collection_id, title, content_type, bbcode, poster_url, torrent_path, nfo_text, saved_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![id, collection_id, title, content_type, bbcode, poster_url, torrent_path, nfo_text, now, now],
         )
         .map_err(|e| format!("Cannot insert presentation: {}", e))?;
 
@@ -264,6 +282,7 @@ impl Database {
             bbcode: bbcode.to_string(),
             poster_url: poster_url.map(|s| s.to_string()),
             torrent_path: torrent_path.map(|s| s.to_string()),
+            nfo_text: nfo_text.map(|s| s.to_string()),
             saved_at: now.clone(),
             updated_at: now,
         })
@@ -280,7 +299,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
 
         let mut sql = String::from(
-            "SELECT id, collection_id, title, content_type, bbcode, poster_url, torrent_path, saved_at, updated_at FROM saved_presentations WHERE collection_id = ?1",
+            "SELECT id, collection_id, title, content_type, bbcode, poster_url, torrent_path, nfo_text, saved_at, updated_at FROM saved_presentations WHERE collection_id = ?1",
         );
         let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = vec![Box::new(collection_id.to_string())];
 
@@ -321,8 +340,9 @@ impl Database {
                     bbcode: row.get(4)?,
                     poster_url: row.get(5)?,
                     torrent_path: row.get(6)?,
-                    saved_at: row.get(7)?,
-                    updated_at: row.get(8)?,
+                    nfo_text: row.get(7)?,
+                    saved_at: row.get(8)?,
+                    updated_at: row.get(9)?,
                 })
             })
             .map_err(|e| format!("Query error: {}", e))?;
@@ -337,7 +357,7 @@ impl Database {
     pub fn get_presentation(&self, collection_id: &str, id: &str) -> Result<SavedPresentation, String> {
         let conn = self.conn.lock().unwrap();
         conn.query_row(
-            "SELECT id, collection_id, title, content_type, bbcode, poster_url, torrent_path, saved_at, updated_at FROM saved_presentations WHERE id = ?1 AND collection_id = ?2",
+            "SELECT id, collection_id, title, content_type, bbcode, poster_url, torrent_path, nfo_text, saved_at, updated_at FROM saved_presentations WHERE id = ?1 AND collection_id = ?2",
             params![id, collection_id],
             |row| {
                 Ok(SavedPresentation {
@@ -348,8 +368,9 @@ impl Database {
                     bbcode: row.get(4)?,
                     poster_url: row.get(5)?,
                     torrent_path: row.get(6)?,
-                    saved_at: row.get(7)?,
-                    updated_at: row.get(8)?,
+                    nfo_text: row.get(7)?,
+                    saved_at: row.get(8)?,
+                    updated_at: row.get(9)?,
                 })
             },
         )

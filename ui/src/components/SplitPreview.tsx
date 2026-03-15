@@ -144,7 +144,11 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
       setNfoContent(existingAnalysis.raw_text);
       return;
     }
-    // Last resort: pick a file and get raw mediainfo
+    // For games/apps, no MediaInfo to pick — NFO not applicable
+    if (meta.contentType === "jeu" || meta.contentType === "app") {
+      return;
+    }
+    // Last resort: pick a media file and get raw mediainfo
     const path = await open({
       filters: [{ name: "Media", extensions: ["mkv", "mp4", "avi", "wmv", "flv", "mov", "ts", "m2ts", "iso"] }],
       multiple: false,
@@ -159,7 +163,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
     } finally {
       setNfoLoading(false);
     }
-  }, [nfoText, existingAnalysis]);
+  }, [nfoText, existingAnalysis, meta.contentType]);
 
   const doSave = useCallback(async (collectionId: string, entryId?: string) => {
     try {
@@ -171,6 +175,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
         bbcode,
         posterUrl: meta.posterUrl,
         torrentPath: torrentFilePath ?? null,
+        nfoText: nfoContent ?? nfoText ?? null,
       });
       setSavedRef({ collectionId: result.collection_id, entryId: result.id });
       setSaved(true);
@@ -178,7 +183,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
     } catch (e) {
       alert(String(e));
     }
-  }, [bbcode, meta, torrentFilePath]);
+  }, [bbcode, meta, torrentFilePath, nfoContent, nfoText]);
 
   const handleSaveToCollection = useCallback(() => {
     if (savedRef) {
