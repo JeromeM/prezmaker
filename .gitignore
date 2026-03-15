@@ -10,3 +10,4 @@ ui/dist
 
 # Tauri generated
 src-tauri/gen/schemas
+node_modules/
