@@ -48,7 +48,7 @@ describe("SettingsModal", () => {
 
   it("saves c411_enabled and c411_api_key", async () => {
     const user = userEvent.setup();
-    mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
+    mockInvoke.mockImplementation(async (cmd: string) => {
       if (cmd === "get_settings") return { ...mockSettings, c411_enabled: false, c411_api_key: null };
       if (cmd === "save_settings") return null;
       return null;
