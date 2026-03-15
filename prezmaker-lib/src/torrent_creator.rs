@@ -31,7 +31,10 @@ struct FileEntry {
 
 /// Collect files from `source_path`. If it's a single file, return one entry.
 /// If it's a directory, recursively collect all files (sorted for determinism).
-fn scan_files(source: &Path) -> Result<(String, Vec<FileEntry>), String> {
+fn scan_files<F>(source: &Path, progress_cb: &F) -> Result<(String, Vec<FileEntry>), String>
+where
+    F: Fn(TorrentCreateProgress),
+{
     if !source.exists() {
         return Err(format!("Le chemin n'existe pas : {}", source.display()));
     }
@@ -54,9 +57,9 @@ fn scan_files(source: &Path) -> Result<(String, Vec<FileEntry>), String> {
         ));
     }
 
-    // Directory: recursive walk
+    // Directory: recursive walk with progress
     let mut entries = Vec::new();
-    walk_dir(source, source, &mut entries)?;
+    walk_dir(source, source, &mut entries, progress_cb)?;
     entries.sort_by(|a, b| a.relative_path.cmp(&b.relative_path));
 
     if entries.is_empty() {
@@ -66,13 +69,16 @@ fn scan_files(source: &Path) -> Result<(String, Vec<FileEntry>), String> {
     Ok((name, entries))
 }
 
-fn walk_dir(root: &Path, current: &Path, entries: &mut Vec<FileEntry>) -> Result<(), String> {
+fn walk_dir<F>(root: &Path, current: &Path, entries: &mut Vec<FileEntry>, progress_cb: &F) -> Result<(), String>
+where
+    F: Fn(TorrentCreateProgress),
+{
     let read = fs::read_dir(current).map_err(|e| format!("Impossible de lire {}: {}", current.display(), e))?;
     for entry in read {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
         if path.is_dir() {
-            walk_dir(root, &path, entries)?;
+            walk_dir(root, &path, entries, progress_cb)?;
         } else if path.is_file() {
             let meta = path.metadata().map_err(|e| e.to_string())?;
             if meta.len() == 0 {
@@ -90,6 +96,15 @@ fn walk_dir(root: &Path, current: &Path, entries: &mut Vec<FileEntry>) -> Result
                 absolute_path: path,
                 size: meta.len(),
             });
+
+            // Emit progress every 100 files
+            if entries.len() % 100 == 0 {
+                progress_cb(TorrentCreateProgress {
+                    phase: "scanning".into(),
+                    percent: 0.0,
+                    message: format!("{} fichiers trouvés...", entries.len()),
+                });
+            }
         }
     }
     Ok(())
@@ -161,7 +176,7 @@ where
         message: "Analyse des fichiers...".into(),
     });
 
-    let (name, files) = scan_files(source)?;
+    let (name, files) = scan_files(source, &progress_cb)?;
     let is_single = source.is_file();
     let total_size: u64 = files.iter().map(|f| f.size).sum();
 

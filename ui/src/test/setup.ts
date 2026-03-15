@@ -51,6 +51,16 @@ const localStorageMock = (() => {
 })();
 Object.defineProperty(globalThis, "localStorage", { value: localStorageMock });
 
+// Mock clipboard API
+Object.defineProperty(navigator, "clipboard", {
+  value: {
+    writeText: vi.fn().mockResolvedValue(undefined),
+    readText: vi.fn().mockResolvedValue(""),
+  },
+  writable: true,
+  configurable: true,
+});
+
 // Initialize i18n for tests — force French
 import i18n from "../i18n";
 i18n.changeLanguage("fr");

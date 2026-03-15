@@ -169,13 +169,20 @@ function App() {
               {state.progress && (
                 <>
                   <div className="w-full bg-surface-raised rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-blue-500 h-full transition-all duration-300"
-                      style={{ width: `${Math.min(state.progress.percent, 100)}%` }}
-                    />
+                    {state.progress.percent > 0 ? (
+                      <div
+                        className="bg-blue-500 h-full transition-all duration-300"
+                        style={{ width: `${Math.min(state.progress.percent, 100)}%` }}
+                      />
+                    ) : (
+                      <div
+                        className="bg-blue-500 h-full w-1/3 rounded-full"
+                        style={{ animation: "indeterminate 1.5s ease-in-out infinite" }}
+                      />
+                    )}
                   </div>
                   <p className="text-sm text-fg-faint">
-                    {state.progress.phase === "scanning" && t("torrentCreator.scanning")}
+                    {state.progress.phase === "scanning" && (state.progress.message || t("torrentCreator.scanning"))}
                     {state.progress.phase === "hashing" && t("torrentCreator.hashing", { percent: Math.round(state.progress.percent) })}
                     {state.progress.phase === "writing" && t("torrentCreator.writing")}
                   </p>
@@ -309,6 +316,7 @@ function App() {
             mediaAnalysis={state.mediaAnalysis}
             torrentFilePath={torrentFilePath}
             torrentInfo={torrentInfo}
+            onReset={reset}
           />
         )}
 
