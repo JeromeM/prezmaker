@@ -106,7 +106,8 @@ export function usePrezMaker() {
           gamePayload: gamePayload ?? null,
           appPayload: appPayload ?? null,
         });
-        const html = await invoke<string>("convert_bbcode", { bbcode: result.bbcode });
+        // Use native HTML from template engine, fall back to BBCode conversion
+        const html = result.html || await invoke<string>("convert_bbcode", { bbcode: result.bbcode });
         const presentationMeta: PresentationMeta = meta ?? {
           title: "Présentation",
           contentType,
