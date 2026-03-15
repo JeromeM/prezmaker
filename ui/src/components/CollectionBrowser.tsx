@@ -5,7 +5,7 @@ import type { Collection, SavedPresentation, PresentationMeta, ContentType } fro
 
 interface Props {
   onClose: () => void;
-  onLoad: (bbcode: string, html: string, meta: PresentationMeta) => void;
+  onLoad: (bbcode: string, html: string, meta: PresentationMeta, torrentPath?: string | null) => void;
 }
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
@@ -196,7 +196,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
         posterUrl: entry.poster_url,
         savedRef: { collectionId: entry.collection_id, entryId: entry.id },
       };
-      onLoad(entry.bbcode, html, meta);
+      onLoad(entry.bbcode, html, meta, entry.torrent_path);
     } catch (e) {
       alert(String(e));
     }
