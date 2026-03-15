@@ -1,6 +1,6 @@
 [package]
 name = "prezmaker-tauri"
-version = "1.21.1"
+version = "1.21.2"
 edition = "2021"
 description = "PrezMaker GUI - Tauri backend"
 
