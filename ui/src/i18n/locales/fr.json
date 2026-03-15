@@ -291,6 +291,10 @@
     "spoiler": "Spoiler",
     "alert": "Alerte"
   },
+  "nfo": {
+    "confirmGenerate": "Pas de NFO disponible. Voulez-vous le générer à partir d'un fichier média ?",
+    "confirmRegenerate": "Pas de NFO disponible. Voulez-vous relancer la génération de la présentation ?"
+  },
   "bbcodePanel": {
     "title": "BBCode"
   },

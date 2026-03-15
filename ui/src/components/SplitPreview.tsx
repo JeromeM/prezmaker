@@ -19,11 +19,12 @@ interface Props {
   mediaAnalysis?: MediaAnalysis | null;
   torrentFilePath?: string | null;
   torrentInfo?: TorrentInfo | null;
+  onReset?: () => void;
 }
 
 const PALETTE_KEY = "prezmaker_palette_collapsed";
 
-export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml, onConvert, meta, nfoText, mediaAnalysis: existingAnalysis, torrentFilePath, torrentInfo }: Props) {
+export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml, onConvert, meta, nfoText, mediaAnalysis: existingAnalysis, torrentFilePath, torrentInfo, onReset }: Props) {
   const { t } = useTranslation();
   const [bbcode, setBBCode] = useState(initialBBCode);
   const [html, setHtml] = useState(initialHtml);
@@ -144,11 +145,15 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
       setNfoContent(existingAnalysis.raw_text);
       return;
     }
-    // For games/apps, no MediaInfo to pick — NFO not applicable
+    // No NFO available — ask user
     if (meta.contentType === "jeu" || meta.contentType === "app") {
+      if (onReset && confirm(t("nfo.confirmRegenerate"))) {
+        onReset();
+      }
       return;
     }
-    // Last resort: pick a media file and get raw mediainfo
+    // Films/series: propose to generate from a media file
+    if (!confirm(t("nfo.confirmGenerate"))) return;
     const path = await open({
       filters: [{ name: "Media", extensions: ["mkv", "mp4", "avi", "wmv", "flv", "mov", "ts", "m2ts", "iso"] }],
       multiple: false,

@@ -1,7 +1,7 @@
 # Version Bumper - Mémoire
 
 ## Version actuelle
-- **1.21.0** (depuis feature release : module d'upload C411 avec client API, auto-mapping et dialog)
+- **1.23.1** (depuis 2026-03-15 : patch bump bugfix NFO/reload/game)
 
 ## Fichiers de version à maintenir synchronisés
 1. `/apps/perso/PrezMaker/prezmaker-lib/Cargo.toml` (source de vérité)
@@ -14,6 +14,8 @@
 - 1.1.0 → 1.1.1 (2026-03-10) : bugfix Steam search retry en anglais pour certaines locales
 - 1.3.0 → 1.4.0 (2026-03-11) : feature release majeure (11 fonctionnalités + 10 tests)
 - 1.20.0 → 1.21.0 (2026-03-14) : feature release (module d'upload C411)
+- 1.21.2 → 1.22.0 (2026-03-15) : feature release MINOR bump
+- 1.23.0 → 1.23.1 (2026-03-15) : bugfix NFO persistence, reload, game NFO
 
 ## Règles appliquées
 - **Feature terminée** : MINOR++ (PATCH→0)

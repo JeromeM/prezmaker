@@ -85,14 +85,59 @@ describe("SplitPreview", () => {
     });
   });
 
-  it("NFO button does NOT open file picker for games", async () => {
+  it("NFO button for games without NFO: confirm → Yes calls onReset", async () => {
     const { open } = await import("@tauri-apps/plugin-dialog");
     const mockOpen = vi.mocked(open);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const onReset = vi.fn();
 
     renderWithProviders(
       <SplitPreview
         {...defaultProps}
         meta={{ title: "Cool Game", contentType: "jeu", posterUrl: null }}
+        nfoText={null}
+        mediaAnalysis={null}
+        onReset={onReset}
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText("NFO"));
+
+    expect(mockOpen).not.toHaveBeenCalled();
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringContaining("relancer la génération"),
+    );
+    expect(onReset).toHaveBeenCalled();
+  });
+
+  it("NFO button for games without NFO: confirm → No does nothing", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    const onReset = vi.fn();
+
+    renderWithProviders(
+      <SplitPreview
+        {...defaultProps}
+        meta={{ title: "Cool Game", contentType: "jeu", posterUrl: null }}
+        nfoText={null}
+        mediaAnalysis={null}
+        onReset={onReset}
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText("NFO"));
+
+    expect(onReset).not.toHaveBeenCalled();
+  });
+
+  it("NFO button shows confirm for films without NFO", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    renderWithProviders(
+      <SplitPreview
+        {...defaultProps}
+        meta={{ title: "Film", contentType: "film", posterUrl: null }}
         nfoText={null}
         mediaAnalysis={null}
       />,
@@ -101,8 +146,9 @@ describe("SplitPreview", () => {
     const user = userEvent.setup();
     await user.click(screen.getByText("NFO"));
 
-    // Should NOT have opened file dialog for games
-    expect(mockOpen).not.toHaveBeenCalled();
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringContaining("fichier média"),
+    );
   });
 
   it("passes torrentPath and nfoText to save_to_collection via savedRef", async () => {
