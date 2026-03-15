@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import type { TorrentCreateOptions } from "../types/api";
+
+const SAVED_TRACKER_KEY = "prezmaker_default_tracker";
 
 const PIECE_SIZES = [
   { label: "16 KiB", value: 16 * 1024 },
@@ -28,11 +30,13 @@ interface Props {
 
 export default function TorrentCreator({ initialPath, onCreateTorrent, onCancel }: Props) {
   const { t } = useTranslation();
+  const savedTracker = localStorage.getItem(SAVED_TRACKER_KEY) || "";
   const [sourcePath, setSourcePath] = useState(initialPath || "");
   const [pieceSize, setPieceSize] = useState<number | null>(null);
-  const [isPrivate, setIsPrivate] = useState(false);
-  const [trackers, setTrackers] = useState<string[]>([""]);
+  const [isPrivate, setIsPrivate] = useState(!!savedTracker);
+  const [trackers, setTrackers] = useState<string[]>([savedTracker || ""]);
   const [comment, setComment] = useState("");
+  const [rememberTracker, setRememberTracker] = useState(!!savedTracker);
 
   const browseFile = async () => {
     const path = await open({ multiple: false, directory: false });
@@ -69,6 +73,13 @@ export default function TorrentCreator({ initialPath, onCreateTorrent, onCancel 
       filters: [{ name: "Torrent", extensions: ["torrent"] }],
     });
     if (!outputPath) return;
+
+    const firstTracker = trackers[0]?.trim() || "";
+    if (rememberTracker && firstTracker) {
+      localStorage.setItem(SAVED_TRACKER_KEY, firstTracker);
+    } else {
+      localStorage.removeItem(SAVED_TRACKER_KEY);
+    }
 
     onCreateTorrent({
       source_path: sourcePath,
@@ -158,12 +169,23 @@ export default function TorrentCreator({ initialPath, onCreateTorrent, onCancel 
               </div>
             ))}
           </div>
-          <button
-            onClick={addTracker}
-            className="mt-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            {t("torrentCreator.addTracker")}
-          </button>
+          <div className="flex items-center justify-between mt-2">
+            <button
+              onClick={addTracker}
+              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              {t("torrentCreator.addTracker")}
+            </button>
+            <label className="flex items-center gap-1.5 text-xs text-fg-dim cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rememberTracker}
+                onChange={(e) => setRememberTracker(e.target.checked)}
+                className="accent-blue-500"
+              />
+              {t("torrentCreator.rememberTracker")}
+            </label>
+          </div>
         </div>
 
         {/* Comment */}

@@ -68,7 +68,8 @@
     "scanning": "Scanning files...",
     "hashing": "Hashing pieces... {{percent}}%",
     "writing": "Writing .torrent file...",
-    "noSource": "Please select a source file or folder"
+    "noSource": "Please select a source file or folder",
+    "rememberTracker": "Remember this tracker"
   },
   "settings": {
     "title": "Settings",
