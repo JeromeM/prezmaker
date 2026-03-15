@@ -7,11 +7,13 @@ mod tags;
 
 use serde::{Deserialize, Serialize};
 
+use crate::formatters::OutputFormat;
 use crate::models::Rating;
 
 /// Extra context for composite blocks that need model-level data
 #[derive(Default)]
 pub struct RenderContext {
+    pub output_format: OutputFormat,
     pub ratings: Vec<Rating>,
     pub poster_url: Option<String>,
     pub cover_url: Option<String>,

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::formatters::bbcode;
+use crate::formatters::OutputFormat;
 
 use super::{format_date_fr, translate_status};
 use super::blocks::format_system_reqs;
@@ -198,12 +199,12 @@ pub fn build_game_data(game: &crate::models::Game) -> HashMap<String, String> {
     // System requirements
     if let Some(ref reqs) = game.min_reqs {
         if !reqs.is_empty() {
-            data.insert("config_mini".into(), format_system_reqs(reqs));
+            data.insert("config_mini".into(), format_system_reqs(reqs, OutputFormat::Bbcode));
         }
     }
     if let Some(ref reqs) = game.rec_reqs {
         if !reqs.is_empty() {
-            data.insert("config_reco".into(), format_system_reqs(reqs));
+            data.insert("config_reco".into(), format_system_reqs(reqs, OutputFormat::Bbcode));
         }
     }
 

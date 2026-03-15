@@ -1,31 +1,33 @@
-use crate::formatters::bbcode;
+use crate::formatters::dispatch;
+use crate::formatters::OutputFormat;
 
 pub fn render_ratings_block(
     ratings: &[crate::models::Rating],
     title_color: &str,
+    fmt: OutputFormat,
 ) -> String {
     if ratings.is_empty() {
         return String::new();
     }
 
     let mut out = String::new();
-    out.push_str(&bbcode::section_heading("Notes", title_color));
+    out.push_str(&dispatch::section_heading(fmt, "Notes", title_color, None));
     out.push('\n');
 
     let mut ratings_table = String::new();
     let mut header_row = String::new();
     for rating in ratings {
-        header_row.push_str(&bbcode::th(&rating.source));
+        header_row.push_str(&dispatch::th(fmt, &rating.source, None));
     }
-    ratings_table.push_str(&bbcode::tr(&header_row));
+    ratings_table.push_str(&dispatch::tr(fmt, &header_row, None));
     let mut values_row = String::new();
     for rating in ratings {
-        values_row.push_str(&bbcode::td(&bbcode::center(
-            &bbcode::colored_rating(rating.value, rating.max),
-        )));
+        values_row.push_str(&dispatch::td(fmt, &dispatch::center(fmt,
+            &dispatch::colored_rating(fmt, rating.value, rating.max), None,
+        ), None));
     }
-    ratings_table.push_str(&bbcode::tr(&values_row));
-    out.push_str(&bbcode::table(&ratings_table));
+    ratings_table.push_str(&dispatch::tr(fmt, &values_row, None));
+    out.push_str(&dispatch::table(fmt, &ratings_table, None));
 
     out
 }
@@ -33,12 +35,10 @@ pub fn render_ratings_block(
 pub fn render_movie_tech_block(
     tech: Option<&crate::models::MediaTechInfo>,
     title_color: &str,
+    fmt: OutputFormat,
 ) -> String {
     let mut out = String::new();
-    out.push_str(&bbcode::sub_heading(
-        "Informations techniques",
-        title_color,
-    ));
+    out.push_str(&dispatch::sub_heading(fmt, "Informations techniques", title_color, None));
     out.push('\n');
 
     let quality_val = tech.and_then(|t| t.quality.as_deref()).unwrap_or(" ");
@@ -63,15 +63,15 @@ pub fn render_movie_tech_block(
     let mut tech_table = String::new();
     let mut header_row = String::new();
     for h in &headers {
-        header_row.push_str(&bbcode::th(h));
+        header_row.push_str(&dispatch::th(fmt, h, None));
     }
-    tech_table.push_str(&bbcode::tr(&header_row));
+    tech_table.push_str(&dispatch::tr(fmt, &header_row, None));
     let mut val_row = String::new();
     for v in &values {
-        val_row.push_str(&bbcode::td(&bbcode::center(v)));
+        val_row.push_str(&dispatch::td(fmt, &dispatch::center(fmt, v, None), None));
     }
-    tech_table.push_str(&bbcode::tr(&val_row));
-    out.push_str(&bbcode::table(&tech_table));
+    tech_table.push_str(&dispatch::tr(fmt, &val_row, None));
+    out.push_str(&dispatch::table(fmt, &tech_table, None));
 
     out
 }
@@ -79,12 +79,10 @@ pub fn render_movie_tech_block(
 pub fn render_game_tech_block(
     tech: Option<&crate::models::TechInfo>,
     title_color: &str,
+    fmt: OutputFormat,
 ) -> String {
     let mut out = String::new();
-    out.push_str(&bbcode::sub_heading(
-        "Informations techniques",
-        title_color,
-    ));
+    out.push_str(&dispatch::sub_heading(fmt, "Informations techniques", title_color, None));
     out.push('\n');
 
     let mut tech_headers: Vec<&str> = vec!["Plateforme", "Langue(s)", "Taille"];
@@ -96,9 +94,9 @@ pub fn render_game_tech_block(
     let mut tech_table = String::new();
     let mut header_row = String::new();
     for h in &tech_headers {
-        header_row.push_str(&bbcode::th(h));
+        header_row.push_str(&dispatch::th(fmt, h, None));
     }
-    tech_table.push_str(&bbcode::tr(&header_row));
+    tech_table.push_str(&dispatch::tr(fmt, &header_row, None));
     let mut values_row = String::new();
     if let Some(t) = tech {
         let mut values: Vec<&str> = vec![&t.platform, &t.languages, &t.size];
@@ -107,20 +105,20 @@ pub fn render_game_tech_block(
         }
         for val in &values {
             let display = if val.is_empty() { " " } else { val };
-            values_row.push_str(&bbcode::td(&bbcode::center(display)));
+            values_row.push_str(&dispatch::td(fmt, &dispatch::center(fmt, display, None), None));
         }
     } else {
         for _ in &tech_headers {
-            values_row.push_str(&bbcode::td(&bbcode::center(" ")));
+            values_row.push_str(&dispatch::td(fmt, &dispatch::center(fmt, " ", None), None));
         }
     }
-    tech_table.push_str(&bbcode::tr(&values_row));
-    out.push_str(&bbcode::table(&tech_table));
+    tech_table.push_str(&dispatch::tr(fmt, &values_row, None));
+    out.push_str(&dispatch::table(fmt, &tech_table, None));
 
     out
 }
 
-pub(crate) fn format_system_reqs(reqs: &crate::models::SystemReqs) -> String {
+pub(crate) fn format_system_reqs(reqs: &crate::models::SystemReqs, fmt: OutputFormat) -> String {
     let fields: [(&str, &str); 5] = [
         ("OS", &reqs.os),
         ("Processeur", &reqs.cpu),
@@ -131,7 +129,7 @@ pub(crate) fn format_system_reqs(reqs: &crate::models::SystemReqs) -> String {
     fields
         .iter()
         .filter(|(_, v)| !v.is_empty())
-        .map(|(label, value)| bbcode::field(label, value))
+        .map(|(label, value)| dispatch::field(fmt, label, value))
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -140,6 +138,7 @@ pub fn render_game_reqs_block(
     min_reqs: Option<&crate::models::SystemReqs>,
     rec_reqs: Option<&crate::models::SystemReqs>,
     title_color: &str,
+    fmt: OutputFormat,
 ) -> String {
     let has_min = min_reqs.map_or(false, |r| !r.is_empty());
     let has_rec = rec_reqs.map_or(false, |r| !r.is_empty());
@@ -148,48 +147,44 @@ pub fn render_game_reqs_block(
     }
 
     let mut out = String::new();
-    out.push_str(&bbcode::sub_heading("Configuration requise", title_color));
+    out.push_str(&dispatch::sub_heading(fmt, "Configuration requise", title_color, None));
     out.push('\n');
 
     let mut tech_table = String::new();
 
-    // Header row
     let mut header_row = String::new();
     if has_min {
-        header_row.push_str(&bbcode::th("Configuration minimale"));
+        header_row.push_str(&dispatch::th(fmt, "Configuration minimale", None));
     }
     if has_rec {
-        header_row.push_str(&bbcode::th("Configuration recommandee"));
+        header_row.push_str(&dispatch::th(fmt, "Configuration recommandee", None));
     }
-    tech_table.push_str(&bbcode::tr(&header_row));
+    tech_table.push_str(&dispatch::tr(fmt, &header_row, None));
 
-    // Content row
     let mut content_row = String::new();
     if has_min {
-        content_row.push_str(&bbcode::td(&format_system_reqs(min_reqs.unwrap())));
+        content_row.push_str(&dispatch::td(fmt, &format_system_reqs(min_reqs.unwrap(), fmt), None));
     }
     if has_rec {
-        content_row.push_str(&bbcode::td(&format_system_reqs(rec_reqs.unwrap())));
+        content_row.push_str(&dispatch::td(fmt, &format_system_reqs(rec_reqs.unwrap(), fmt), None));
     }
-    tech_table.push_str(&bbcode::tr(&content_row));
+    tech_table.push_str(&dispatch::tr(fmt, &content_row, None));
 
-    out.push_str(&bbcode::table(&tech_table));
+    out.push_str(&dispatch::table(fmt, &tech_table, None));
     out
 }
 
 pub fn render_screenshots_block(
     screenshots: &[String],
     title_color: &str,
+    fmt: OutputFormat,
 ) -> String {
     if screenshots.is_empty() {
         return String::new();
     }
 
     let mut out = String::new();
-    out.push_str(&bbcode::section_heading(
-        "Screenshots",
-        title_color,
-    ));
+    out.push_str(&dispatch::section_heading(fmt, "Screenshots", title_color, None));
     out.push('\n');
 
     let taken: Vec<_> = screenshots.iter().take(4).collect();
@@ -197,7 +192,7 @@ pub fn render_screenshots_block(
     for pair in taken.chunks(2) {
         let line = pair
             .iter()
-            .map(|ss| bbcode::img_width(ss, 400))
+            .map(|ss| dispatch::img_width(fmt, ss, 400, None))
             .collect::<Vec<_>>()
             .join(" ");
         if !inner.is_empty() {
@@ -205,41 +200,42 @@ pub fn render_screenshots_block(
         }
         inner.push_str(&line);
     }
-    out.push_str(&bbcode::center(&inner));
+    out.push_str(&dispatch::center(fmt, &inner, None));
 
     out
 }
 
 pub fn render_poster_info_block(
     poster_url: Option<&str>,
-    info_bbcode: &str,
+    info_markup: &str,
+    fmt: OutputFormat,
 ) -> String {
     let mut out = String::new();
     let mut table_content = String::new();
     let mut row_content = String::new();
     if let Some(poster) = poster_url {
-        row_content.push_str(&bbcode::td(&bbcode::center(&bbcode::img_width(poster, 300))));
+        row_content.push_str(&dispatch::td(fmt, &dispatch::center(fmt, &dispatch::img_width(fmt, poster, 300, None), None), None));
     }
-    row_content.push_str(&bbcode::td(info_bbcode));
-    table_content.push_str(&bbcode::tr(&row_content));
-    out.push_str(&bbcode::quote(&bbcode::table(&table_content)));
+    row_content.push_str(&dispatch::td(fmt, info_markup, None));
+    table_content.push_str(&dispatch::tr(fmt, &row_content, None));
+    out.push_str(&dispatch::quote(fmt, &dispatch::table(fmt, &table_content, None), None));
     out
 }
 
 pub fn render_cover_info_block(
     cover_url: Option<&str>,
-    info_bbcode: &str,
+    info_markup: &str,
+    fmt: OutputFormat,
 ) -> String {
     let mut out = String::new();
     let mut table_content = String::new();
     let mut row_content = String::new();
     if let Some(cover) = cover_url {
-        row_content
-            .push_str(&bbcode::td(&bbcode::center(&bbcode::img_width(cover, 264))));
+        row_content.push_str(&dispatch::td(fmt, &dispatch::center(fmt, &dispatch::img_width(fmt, cover, 264, None), None), None));
     }
-    row_content.push_str(&bbcode::td(info_bbcode));
-    table_content.push_str(&bbcode::tr(&row_content));
-    out.push_str(&bbcode::quote(&bbcode::table(&table_content)));
+    row_content.push_str(&dispatch::td(fmt, info_markup, None));
+    table_content.push_str(&dispatch::tr(fmt, &row_content, None));
+    out.push_str(&dispatch::quote(fmt, &dispatch::table(fmt, &table_content, None), None));
     out
 }
 
@@ -283,10 +279,10 @@ fn language_to_country_code(lang: &str) -> Option<&'static str> {
     }
 }
 
-/// BBCode cell content with flag + language name
-fn language_with_flag(lang: &str) -> String {
+fn language_with_flag(lang: &str, fmt: OutputFormat) -> String {
     if let Some(code) = language_to_country_code(lang) {
-        format!("[img]https://flagcdn.com/w20/{}.png[/img] {}", code, lang)
+        let flag = dispatch::img(fmt, &format!("https://flagcdn.com/w20/{}.png", code), None);
+        format!("{} {}", flag, lang)
     } else {
         lang.to_string()
     }
@@ -295,9 +291,10 @@ fn language_with_flag(lang: &str) -> String {
 pub fn render_mediainfo_block(
     ma: &crate::models::MediaAnalysis,
     title_color: &str,
+    fmt: OutputFormat,
 ) -> String {
     let mut out = String::new();
-    out.push_str(&bbcode::section_heading("MediaInfo", title_color));
+    out.push_str(&dispatch::section_heading(fmt, "MediaInfo", title_color, None));
     out.push('\n');
 
     // Video info table
@@ -325,58 +322,58 @@ pub fn render_mediainfo_block(
         let mut table = String::new();
         let mut hrow = String::new();
         for h in &headers {
-            hrow.push_str(&bbcode::th(h));
+            hrow.push_str(&dispatch::th(fmt, h, None));
         }
-        table.push_str(&bbcode::tr(&hrow));
+        table.push_str(&dispatch::tr(fmt, &hrow, None));
         let mut vrow = String::new();
         for val in &values {
-            vrow.push_str(&bbcode::td(&bbcode::center(val)));
+            vrow.push_str(&dispatch::td(fmt, &dispatch::center(fmt, val, None), None));
         }
-        table.push_str(&bbcode::tr(&vrow));
-        out.push_str(&bbcode::table(&table));
+        table.push_str(&dispatch::tr(fmt, &vrow, None));
+        out.push_str(&dispatch::table(fmt, &table, None));
     }
 
-    // Audio/Langues table: # | Langue | Canaux | Codec | Bitrate
+    // Audio/Langues table
     if !ma.audio.is_empty() {
         out.push('\n');
-        out.push_str(&bbcode::sub_heading("Langues", title_color));
+        out.push_str(&dispatch::sub_heading(fmt, "Langues", title_color, None));
         out.push('\n');
         let mut table = String::new();
         let mut hrow = String::new();
-        hrow.push_str(&bbcode::th("#"));
-        hrow.push_str(&bbcode::th("Langue"));
-        hrow.push_str(&bbcode::th("Canaux"));
-        hrow.push_str(&bbcode::th("Codec"));
-        hrow.push_str(&bbcode::th("Bitrate"));
-        table.push_str(&bbcode::tr(&hrow));
+        hrow.push_str(&dispatch::th(fmt, "#", None));
+        hrow.push_str(&dispatch::th(fmt, "Langue", None));
+        hrow.push_str(&dispatch::th(fmt, "Canaux", None));
+        hrow.push_str(&dispatch::th(fmt, "Codec", None));
+        hrow.push_str(&dispatch::th(fmt, "Bitrate", None));
+        table.push_str(&dispatch::tr(fmt, &hrow, None));
         for (i, a) in ma.audio.iter().enumerate() {
             let mut row = String::new();
-            row.push_str(&bbcode::td(&bbcode::center(&format!("{}", i + 1))));
+            row.push_str(&dispatch::td(fmt, &dispatch::center(fmt, &format!("{}", i + 1), None), None));
             let lang_cell = match a.language.as_deref() {
-                Some(l) => language_with_flag(l),
+                Some(l) => language_with_flag(l, fmt),
                 None => "-".to_string(),
             };
-            row.push_str(&bbcode::td(&lang_cell));
-            row.push_str(&bbcode::td(&bbcode::center(&a.channels)));
-            row.push_str(&bbcode::td(&bbcode::center(&a.codec)));
-            row.push_str(&bbcode::td(&bbcode::center(a.bitrate.as_deref().unwrap_or("-"))));
-            table.push_str(&bbcode::tr(&row));
+            row.push_str(&dispatch::td(fmt, &lang_cell, None));
+            row.push_str(&dispatch::td(fmt, &dispatch::center(fmt, &a.channels, None), None));
+            row.push_str(&dispatch::td(fmt, &dispatch::center(fmt, &a.codec, None), None));
+            row.push_str(&dispatch::td(fmt, &dispatch::center(fmt, a.bitrate.as_deref().unwrap_or("-"), None), None));
+            table.push_str(&dispatch::tr(fmt, &row, None));
         }
-        out.push_str(&bbcode::table(&table));
+        out.push_str(&dispatch::table(fmt, &table, None));
     }
 
-    // Subtitle table: # | Langue | Format | Type
+    // Subtitle table
     if !ma.subtitles.is_empty() {
         out.push('\n');
-        out.push_str(&bbcode::sub_heading("Sous-Titres", title_color));
+        out.push_str(&dispatch::sub_heading(fmt, "Sous-Titres", title_color, None));
         out.push('\n');
         let mut table = String::new();
         let mut hrow = String::new();
-        hrow.push_str(&bbcode::th("#"));
-        hrow.push_str(&bbcode::th("Langue"));
-        hrow.push_str(&bbcode::th("Format"));
-        hrow.push_str(&bbcode::th("Type"));
-        table.push_str(&bbcode::tr(&hrow));
+        hrow.push_str(&dispatch::th(fmt, "#", None));
+        hrow.push_str(&dispatch::th(fmt, "Langue", None));
+        hrow.push_str(&dispatch::th(fmt, "Format", None));
+        hrow.push_str(&dispatch::th(fmt, "Type", None));
+        table.push_str(&dispatch::tr(fmt, &hrow, None));
         for (i, s) in ma.subtitles.iter().enumerate() {
             let sub_type = if s.is_forced {
                 "FORCED"
@@ -389,17 +386,17 @@ pub fn render_mediainfo_block(
                 "FULL"
             };
             let mut row = String::new();
-            row.push_str(&bbcode::td(&bbcode::center(&format!("{}", i + 1))));
+            row.push_str(&dispatch::td(fmt, &dispatch::center(fmt, &format!("{}", i + 1), None), None));
             let lang_cell = match s.language.as_deref() {
-                Some(l) => language_with_flag(l),
+                Some(l) => language_with_flag(l, fmt),
                 None => "-".to_string(),
             };
-            row.push_str(&bbcode::td(&lang_cell));
-            row.push_str(&bbcode::td(&bbcode::center(&s.format)));
-            row.push_str(&bbcode::td(&bbcode::center(sub_type)));
-            table.push_str(&bbcode::tr(&row));
+            row.push_str(&dispatch::td(fmt, &lang_cell, None));
+            row.push_str(&dispatch::td(fmt, &dispatch::center(fmt, &s.format, None), None));
+            row.push_str(&dispatch::td(fmt, &dispatch::center(fmt, sub_type, None), None));
+            table.push_str(&dispatch::tr(fmt, &row, None));
         }
-        out.push_str(&bbcode::table(&table));
+        out.push_str(&dispatch::table(fmt, &table, None));
     }
 
     out
