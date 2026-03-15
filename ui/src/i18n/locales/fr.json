@@ -68,7 +68,8 @@
     "scanning": "Analyse des fichiers...",
     "hashing": "Calcul des empreintes... {{percent}}%",
     "writing": "Écriture du fichier .torrent...",
-    "noSource": "Veuillez sélectionner un fichier ou dossier source"
+    "noSource": "Veuillez sélectionner un fichier ou dossier source",
+    "rememberTracker": "Mémoriser ce tracker"
   },
   "settings": {
     "title": "Paramètres",
