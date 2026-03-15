@@ -300,6 +300,7 @@ function App() {
 
         {state.step === "done" && (
           <SplitPreview
+            key={state.meta.savedRef?.entryId ?? state.meta.title}
             bbcode={state.bbcode}
             html={state.html}
             onConvert={convertBBCode}
@@ -355,9 +356,9 @@ function App() {
       {showCollections && (
         <CollectionBrowser
           onClose={() => setShowCollections(false)}
-          onLoad={(bbcode, html, meta, torrentPath) => {
+          onLoad={(bbcode, html, meta, torrentPath, nfoText) => {
             setShowCollections(false);
-            loadPresentation(bbcode, html, meta, torrentPath);
+            loadPresentation(bbcode, html, meta, torrentPath, nfoText);
           }}
         />
       )}

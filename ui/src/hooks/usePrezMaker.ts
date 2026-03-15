@@ -381,12 +381,13 @@ export function usePrezMaker() {
     [titleColor, searchForTorrent]
   );
 
-  const loadPresentation = useCallback((bbcode: string, html: string, meta?: PresentationMeta, savedTorrentPath?: string | null) => {
+  const loadPresentation = useCallback((bbcode: string, html: string, meta?: PresentationMeta, savedTorrentPath?: string | null, savedNfoText?: string | null) => {
     setState({
       step: "done",
       bbcode,
       html,
       meta: meta ?? { title: "Collection", contentType: "film", posterUrl: null },
+      nfoText: savedNfoText,
     });
     setTorrentFilePath(savedTorrentPath ?? null);
   }, []);

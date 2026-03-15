@@ -736,6 +736,7 @@ pub fn save_to_collection(
     bbcode: String,
     poster_url: Option<String>,
     torrent_path: Option<String>,
+    nfo_text: Option<String>,
 ) -> Result<db::SavedPresentation, String> {
     state.db.save_presentation(
         &collection_id,
@@ -745,6 +746,7 @@ pub fn save_to_collection(
         &bbcode,
         poster_url.as_deref(),
         torrent_path.as_deref(),
+        nfo_text.as_deref(),
     )
 }
 
