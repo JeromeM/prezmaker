@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use crate::formatters::bbcode;
+use crate::formatters::dispatch;
+use crate::formatters::OutputFormat;
 
 use super::{extract_optional_color, RenderContext};
 use super::blocks::{
@@ -17,7 +18,6 @@ pub fn render(
     pseudo: &str,
 ) -> String {
     // Pass 0: Strip template indentation (leading whitespace per line)
-    // This allows users to indent inside {{#if}} blocks without affecting output
     let mut output = template_body
         .lines()
         .map(|line| line.trim_start())
@@ -60,18 +60,14 @@ pub fn render(
 pub(crate) fn process_conditionals(template: &str, data: &HashMap<String, String>) -> String {
     let mut result = template.to_string();
 
-    // Process from innermost to outermost: find the first {{#if ...}} whose matching
-    // {{/if}} contains no nested {{#if}}.
     loop {
         let start_marker = "{{#if ";
         let end_marker = "{{/if}}";
 
-        // Find the innermost {{#if ...}} by finding the last one before any {{/if}}
         let Some(first_end) = result.find(end_marker) else {
             break;
         };
 
-        // Search backwards from first_end to find the nearest {{#if ...}} before it
         let search_region = &result[..first_end];
         let Some(start_pos) = search_region.rfind(start_marker) else {
             break;
@@ -87,28 +83,23 @@ pub(crate) fn process_conditionals(template: &str, data: &HashMap<String, String
         let block_end = first_end;
         let full_end = block_end + end_marker.len();
 
-        // Evaluate condition
         let condition_met = evaluate_condition(condition_str, data);
 
-        // Extract block content: skip the newline right after {{#if ...}} opening
         let mut content_start = block_start;
         let content_end = block_end;
         if result.as_bytes().get(content_start) == Some(&b'\n') {
             content_start += 1;
         }
 
-        // Consume the newline after {{/if}} if present
         let mut consume_end = full_end;
         if result.as_bytes().get(consume_end) == Some(&b'\n') {
             consume_end += 1;
         }
 
-        // If {{#if ...}} is at the start of a line, also consume leading whitespace on that line
         let mut consume_start = start_pos;
         if consume_start > 0 && result.as_bytes().get(consume_start - 1) == Some(&b'\n') {
-            // Already at line start, nothing extra to consume
+            // Already at line start
         } else {
-            // Check if everything before on this line is whitespace
             let line_start = result[..consume_start].rfind('\n').map_or(0, |p| p + 1);
             if result[line_start..consume_start].chars().all(|c| c == ' ' || c == '\t') {
                 consume_start = line_start;
@@ -126,13 +117,7 @@ pub(crate) fn process_conditionals(template: &str, data: &HashMap<String, String
     result
 }
 
-/// Evaluate a conditional expression.
-/// Supports:
-///   - `tag` → true if tag exists and is non-empty
-///   - `tag > value`, `tag >= value`, `tag < value`, `tag <= value` → numeric comparison
-///   - `tag == value`, `tag != value` → string or numeric comparison
 pub(crate) fn evaluate_condition(condition: &str, data: &HashMap<String, String>) -> bool {
-    // Try to parse as comparison
     let operators = [">=", "<=", "!=", "==", ">", "<"];
     for op in &operators {
         if let Some(pos) = condition.find(op) {
@@ -144,7 +129,6 @@ pub(crate) fn evaluate_condition(condition: &str, data: &HashMap<String, String>
                 None => return false,
             };
 
-            // Try numeric comparison first
             if let (Ok(lhs), Ok(rhs)) = (data_val.parse::<f64>(), compare_val.parse::<f64>()) {
                 return match *op {
                     ">=" => lhs >= rhs,
@@ -157,16 +141,14 @@ pub(crate) fn evaluate_condition(condition: &str, data: &HashMap<String, String>
                 };
             }
 
-            // Fall back to string comparison for == and !=
             return match *op {
                 "==" => data_val == compare_val,
                 "!=" => data_val != compare_val,
-                _ => false, // Can't do > < on non-numeric
+                _ => false,
             };
         }
     }
 
-    // Simple existence check
     let tag = condition.to_lowercase();
     data.get(&tag).map(|v| !v.is_empty()).unwrap_or(false)
 }
@@ -174,7 +156,6 @@ pub(crate) fn evaluate_condition(condition: &str, data: &HashMap<String, String>
 pub(crate) fn replace_data_tags(template: &str, data: &HashMap<String, String>) -> String {
     let mut result = template.to_string();
 
-    // Sort keys by length descending to avoid partial replacements
     let mut keys: Vec<&String> = data.keys().collect();
     keys.sort_by(|a, b| b.len().cmp(&a.len()));
 
@@ -207,7 +188,6 @@ pub(crate) fn render_layout_tags(template: &str, ctx: &RenderContext, title_colo
                 }
             }
         }
-        // Advance by one UTF-8 character
         if pos < bytes.len() {
             let b = bytes[pos];
             let char_len = if b < 0x80 { 1 }
@@ -223,20 +203,63 @@ pub(crate) fn render_layout_tags(template: &str, ctx: &RenderContext, title_colo
     result
 }
 
+/// Parse optional style from tag arg: `content | css-style`
+/// Returns (content, Option<style>)
+fn parse_style(arg: &str) -> (&str, Option<&str>) {
+    // Find pipe separator that's not inside a URL (not preceded by :/)
+    // We search from the end to find the LAST pipe
+    if let Some(pipe_pos) = arg.rfind(" | ") {
+        let content = arg[..pipe_pos].trim();
+        let style = arg[pipe_pos + 3..].trim();
+        if !style.is_empty() {
+            return (content, Some(style));
+        }
+    }
+    (arg, None)
+}
+
+/// Parse style from a tag that has no colon arg (e.g. {{hr | border-color:red}})
+fn parse_style_no_arg(tag_content: &str) -> (Option<&str>, Option<&str>) {
+    if let Some(pipe_pos) = tag_content.find(" | ") {
+        let tag = tag_content[..pipe_pos].trim();
+        let style = tag_content[pipe_pos + 3..].trim();
+        if !style.is_empty() {
+            return (Some(tag), Some(style));
+        }
+        return (Some(tag), None);
+    }
+    (None, None)
+}
+
 fn render_single_layout_tag(
     tag_content: &str,
     ctx: &RenderContext,
     title_color: &str,
     pseudo: &str,
 ) -> Option<String> {
-    // Parse tag:arg format
-    let (tag_name, arg) = if let Some(colon_pos) = tag_content.find(':') {
+    let fmt = ctx.output_format;
+
+    // Parse tag:arg format, then parse style from arg
+    let (tag_name, raw_arg) = if let Some(colon_pos) = tag_content.find(':') {
         (
             tag_content[..colon_pos].trim(),
             Some(tag_content[colon_pos + 1..].trim()),
         )
     } else {
         (tag_content.trim(), None)
+    };
+
+    // Extract style from arg (for tags with args)
+    let (arg, style) = match raw_arg {
+        Some(a) => {
+            let (content, s) = parse_style(a);
+            (Some(content), s)
+        }
+        None => {
+            // For tags without arg, check if tag_content itself has a style
+            let (_, s) = parse_style_no_arg(tag_content);
+            (None, s)
+        }
     };
 
     match tag_name.to_lowercase().as_str() {
@@ -247,22 +270,22 @@ fn render_single_layout_tag(
         "heading" => {
             let text = arg.unwrap_or("");
             let (label, col) = extract_optional_color(text, title_color);
-            Some(bbcode::heading_title(label, col))
+            Some(dispatch::heading_title(fmt, label, col, style))
         }
         "section" => {
             let text = arg.unwrap_or("");
             let (label, col) = extract_optional_color(text, title_color);
-            Some(bbcode::section_heading(label, col))
+            Some(dispatch::section_heading(fmt, label, col, style))
         }
         "sub_section" => {
             let text = arg.unwrap_or("");
             let (label, col) = extract_optional_color(text, title_color);
-            Some(bbcode::sub_heading(label, col))
+            Some(dispatch::sub_heading(fmt, label, col, style))
         }
         "inline_heading" => {
             let text = arg.unwrap_or("");
             let (label, col) = extract_optional_color(text, title_color);
-            Some(bbcode::inline_heading(label, col))
+            Some(dispatch::inline_heading(fmt, label, col))
         }
 
         // --- Field ---
@@ -273,65 +296,65 @@ fn render_single_layout_tag(
             } else {
                 (text, "")
             };
-            Some(bbcode::field(label, value))
+            Some(dispatch::field(fmt, label, value))
         }
 
         // --- Separator ---
-        "hr" => Some(bbcode::hr()),
+        "hr" => Some(dispatch::hr(fmt, style)),
 
-        // --- Block pairs: opening/closing tags ---
-        // Closing tags
-        "/center" => Some("[/center]".to_string()),
-        "/quote" => Some("[/quote]".to_string()),
-        "/bold" => Some("[/b]".to_string()),
-        "/italic" => Some("[/i]".to_string()),
-        "/underline" => Some("[/u]".to_string()),
-        "/table" => Some("[/table]".to_string()),
-        "/tr" => Some("[/tr]\n".to_string()),
-        "/spoiler" => Some("[/spoiler]".to_string()),
+        // --- Block pairs: closing tags ---
+        "/center" => Some(dispatch::close_center(fmt)),
+        "/quote" => Some(dispatch::close_quote(fmt)),
+        "/bold" => Some(dispatch::close_bold(fmt)),
+        "/italic" => Some(dispatch::close_italic(fmt)),
+        "/underline" => Some(dispatch::close_underline(fmt)),
+        "/table" => Some(dispatch::close_table(fmt)),
+        "/tr" => Some(dispatch::close_tr(fmt)),
+        "/spoiler" => Some(dispatch::close_spoiler(fmt)),
+        "/details" => Some(dispatch::close_details(fmt)),
 
-        // Opening tags: with arg → inline, without arg → opening only
+        // --- Block pairs: opening tags (with arg → inline, without → opening only) ---
         "quote" => {
             match arg {
-                Some(text) if !text.is_empty() => Some(bbcode::quote(text)),
-                _ => Some("[quote]".to_string()),
+                Some(text) if !text.is_empty() => Some(dispatch::quote(fmt, text, style)),
+                _ => Some(dispatch::open_quote(fmt, style)),
             }
         }
         "center" => {
             match arg {
-                Some(text) if !text.is_empty() => Some(bbcode::center(text)),
-                _ => Some("[center]".to_string()),
+                Some(text) if !text.is_empty() => Some(dispatch::center(fmt, text, style)),
+                _ => Some(dispatch::open_center(fmt, style)),
             }
         }
         "bold" => {
             match arg {
-                Some(text) if !text.is_empty() => Some(bbcode::bold(text)),
-                _ => Some("[b]".to_string()),
+                Some(text) if !text.is_empty() => Some(dispatch::bold(fmt, text, style)),
+                _ => Some(dispatch::open_bold(fmt, style)),
             }
         }
         "italic" => {
             match arg {
-                Some(text) if !text.is_empty() => Some(bbcode::italic(text)),
-                _ => Some("[i]".to_string()),
+                Some(text) if !text.is_empty() => Some(dispatch::italic(fmt, text, style)),
+                _ => Some(dispatch::open_italic(fmt, style)),
             }
         }
         "underline" => {
             match arg {
-                Some(text) if !text.is_empty() => Some(bbcode::underline(text)),
-                _ => Some("[u]".to_string()),
+                Some(text) if !text.is_empty() => Some(dispatch::underline(fmt, text, style)),
+                _ => Some(dispatch::open_underline(fmt, style)),
             }
         }
 
         // --- Table tags ---
-        "table" => Some("[table]\n".to_string()),
-        "tr" => Some("[tr]\n".to_string()),
+        "table" => Some(dispatch::open_table(fmt, style)),
+        "tr" => Some(dispatch::open_tr(fmt, style)),
         "td" => {
             let text = arg.unwrap_or("");
-            Some(bbcode::td(text))
+            Some(dispatch::td(fmt, text, style))
         }
         "th" => {
             let text = arg.unwrap_or("");
-            Some(bbcode::th(text))
+            Some(dispatch::th(fmt, text, style))
         }
 
         // --- Color & Size ---
@@ -340,7 +363,7 @@ fn render_single_layout_tag(
             if let Some(sep) = text.find(':') {
                 let hex = &text[..sep];
                 let content = &text[sep + 1..];
-                Some(bbcode::color(hex, content))
+                Some(dispatch::color(fmt, hex, content))
             } else {
                 Some(text.to_string())
             }
@@ -350,7 +373,11 @@ fn render_single_layout_tag(
             if let Some(sep) = text.find(':') {
                 let size_str = &text[..sep];
                 let content = &text[sep + 1..];
-                Some(format!("[size={}]{}[/size]", size_str, content))
+                if let Ok(px) = size_str.parse::<u32>() {
+                    Some(dispatch::size(fmt, px, content))
+                } else {
+                    Some(format!("[size={}]{}[/size]", size_str, content))
+                }
             } else {
                 Some(text.to_string())
             }
@@ -362,29 +389,73 @@ fn render_single_layout_tag(
             if let Some(sep) = text.find(':') {
                 let label = &text[..sep];
                 let content = &text[sep + 1..];
-                Some(bbcode::spoiler(label, content))
+                Some(dispatch::spoiler(fmt, label, content, style))
             } else {
-                // No content → opening tag only
-                if text.is_empty() {
-                    Some("[spoiler]".to_string())
-                } else {
-                    Some(format!("[spoiler={}]", text))
-                }
+                Some(dispatch::open_spoiler(fmt, text, style))
             }
         }
+
+        // --- HTML-exclusive: details/summary ---
+        "details" => {
+            let label = arg.unwrap_or("");
+            let mut result = dispatch::open_details(fmt, style);
+            if !label.is_empty() {
+                result.push_str(&dispatch::summary(fmt, label, None));
+            }
+            Some(result)
+        }
+        "summary" => {
+            let text = arg.unwrap_or("");
+            Some(dispatch::summary(fmt, text, style))
+        }
+
+        // --- Paragraph (HTML-exclusive, pass-through in BBCode) ---
+        "p" => {
+            match arg {
+                Some(text) if !text.is_empty() => Some(dispatch::p(fmt, text, style)),
+                _ => match fmt {
+                    OutputFormat::Html => Some(match style {
+                        Some(s) if !s.is_empty() => format!("<p style=\"{}\">", s),
+                        _ => "<p>".to_string(),
+                    }),
+                    OutputFormat::Bbcode => Some(String::new()),
+                },
+            }
+        }
+        "/p" => match fmt {
+            OutputFormat::Html => Some("</p>".to_string()),
+            OutputFormat::Bbcode => Some("\n".to_string()),
+        },
+
+        // --- Pre (code block) ---
+        "pre" => {
+            match arg {
+                Some(text) if !text.is_empty() => Some(dispatch::pre(fmt, text, style)),
+                _ => match fmt {
+                    OutputFormat::Html => Some(match style {
+                        Some(s) if !s.is_empty() => format!("<pre style=\"{}\">", s),
+                        _ => "<pre>".to_string(),
+                    }),
+                    OutputFormat::Bbcode => Some("[code]".to_string()),
+                },
+            }
+        }
+        "/pre" => match fmt {
+            OutputFormat::Html => Some("</pre>".to_string()),
+            OutputFormat::Bbcode => Some("[/code]".to_string()),
+        },
 
         // --- URL ---
         "url" => {
             let text = arg.unwrap_or("");
-            // Find the label separator (:) AFTER the protocol (://)
             let search_start = text.find("://").map(|p| p + 3).unwrap_or(0);
             if let Some(sep) = text[search_start..].rfind(':') {
                 let actual_sep = search_start + sep;
                 let href = &text[..actual_sep];
                 let label = &text[actual_sep + 1..];
-                Some(bbcode::url(href, label))
+                Some(dispatch::url(fmt, href, label, style))
             } else if !text.is_empty() {
-                Some(bbcode::url(text, text))
+                Some(dispatch::url(fmt, text, text, style))
             } else {
                 Some(String::new())
             }
@@ -393,71 +464,69 @@ fn render_single_layout_tag(
         // --- Images ---
         "img" => {
             let url_full = arg.unwrap_or("");
-            // Check if last segment after ':' is a number (width)
             if let Some(rpos) = url_full.rfind(':') {
                 let candidate = &url_full[rpos + 1..];
                 if let Ok(width) = candidate.parse::<u32>() {
                     let url = &url_full[..rpos];
-                    return Some(bbcode::img_width(url, width));
+                    return Some(dispatch::img_width(fmt, url, width, style));
                 }
             }
-            // No width → original size
-            Some(bbcode::img(url_full))
+            Some(dispatch::img(fmt, url_full, style))
         }
         "img_cover" => {
             let url = arg.unwrap_or("");
-            Some(bbcode::img_width(url, 264))
+            Some(dispatch::img_width(fmt, url, 264, style))
         }
         "img_poster" => {
             let url = arg.unwrap_or("");
-            Some(bbcode::img_width(url, 300))
+            Some(dispatch::img_width(fmt, url, 300, style))
         }
         "img_logo" => {
             let url = arg.unwrap_or("");
-            Some(bbcode::img_width(url, 200))
+            Some(dispatch::img_width(fmt, url, 200, style))
         }
 
         // --- Footer ---
-        "footer" => Some(bbcode::footer(pseudo)),
+        "footer" => Some(dispatch::footer(fmt, pseudo)),
 
         // --- Composite blocks ---
         "ratings_table" => {
-            Some(render_ratings_block(&ctx.ratings, title_color))
+            Some(render_ratings_block(&ctx.ratings, title_color, fmt))
         }
         "tech_table" => {
-            Some(render_movie_tech_block(ctx.tech.as_ref(), title_color))
+            Some(render_movie_tech_block(ctx.tech.as_ref(), title_color, fmt))
         }
         "game_tech_table" => {
-            Some(render_game_tech_block(ctx.game_tech.as_ref(), title_color))
+            Some(render_game_tech_block(ctx.game_tech.as_ref(), title_color, fmt))
         }
         "game_reqs_table" => {
-            Some(render_game_reqs_block(ctx.min_reqs.as_ref(), ctx.rec_reqs.as_ref(), title_color))
+            Some(render_game_reqs_block(ctx.min_reqs.as_ref(), ctx.rec_reqs.as_ref(), title_color, fmt))
         }
         "app_tech_table" => {
-            Some(render_game_tech_block(None, title_color))
+            Some(render_game_tech_block(None, title_color, fmt))
         }
         "mediainfo_table" => {
             if let Some(ref ma) = ctx.media_analysis {
-                Some(render_mediainfo_block(ma, title_color))
+                Some(render_mediainfo_block(ma, title_color, fmt))
             } else {
                 Some(String::new())
             }
         }
         "screenshots_grid" => {
-            Some(render_screenshots_block(&ctx.screenshots, title_color))
+            Some(render_screenshots_block(&ctx.screenshots, title_color, fmt))
         }
         "poster_info" => {
             let info = ctx.info_bbcode.as_deref().unwrap_or("");
-            Some(render_poster_info_block(ctx.poster_url.as_deref(), info))
+            Some(render_poster_info_block(ctx.poster_url.as_deref(), info, fmt))
         }
         "cover_info" => {
             let info = ctx.info_bbcode.as_deref().unwrap_or("");
-            Some(render_cover_info_block(ctx.cover_url.as_deref(), info))
+            Some(render_cover_info_block(ctx.cover_url.as_deref(), info, fmt))
         }
         "logo_info" => {
             let info = ctx.info_bbcode.as_deref().unwrap_or("");
-            Some(render_cover_info_block(ctx.logo_url.as_deref(), info))
+            Some(render_cover_info_block(ctx.logo_url.as_deref(), info, fmt))
         }
-        _ => None, // Unknown tag → leave as-is
+        _ => None,
     }
 }
