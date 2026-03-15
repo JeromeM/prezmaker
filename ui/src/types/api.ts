@@ -182,6 +182,7 @@ export interface MediaAnalysis {
 
 export interface GenerationResult {
   bbcode: string;
+  html: string;
   nfo_text: string;
 }
 

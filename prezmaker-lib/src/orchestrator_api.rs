@@ -2,7 +2,8 @@ use crate::cache::ApiCache;
 use crate::config::Config;
 use crate::error::PrezError;
 use crate::formatters::{app_fmt, game_fmt, movie_fmt, series_fmt};
-use crate::formatters::bbcode;
+use crate::formatters::dispatch;
+use crate::formatters::OutputFormat;
 use crate::models::{Application, Game, MediaAnalysis, MediaTechInfo, Movie, Series, TechInfo};
 use crate::nfo;
 use crate::template_engine::{self, RenderContext};
@@ -37,6 +38,7 @@ pub struct GameDetailsResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerationResult {
     pub bbcode: String,
+    pub html: String,
     pub nfo_text: String,
 }
 
@@ -519,20 +521,34 @@ impl OrchestratorApi {
             template_engine::build_media_analysis_data(&mut data, ma);
         }
 
-        // Build info BBCode for poster_info composite
-        let info_bbcode = self.build_movie_info_bbcode(&movie);
-        let ctx = RenderContext {
+        // Render BBCode
+        let info_bbcode = Self::build_movie_info(&movie, &self.title_color, OutputFormat::Bbcode);
+        let ctx_bb = RenderContext {
+            output_format: OutputFormat::Bbcode,
             ratings: movie.ratings.clone(),
             poster_url: movie.poster_url.clone(),
-            tech,
+            tech: tech.clone(),
             media_analysis: media_analysis.cloned(),
             info_bbcode: Some(info_bbcode),
             ..Default::default()
         };
+        let bbcode = template_engine::render(&tpl.body, &data, &ctx_bb, &self.title_color, &self.pseudo);
 
-        let bbcode = template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo);
+        // Render HTML
+        let info_html = Self::build_movie_info(&movie, &self.title_color, OutputFormat::Html);
+        let ctx_html = RenderContext {
+            output_format: OutputFormat::Html,
+            ratings: movie.ratings.clone(),
+            poster_url: movie.poster_url.clone(),
+            tech,
+            media_analysis: media_analysis.cloned(),
+            info_bbcode: Some(info_html),
+            ..Default::default()
+        };
+        let html = template_engine::render(&tpl.body, &data, &ctx_html, &self.title_color, &self.pseudo);
+
         let nfo_text = nfo::generate_movie_nfo(&movie, media_analysis, &self.pseudo);
-        Ok(GenerationResult { bbcode, nfo_text })
+        Ok(GenerationResult { bbcode, html, nfo_text })
     }
 
     pub async fn generate_serie_from_template(
@@ -565,19 +581,32 @@ impl OrchestratorApi {
             template_engine::build_media_analysis_data(&mut data, ma);
         }
 
-        let info_bbcode = self.build_series_info_bbcode(&series);
-        let ctx = RenderContext {
+        let info_bb = Self::build_series_info(&series, &self.title_color, OutputFormat::Bbcode);
+        let ctx_bb = RenderContext {
+            output_format: OutputFormat::Bbcode,
+            ratings: series.ratings.clone(),
+            poster_url: series.poster_url.clone(),
+            tech: tech.clone(),
+            media_analysis: media_analysis.cloned(),
+            info_bbcode: Some(info_bb),
+            ..Default::default()
+        };
+        let bbcode = template_engine::render(&tpl.body, &data, &ctx_bb, &self.title_color, &self.pseudo);
+
+        let info_html = Self::build_series_info(&series, &self.title_color, OutputFormat::Html);
+        let ctx_html = RenderContext {
+            output_format: OutputFormat::Html,
             ratings: series.ratings.clone(),
             poster_url: series.poster_url.clone(),
             tech,
             media_analysis: media_analysis.cloned(),
-            info_bbcode: Some(info_bbcode),
+            info_bbcode: Some(info_html),
             ..Default::default()
         };
+        let html = template_engine::render(&tpl.body, &data, &ctx_html, &self.title_color, &self.pseudo);
 
-        let bbcode = template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo);
         let nfo_text = nfo::generate_series_nfo(&series, media_analysis, &self.pseudo);
-        Ok(GenerationResult { bbcode, nfo_text })
+        Ok(GenerationResult { bbcode, html, nfo_text })
     }
 
     pub fn generate_jeu_from_template(
@@ -599,21 +628,36 @@ impl OrchestratorApi {
             .map_err(|e| PrezError::Other(e))?;
         let data = template_engine::build_game_data(&game);
 
-        let info_bbcode = self.build_game_info_bbcode(&game);
-        let ctx = RenderContext {
+        let info_bb = Self::build_game_info(&game, OutputFormat::Bbcode);
+        let ctx_bb = RenderContext {
+            output_format: OutputFormat::Bbcode,
             ratings: game.ratings.clone(),
             cover_url: game.cover_url.clone(),
             screenshots: game.screenshots.clone(),
             game_tech: game.tech_info.clone(),
             min_reqs: game.min_reqs.clone(),
             rec_reqs: game.rec_reqs.clone(),
-            info_bbcode: Some(info_bbcode),
+            info_bbcode: Some(info_bb),
             ..Default::default()
         };
+        let bbcode = template_engine::render(&tpl.body, &data, &ctx_bb, &self.title_color, &self.pseudo);
 
-        let bbcode = template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo);
+        let info_html = Self::build_game_info(&game, OutputFormat::Html);
+        let ctx_html = RenderContext {
+            output_format: OutputFormat::Html,
+            ratings: game.ratings.clone(),
+            cover_url: game.cover_url.clone(),
+            screenshots: game.screenshots.clone(),
+            game_tech: game.tech_info.clone(),
+            min_reqs: game.min_reqs.clone(),
+            rec_reqs: game.rec_reqs.clone(),
+            info_bbcode: Some(info_html),
+            ..Default::default()
+        };
+        let html = template_engine::render(&tpl.body, &data, &ctx_html, &self.title_color, &self.pseudo);
+
         let nfo_text = nfo::generate_game_nfo(&game, &self.pseudo);
-        Ok(GenerationResult { bbcode, nfo_text })
+        Ok(GenerationResult { bbcode, html, nfo_text })
     }
 
     pub fn generate_app_from_template(
@@ -626,143 +670,153 @@ impl OrchestratorApi {
             .map_err(|e| PrezError::Other(e))?;
         let data = template_engine::build_app_data(&app);
 
-        let info_bbcode = self.build_app_info_bbcode(&app);
-        let ctx = RenderContext {
+        let info_bb = Self::build_app_info(&app, OutputFormat::Bbcode);
+        let ctx_bb = RenderContext {
+            output_format: OutputFormat::Bbcode,
             logo_url: app.logo_url.clone(),
-            info_bbcode: Some(info_bbcode),
+            info_bbcode: Some(info_bb),
             ..Default::default()
         };
+        let bbcode = template_engine::render(&tpl.body, &data, &ctx_bb, &self.title_color, &self.pseudo);
 
-        let bbcode = template_engine::render(&tpl.body, &data, &ctx, &self.title_color, &self.pseudo);
+        let info_html = Self::build_app_info(&app, OutputFormat::Html);
+        let ctx_html = RenderContext {
+            output_format: OutputFormat::Html,
+            logo_url: app.logo_url.clone(),
+            info_bbcode: Some(info_html),
+            ..Default::default()
+        };
+        let html = template_engine::render(&tpl.body, &data, &ctx_html, &self.title_color, &self.pseudo);
+
         let nfo_text = nfo::generate_app_nfo(&app, &self.pseudo);
-        Ok(GenerationResult { bbcode, nfo_text })
+        Ok(GenerationResult { bbcode, html, nfo_text })
     }
 
-    // --- Info BBCode builders (for poster_info/cover_info composites) ---
+    // --- Info markup builders (for poster_info/cover_info composites) ---
 
-    fn build_movie_info_bbcode(&self, movie: &Movie) -> String {
+    fn build_movie_info(movie: &Movie, title_color: &str, fmt: OutputFormat) -> String {
         let mut info = String::new();
         if !movie.countries.is_empty() {
-            info.push_str(&bbcode::field("Origine", &movie.countries_display()));
+            info.push_str(&dispatch::field(fmt, "Origine", &movie.countries_display()));
             info.push('\n');
         }
         if let Some(ref date) = movie.release_date {
-            info.push_str(&bbcode::field("Sortie", &template_engine::format_date_fr_pub(date)));
+            info.push_str(&dispatch::field(fmt, "Sortie", &template_engine::format_date_fr_pub(date)));
             info.push('\n');
         }
         if let Some(ref dur) = movie.duration_formatted() {
-            info.push_str(&bbcode::field("Duree", dur));
+            info.push_str(&dispatch::field(fmt, "Duree", dur));
             info.push('\n');
         }
         if !movie.directors.is_empty() {
-            info.push_str(&bbcode::field("Realisateur", &movie.directors_display()));
+            info.push_str(&dispatch::field(fmt, "Realisateur", &movie.directors_display()));
             info.push('\n');
         }
         if !movie.genres.is_empty() {
-            info.push_str(&bbcode::field("Genres", &movie.genres_display()));
+            info.push_str(&dispatch::field(fmt, "Genres", &movie.genres_display()));
             info.push('\n');
         }
         if !movie.cast.is_empty() {
             info.push('\n');
-            info.push_str(&bbcode::inline_heading("Casting", &self.title_color));
+            info.push_str(&dispatch::inline_heading(fmt, "Casting", title_color));
             info.push_str("\n\n");
-            info.push_str(&bbcode::field("Acteurs", &movie.cast_display(6)));
+            info.push_str(&dispatch::field(fmt, "Acteurs", &movie.cast_display(6)));
             info.push('\n');
         }
         info
     }
 
-    fn build_series_info_bbcode(&self, series: &Series) -> String {
+    fn build_series_info(series: &Series, title_color: &str, fmt: OutputFormat) -> String {
         let mut info = String::new();
         if !series.countries.is_empty() {
-            info.push_str(&bbcode::field("Origine", &series.countries_display()));
+            info.push_str(&dispatch::field(fmt, "Origine", &series.countries_display()));
             info.push('\n');
         }
         if let Some(ref date) = series.first_air_date {
-            info.push_str(&bbcode::field("Premiere diffusion", &template_engine::format_date_fr_pub(date)));
+            info.push_str(&dispatch::field(fmt, "Premiere diffusion", &template_engine::format_date_fr_pub(date)));
             info.push('\n');
         }
         if let Some(ref status) = series.status {
-            info.push_str(&bbcode::field("Statut", &template_engine::translate_status_pub(status)));
+            info.push_str(&dispatch::field(fmt, "Statut", &template_engine::translate_status_pub(status)));
             info.push('\n');
         }
         if let Some(seasons) = series.seasons_count {
-            info.push_str(&bbcode::field("Saisons", &seasons.to_string()));
+            info.push_str(&dispatch::field(fmt, "Saisons", &seasons.to_string()));
             info.push('\n');
         }
         if let Some(episodes) = series.episodes_count {
-            info.push_str(&bbcode::field("Episodes", &episodes.to_string()));
+            info.push_str(&dispatch::field(fmt, "Episodes", &episodes.to_string()));
             info.push('\n');
         }
         if let Some(ref runtime) = series.runtime_formatted() {
-            info.push_str(&bbcode::field("Duree par episode", runtime));
+            info.push_str(&dispatch::field(fmt, "Duree par episode", runtime));
             info.push('\n');
         }
         if !series.creators.is_empty() {
-            info.push_str(&bbcode::field("Createur(s)", &series.creators_display()));
+            info.push_str(&dispatch::field(fmt, "Createur(s)", &series.creators_display()));
             info.push('\n');
         }
         if !series.networks.is_empty() {
-            info.push_str(&bbcode::field("Chaine / Plateforme", &series.networks_display()));
+            info.push_str(&dispatch::field(fmt, "Chaine / Plateforme", &series.networks_display()));
             info.push('\n');
         }
         if !series.genres.is_empty() {
-            info.push_str(&bbcode::field("Genres", &series.genres_display()));
+            info.push_str(&dispatch::field(fmt, "Genres", &series.genres_display()));
             info.push('\n');
         }
         if !series.cast.is_empty() {
             info.push('\n');
-            info.push_str(&bbcode::inline_heading("Casting", &self.title_color));
+            info.push_str(&dispatch::inline_heading(fmt, "Casting", title_color));
             info.push_str("\n\n");
-            info.push_str(&bbcode::field("Acteurs", &series.cast_display(8)));
+            info.push_str(&dispatch::field(fmt, "Acteurs", &series.cast_display(8)));
             info.push('\n');
         }
         info
     }
 
-    fn build_game_info_bbcode(&self, game: &Game) -> String {
+    fn build_game_info(game: &Game, fmt: OutputFormat) -> String {
         let mut info = String::new();
         if let Some(ref date) = game.release_date {
-            info.push_str(&bbcode::field("Date de sortie", date));
+            info.push_str(&dispatch::field(fmt, "Date de sortie", date));
             info.push('\n');
         }
         if !game.developers.is_empty() {
-            info.push_str(&bbcode::field("Developpeur(s)", &game.developers_display()));
+            info.push_str(&dispatch::field(fmt, "Developpeur(s)", &game.developers_display()));
             info.push('\n');
         }
         if !game.publishers.is_empty() {
-            info.push_str(&bbcode::field("Editeur(s)", &game.publishers_display()));
+            info.push_str(&dispatch::field(fmt, "Editeur(s)", &game.publishers_display()));
             info.push('\n');
         }
         if !game.genres.is_empty() {
-            info.push_str(&bbcode::field("Genres", &game.genres_display()));
+            info.push_str(&dispatch::field(fmt, "Genres", &game.genres_display()));
             info.push('\n');
         }
         info
     }
 
-    fn build_app_info_bbcode(&self, app: &Application) -> String {
+    fn build_app_info(app: &Application, fmt: OutputFormat) -> String {
         let mut info = String::new();
-        info.push_str(&bbcode::field("Nom", &app.name));
+        info.push_str(&dispatch::field(fmt, "Nom", &app.name));
         info.push('\n');
         if let Some(ref version) = app.version {
-            info.push_str(&bbcode::field("Version", version));
+            info.push_str(&dispatch::field(fmt, "Version", version));
             info.push('\n');
         }
         if let Some(ref dev) = app.developer {
-            info.push_str(&bbcode::field("Developpeur", dev));
+            info.push_str(&dispatch::field(fmt, "Developpeur", dev));
             info.push('\n');
         }
         if let Some(ref license) = app.license {
-            info.push_str(&bbcode::field("Licence", license));
+            info.push_str(&dispatch::field(fmt, "Licence", license));
             info.push('\n');
         }
         if let Some(ref website) = app.website {
-            info.push_str(&bbcode::field("Site web", &bbcode::url(website, website)));
+            info.push_str(&dispatch::field(fmt, "Site web", &dispatch::url(fmt, website, website, None)));
             info.push('\n');
         }
         if !app.platforms.is_empty() {
-            info.push_str(&bbcode::field("Plateformes", &app.platforms_display()));
+            info.push_str(&dispatch::field(fmt, "Plateformes", &app.platforms_display()));
             info.push('\n');
         }
         info

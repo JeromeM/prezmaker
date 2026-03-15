@@ -50,6 +50,7 @@ export const mockTorrentInfo: TorrentInfo = {
 
 export const mockGenerationResult: GenerationResult = {
   bbcode: "[center][b]Movie Title[/b][/center]\n[img]https://example.com/poster.jpg[/img]",
+  html: "<div style=\"text-align:center\"><strong>Movie Title</strong></div>",
   nfo_text: "General\nComplete name: Movie.Title.mkv\nFormat: Matroska",
 };
 
