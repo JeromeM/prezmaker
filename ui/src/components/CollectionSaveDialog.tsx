@@ -43,7 +43,7 @@ export default function CollectionSaveDialog({ onSave, onClose }: Props) {
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="bg-surface border border-edge rounded-lg w-full max-w-sm mx-4 shadow-2xl">
         <div className="flex items-center justify-between px-5 py-3 border-b border-edge">
