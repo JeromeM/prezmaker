@@ -77,7 +77,7 @@ describe("CollectionSaveDialog", () => {
   });
 
   it("allows creating a new collection", async () => {
-    mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
+    mockInvoke.mockImplementation(async (cmd: string) => {
       if (cmd === "list_collections") return [];
       if (cmd === "create_collection")
         return { id: "new-col", name: "Nouvelle", created_at: "2026-01-01" };
