@@ -3,7 +3,13 @@ use crate::torrent::ReleaseParsed;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-const BASE_URL: &str = "https://www.c411.me/api";
+const BASE_URL: &str = "https://c411.org/api";
+
+/// Wrapper for API responses: `{ "data": [...] }`
+#[derive(Debug, Deserialize)]
+struct ApiResponse<T> {
+    data: T,
+}
 
 // --- Types ---
 
@@ -73,8 +79,8 @@ impl C411Client {
             .error_for_status()
             .map_err(|e| PrezError::Upload(format!("Fetch categories failed: {}", e)))?;
 
-        let categories: Vec<C411Category> = resp.json().await?;
-        Ok(categories)
+        let wrapper: ApiResponse<Vec<C411Category>> = resp.json().await?;
+        Ok(wrapper.data)
     }
 
     /// GET /api/categories/{subcategoryId}/options
@@ -91,8 +97,8 @@ impl C411Client {
             .error_for_status()
             .map_err(|e| PrezError::Upload(format!("Fetch options failed: {}", e)))?;
 
-        let options: Vec<C411OptionType> = resp.json().await?;
-        Ok(options)
+        let wrapper: ApiResponse<Vec<C411OptionType>> = resp.json().await?;
+        Ok(wrapper.data)
     }
 
     /// POST /api/torrents (multipart/form-data)
