@@ -355,9 +355,9 @@ function App() {
       {showCollections && (
         <CollectionBrowser
           onClose={() => setShowCollections(false)}
-          onLoad={(bbcode, html, meta) => {
+          onLoad={(bbcode, html, meta, torrentPath) => {
             setShowCollections(false);
-            loadPresentation(bbcode, html, meta);
+            loadPresentation(bbcode, html, meta, torrentPath);
           }}
         />
       )}

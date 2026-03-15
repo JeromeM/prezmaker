@@ -170,6 +170,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
         contentType: meta.contentType,
         bbcode,
         posterUrl: meta.posterUrl,
+        torrentPath: torrentFilePath ?? null,
       });
       setSavedRef({ collectionId: result.collection_id, entryId: result.id });
       setSaved(true);
@@ -177,7 +178,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
     } catch (e) {
       alert(String(e));
     }
-  }, [bbcode, meta]);
+  }, [bbcode, meta, torrentFilePath]);
 
   const handleSaveToCollection = useCallback(() => {
     if (savedRef) {
