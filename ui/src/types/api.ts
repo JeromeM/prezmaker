@@ -205,6 +205,7 @@ export interface SavedPresentation {
   content_type: string;
   bbcode: string;
   poster_url: string | null;
+  torrent_path: string | null;
   saved_at: string;
   updated_at: string;
 }
