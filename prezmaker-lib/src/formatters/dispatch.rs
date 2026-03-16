@@ -213,8 +213,8 @@ pub fn open_center(fmt: OutputFormat, style: Option<&str>) -> String {
     match fmt {
         OutputFormat::Bbcode => "[center]".to_string(),
         OutputFormat::Html => match style {
-            Some(s) if !s.is_empty() => format!("<div style=\"text-align:center;{}\">", s),
-            _ => "<div style=\"text-align:center\">".to_string(),
+            Some(s) if !s.is_empty() => format!("<p style=\"text-align:center;{}\">", s),
+            _ => "<p style=\"text-align:center\">".to_string(),
         },
     }
 }
@@ -222,7 +222,7 @@ pub fn open_center(fmt: OutputFormat, style: Option<&str>) -> String {
 pub fn close_center(fmt: OutputFormat) -> String {
     match fmt {
         OutputFormat::Bbcode => "[/center]".to_string(),
-        OutputFormat::Html => "</div>".to_string(),
+        OutputFormat::Html => "</p>".to_string(),
     }
 }
 
@@ -281,10 +281,8 @@ pub fn open_underline(fmt: OutputFormat, style: Option<&str>) -> String {
     match fmt {
         OutputFormat::Bbcode => "[u]".to_string(),
         OutputFormat::Html => match style {
-            Some(s) if !s.is_empty() => {
-                format!("<span style=\"text-decoration:underline;{}\">", s)
-            }
-            _ => "<span style=\"text-decoration:underline\">".to_string(),
+            Some(s) if !s.is_empty() => format!("<u style=\"{}\">", s),
+            _ => "<u>".to_string(),
         },
     }
 }
@@ -292,7 +290,7 @@ pub fn open_underline(fmt: OutputFormat, style: Option<&str>) -> String {
 pub fn close_underline(fmt: OutputFormat) -> String {
     match fmt {
         OutputFormat::Bbcode => "[/u]".to_string(),
-        OutputFormat::Html => "</span>".to_string(),
+        OutputFormat::Html => "</u>".to_string(),
     }
 }
 
