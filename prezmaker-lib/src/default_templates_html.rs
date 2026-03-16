@@ -21,7 +21,6 @@ const DEFAULT_JEU_HTML: &str = r#"{{heading:🎮 {{titre_maj}} 🎮 | font-size:
 {{#if editeurs}}<p style="margin:4px 0"><strong>Éditeur(s) :</strong> {{editeurs}}</p>{{/if}}
 {{#if genres}}<p style="margin:4px 0"><strong>Genres :</strong> {{genres}}</p>{{/if}}
 {{#if plateformes}}<p style="margin:4px 0"><strong>Plateformes :</strong> {{plateformes}}</p>{{/if}}
-{{#if link}}<p style="margin:12px 0"><a href="{{link}}" style="color:#3498db;text-decoration:none">Voir la fiche</a></p>{{/if}}
 </td>
 </tr>
 </table>
@@ -57,7 +56,18 @@ const DEFAULT_JEU_HTML: &str = r#"{{heading:🎮 {{titre_maj}} 🎮 | font-size:
 {{#if ratings_count}}
 {{hr | border:none;height:2px;background:linear-gradient(90deg,transparent,#c0392b,transparent);margin:16px 0}}
 
-{{ratings_table}}
+{{section:⭐ Notes | font-size:20px;margin:16px 0}}
+
+<table style="width:100%;border-collapse:collapse;margin:12px 0;border-radius:8px;overflow:hidden">
+<tr style="background:#1a2744">
+{{#if rating_1_source}}<th style="padding:10px 20px;text-align:center;color:#c0392b;font-size:14px;border-bottom:2px solid #c0392b">{{rating_1_source}}</th>{{/if}}
+{{#if rating_2_source}}<th style="padding:10px 20px;text-align:center;color:#c0392b;font-size:14px;border-bottom:2px solid #c0392b">{{rating_2_source}}</th>{{/if}}
+</tr>
+<tr style="background:#0f1b32">
+{{#if rating_1_display}}<td style="padding:12px 20px;text-align:center;font-size:16px">{{rating_1_display}}</td>{{/if}}
+{{#if rating_2_display}}<td style="padding:12px 20px;text-align:center;font-size:16px">{{rating_2_display}}</td>{{/if}}
+</tr>
+</table>
 {{/if}}
 
 {{hr | border:none;height:2px;background:linear-gradient(90deg,transparent,#c0392b,transparent);margin:16px 0}}

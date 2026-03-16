@@ -126,12 +126,16 @@ pub(crate) fn format_system_reqs(reqs: &crate::models::SystemReqs, fmt: OutputFo
         ("Carte graphique", &reqs.gpu),
         ("Stockage", &reqs.storage),
     ];
+    let sep = match fmt {
+        OutputFormat::Html => "<br>\n",
+        OutputFormat::Bbcode => "\n",
+    };
     fields
         .iter()
         .filter(|(_, v)| !v.is_empty())
         .map(|(label, value)| dispatch::field(fmt, label, value))
         .collect::<Vec<_>>()
-        .join("\n")
+        .join(sep)
 }
 
 pub fn render_game_reqs_block(
