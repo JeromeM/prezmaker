@@ -176,9 +176,10 @@ pub(crate) fn render_layout_tags(template: &str, ctx: &RenderContext, title_colo
 
     while pos < bytes.len() {
         if pos + 1 < bytes.len() && bytes[pos] == b'{' && bytes[pos + 1] == b'{' {
-            if let Some(end) = template[pos + 2..].find("}}") {
-                let tag_content = &template[pos + 2..pos + 2 + end];
-                let after = pos + 2 + end + 2;
+            // Depth-aware search for matching }}
+            if let Some(end_offset) = find_closing_braces(&template[pos + 2..]) {
+                let tag_content = &template[pos + 2..pos + 2 + end_offset];
+                let after = pos + 2 + end_offset + 2;
 
                 if let Some(rendered) = render_single_layout_tag(tag_content, ctx, title_color, pseudo)
                 {
@@ -201,6 +202,29 @@ pub(crate) fn render_layout_tags(template: &str, ctx: &RenderContext, title_colo
     }
 
     result
+}
+
+/// Find the position of the matching `}}` accounting for nested `{{...}}`.
+/// Returns the offset within `s` where `}}` starts (not including the `}}`).
+fn find_closing_braces(s: &str) -> Option<usize> {
+    let bytes = s.as_bytes();
+    let mut depth: u32 = 1;
+    let mut i = 0;
+    while i < bytes.len().saturating_sub(1) {
+        if bytes[i] == b'{' && bytes[i + 1] == b'{' {
+            depth += 1;
+            i += 2;
+        } else if bytes[i] == b'}' && bytes[i + 1] == b'}' {
+            depth -= 1;
+            if depth == 0 {
+                return Some(i);
+            }
+            i += 2;
+        } else {
+            i += 1;
+        }
+    }
+    None
 }
 
 /// Parse optional style from tag arg: `content | css-style`
