@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
-import type { ContentType, ContentTemplate } from "../types/api";
+import type { ContentType, ContentTemplate, OutputFormat } from "../types/api";
 
 interface Props {
   contentType: ContentType;
-  onSelect: (templateName: string) => void;
+  onSelect: (templateName: string, outputFormat: OutputFormat) => void;
   onCancel: () => void;
   onEditTemplates: () => void;
 }
@@ -21,6 +21,7 @@ export default function TemplatePicker({
   const [selected, setSelected] = useState("default");
   const [loading, setLoading] = useState(true);
   const [favoriteName, setFavoriteName] = useState<string | null>(null);
+  const [outputFormat, setOutputFormat] = useState<OutputFormat>("bbcode");
 
   useEffect(() => {
     setLoading(true);
@@ -28,7 +29,6 @@ export default function TemplatePicker({
       invoke<ContentTemplate[]>("list_content_templates", { contentType }),
       invoke<string | null>("get_default_template", { contentType }),
     ]).then(([list, favName]) => {
-      // Sort: user favorite first, then is_default, then by order
       const sorted = [...list].sort((a, b) => {
         if (favName) {
           if (a.name === favName) return -1;
@@ -39,7 +39,6 @@ export default function TemplatePicker({
       });
       setTemplates(sorted);
       setFavoriteName(favName);
-      // Pre-select favorite if it exists, otherwise first
       const initial = favName && sorted.some((tpl) => tpl.name === favName)
         ? favName
         : sorted[0]?.name ?? "default";
@@ -51,11 +50,10 @@ export default function TemplatePicker({
   // If only one template, auto-select it
   useEffect(() => {
     if (!loading && templates.length <= 1) {
-      onSelect(templates[0]?.name ?? "default");
+      onSelect(templates[0]?.name ?? "default", outputFormat);
     }
   }, [templates, loading]);
 
-  // Show spinner while loading or during auto-select (single template)
   if (loading || templates.length <= 1) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -73,6 +71,30 @@ export default function TemplatePicker({
   return (
     <div className="max-w-md mx-auto p-6">
       <h2 className="text-xl font-semibold mb-4">{t("templatePicker.title")}</h2>
+
+      {/* Output format toggle */}
+      <div className="flex items-center gap-1 mb-4 bg-input rounded-lg p-1">
+        <button
+          onClick={() => setOutputFormat("bbcode")}
+          className={`flex-1 text-sm py-1.5 rounded-md transition-colors font-medium ${
+            outputFormat === "bbcode"
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-fg-muted hover:text-fg-bright"
+          }`}
+        >
+          BBCode
+        </button>
+        <button
+          onClick={() => setOutputFormat("html")}
+          className={`flex-1 text-sm py-1.5 rounded-md transition-colors font-medium ${
+            outputFormat === "html"
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-fg-muted hover:text-fg-bright"
+          }`}
+        >
+          HTML
+        </button>
+      </div>
 
       <div className="space-y-2 mb-4">
         {templates.map((tpl) => (
@@ -104,7 +126,7 @@ export default function TemplatePicker({
 
       <div className="flex items-center gap-3">
         <button
-          onClick={() => onSelect(selected)}
+          onClick={() => onSelect(selected, outputFormat)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded text-sm font-medium transition-colors"
         >
           {t("templatePicker.useTemplate")}

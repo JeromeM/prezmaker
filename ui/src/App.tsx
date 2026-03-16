@@ -295,7 +295,7 @@ function App() {
         {state.step === "template_pick" && (
           <TemplatePicker
             contentType={state.pending.contentType}
-            onSelect={(templateName) => confirmTemplate(templateName, state.pending)}
+            onSelect={(templateName, outputFormat) => confirmTemplate(templateName, state.pending, outputFormat)}
             onCancel={reset}
             onEditTemplates={() => setShowTemplateEditor(true)}
           />
@@ -317,6 +317,7 @@ function App() {
             torrentFilePath={torrentFilePath}
             torrentInfo={torrentInfo}
             onReset={reset}
+            outputFormat={state.outputFormat}
           />
         )}
 

@@ -19,6 +19,7 @@ import type {
   TorrentInfo,
   TorrentCreateOptions,
   TorrentCreateProgress,
+  OutputFormat,
 } from "../types/api";
 
 function buildMediaTech(parsed: TorrentInfo["parsed"], sizeFormatted: string): MediaTechInfo {
@@ -93,6 +94,7 @@ export function usePrezMaker() {
       gamePayload?: { game: Game; description: string | null; installation: string | null; tech_info: TechInfo },
       appPayload?: AppPayload,
       meta?: PresentationMeta,
+      chosenFormat?: OutputFormat,
     ) => {
       setState({ step: "generating" });
       try {
@@ -106,14 +108,15 @@ export function usePrezMaker() {
           gamePayload: gamePayload ?? null,
           appPayload: appPayload ?? null,
         });
-        // Use native HTML from template engine, fall back to BBCode conversion
+        const fmt = chosenFormat ?? "bbcode";
+        // Use native HTML from template engine for preview, fall back to BBCode conversion
         const html = result.html || await invoke<string>("convert_bbcode", { bbcode: result.bbcode });
         const presentationMeta: PresentationMeta = meta ?? {
           title: "Présentation",
           contentType,
           posterUrl: null,
         };
-        setState({ step: "done", bbcode: result.bbcode, html, meta: presentationMeta, nfoText: result.nfo_text, mediaAnalysis: mediaAnalysis ?? null });
+        setState({ step: "done", bbcode: result.bbcode, html, meta: presentationMeta, nfoText: result.nfo_text, mediaAnalysis: mediaAnalysis ?? null, outputFormat: fmt });
       } catch (e) {
         setState({ step: "error", message: String(e) });
       }
@@ -330,7 +333,7 @@ export function usePrezMaker() {
 
   // --- Confirm template selection → actually generate ---
   const confirmTemplate = useCallback(
-    async (templateName: string, pending: PendingGeneration) => {
+    async (templateName: string, pending: PendingGeneration, outputFormat?: OutputFormat) => {
       const meta: PresentationMeta = {
         title: pending.title ?? "Présentation",
         contentType: pending.contentType,
@@ -345,6 +348,7 @@ export function usePrezMaker() {
         pending.gamePayload,
         pending.appPayload,
         meta,
+        outputFormat,
       );
     },
     [generateWithTemplate]
