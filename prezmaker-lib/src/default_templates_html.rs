@@ -16,12 +16,12 @@ const DEFAULT_JEU_HTML: &str = r#"{{heading:🎮 {{titre_maj}} 🎮 | font-size:
 </td>
 <td style="vertical-align:top;padding:8px 0">
 <h3 style="color:#c0392b;margin:0 0 12px 0;font-size:16px">Informations</h3>
-{{#if date_sortie}}{{p:{{field:Date de sortie:{{date_sortie}}}} | margin:4px 0}}{{/if}}
-{{#if developpeurs}}{{p:{{field:Développeur(s):{{developpeurs}}}} | margin:4px 0}}{{/if}}
-{{#if editeurs}}{{p:{{field:Éditeur(s):{{editeurs}}}} | margin:4px 0}}{{/if}}
-{{#if genres}}{{p:{{field:Genres:{{genres}}}} | margin:4px 0}}{{/if}}
-{{#if plateformes}}{{p:{{field:Plateformes:{{plateformes}}}} | margin:4px 0}}{{/if}}
-{{#if link}}{{p:{{url:{{link}}:Voir la fiche | color:#3498db;text-decoration:none}} | margin:12px 0}}{{/if}}
+{{#if date_sortie}}<p style="margin:4px 0"><strong>Date de sortie :</strong> {{date_sortie}}</p>{{/if}}
+{{#if developpeurs}}<p style="margin:4px 0"><strong>Développeur(s) :</strong> {{developpeurs}}</p>{{/if}}
+{{#if editeurs}}<p style="margin:4px 0"><strong>Éditeur(s) :</strong> {{editeurs}}</p>{{/if}}
+{{#if genres}}<p style="margin:4px 0"><strong>Genres :</strong> {{genres}}</p>{{/if}}
+{{#if plateformes}}<p style="margin:4px 0"><strong>Plateformes :</strong> {{plateformes}}</p>{{/if}}
+{{#if link}}<p style="margin:12px 0"><a href="{{link}}" style="color:#3498db;text-decoration:none">Voir la fiche</a></p>{{/if}}
 </td>
 </tr>
 </table>

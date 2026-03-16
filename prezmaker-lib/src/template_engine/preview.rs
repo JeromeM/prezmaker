@@ -23,8 +23,46 @@ pub fn preview_template_with_format(
     pseudo: &str,
     output_format: OutputFormat,
 ) -> String {
-    let (data, mut ctx) = build_sample_data(content_type, title_color);
+    let (mut data, mut ctx) = build_sample_data(content_type, title_color);
     ctx.output_format = output_format;
+
+    // Re-render format-sensitive data fields for HTML mode
+    if output_format == OutputFormat::Html {
+        use super::blocks::format_system_reqs;
+        // Re-render config_mini/config_reco with HTML format
+        if let Some(val) = data.get("config_mini").cloned() {
+            if val.contains("[b]") {
+                // Re-build from context if available
+                if let Some(ref reqs) = ctx.min_reqs {
+                    data.insert("config_mini".into(), format_system_reqs(reqs, OutputFormat::Html));
+                }
+            }
+        }
+        if let Some(val) = data.get("config_reco").cloned() {
+            if val.contains("[b]") {
+                if let Some(ref reqs) = ctx.rec_reqs {
+                    data.insert("config_reco".into(), format_system_reqs(reqs, OutputFormat::Html));
+                }
+            }
+        }
+        // Re-render info_bbcode with HTML format
+        if let Some(ref info) = ctx.info_bbcode {
+            if info.contains("[b]") {
+                // Simple BBCode→HTML for the info block
+                let html_info = info
+                    .replace("[b]", "<strong>")
+                    .replace("[/b]", "</strong>")
+                    .replace("[h2]", "<h2>")
+                    .replace("[/h2]", "</h2>")
+                    .replace("[color=#", "<span style=\"color:#")
+                    .replace("[/color]", "</span>");
+                // Simple BBCode→HTML conversion for info block
+                let html_info = html_info.replace("]", "\">");
+                ctx.info_bbcode = Some(html_info);
+            }
+        }
+    }
+
     render(template_body, &data, &ctx, title_color, pseudo)
 }
 
