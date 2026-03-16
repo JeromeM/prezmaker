@@ -37,6 +37,8 @@ pub struct ContentTemplate {
     pub title_color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub order: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_format: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,7 +121,7 @@ pub use data::{
 pub use preview::{preview_template, preview_template_with_format};
 pub use render::render;
 pub use storage::{
-    save_template_meta, reorder_templates, list_templates, get_template,
+    save_template_meta, save_template_format, reorder_templates, list_templates, get_template,
     save_template, delete_template, duplicate_template,
 };
 pub use tags::get_available_tags;

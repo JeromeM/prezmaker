@@ -211,11 +211,13 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
   return (
     <div className="flex-1 flex min-h-0">
       <div className="w-1/2 flex border-r border-edge">
-        <BBCodePalette
-          collapsed={paletteCollapsed}
-          onToggle={togglePalette}
-          onInsertTag={insertTag}
-        />
+        {outputFormat !== "html" && (
+          <BBCodePalette
+            collapsed={paletteCollapsed}
+            onToggle={togglePalette}
+            onInsertTag={insertTag}
+          />
+        )}
         <div className="flex-1 flex flex-col min-w-0">
           <BBCodePanel
             bbcode={source}
