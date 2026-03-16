@@ -9,6 +9,7 @@ import NfoModal from "./NfoModal";
 import CollectionSaveDialog from "./CollectionSaveDialog";
 import UploadDialog from "./UploadDialog";
 import type { PresentationMeta, MediaAnalysis, SavedPresentation, SettingsPayload, TorrentInfo, OutputFormat } from "../types/api";
+import { wrapHtmlDocument } from "../utils/wrapHtml";
 
 interface Props {
   bbcode: string;
@@ -275,7 +276,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
         </div>
       </div>
       <div className="w-1/2 flex flex-col">
-        <HtmlPreview html={html} />
+        <HtmlPreview html={outputFormat === "html" ? wrapHtmlDocument(html) : html} />
       </div>
       {nfoContent && (
         <NfoModal content={nfoContent} title={meta.title} onClose={() => setNfoContent(null)} />

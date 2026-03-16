@@ -147,6 +147,10 @@ pub fn build_series_data(
 }
 
 pub fn build_game_data(game: &crate::models::Game) -> HashMap<String, String> {
+    build_game_data_with_format(game, OutputFormat::Bbcode)
+}
+
+pub fn build_game_data_with_format(game: &crate::models::Game, fmt: OutputFormat) -> HashMap<String, String> {
     let mut data = HashMap::new();
 
     data.insert("titre".into(), game.title.clone());
@@ -199,12 +203,12 @@ pub fn build_game_data(game: &crate::models::Game) -> HashMap<String, String> {
     // System requirements
     if let Some(ref reqs) = game.min_reqs {
         if !reqs.is_empty() {
-            data.insert("config_mini".into(), format_system_reqs(reqs, OutputFormat::Bbcode));
+            data.insert("config_mini".into(), format_system_reqs(reqs, fmt));
         }
     }
     if let Some(ref reqs) = game.rec_reqs {
         if !reqs.is_empty() {
-            data.insert("config_reco".into(), format_system_reqs(reqs, OutputFormat::Bbcode));
+            data.insert("config_reco".into(), format_system_reqs(reqs, fmt));
         }
     }
 

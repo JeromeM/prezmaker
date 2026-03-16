@@ -4,7 +4,7 @@ use crate::formatters::bbcode;
 use crate::formatters::OutputFormat;
 
 use super::{format_date_fr, translate_status, RenderContext};
-use super::data::{build_movie_data, build_series_data, build_game_data, build_app_data, build_media_analysis_data};
+use super::data::{build_movie_data, build_series_data, build_app_data, build_media_analysis_data};
 use super::render::render;
 
 pub fn preview_template(
@@ -23,57 +23,20 @@ pub fn preview_template_with_format(
     pseudo: &str,
     output_format: OutputFormat,
 ) -> String {
-    let (mut data, mut ctx) = build_sample_data(content_type, title_color);
+    let (data, mut ctx) = build_sample_data_with_format(content_type, title_color, output_format);
     ctx.output_format = output_format;
-
-    // Re-render format-sensitive data fields for HTML mode
-    if output_format == OutputFormat::Html {
-        use super::blocks::format_system_reqs;
-        // Re-render config_mini/config_reco with HTML format
-        if let Some(val) = data.get("config_mini").cloned() {
-            if val.contains("[b]") {
-                // Re-build from context if available
-                if let Some(ref reqs) = ctx.min_reqs {
-                    data.insert("config_mini".into(), format_system_reqs(reqs, OutputFormat::Html));
-                }
-            }
-        }
-        if let Some(val) = data.get("config_reco").cloned() {
-            if val.contains("[b]") {
-                if let Some(ref reqs) = ctx.rec_reqs {
-                    data.insert("config_reco".into(), format_system_reqs(reqs, OutputFormat::Html));
-                }
-            }
-        }
-        // Re-render info_bbcode with HTML format
-        if let Some(ref info) = ctx.info_bbcode {
-            if info.contains("[b]") {
-                // Simple BBCode→HTML for the info block
-                let html_info = info
-                    .replace("[b]", "<strong>")
-                    .replace("[/b]", "</strong>")
-                    .replace("[h2]", "<h2>")
-                    .replace("[/h2]", "</h2>")
-                    .replace("[color=#", "<span style=\"color:#")
-                    .replace("[/color]", "</span>");
-                // Simple BBCode→HTML conversion for info block
-                let html_info = html_info.replace("]", "\">");
-                ctx.info_bbcode = Some(html_info);
-            }
-        }
-    }
-
     render(template_body, &data, &ctx, title_color, pseudo)
 }
 
-fn build_sample_data(
+fn build_sample_data_with_format(
     content_type: &str,
     title_color: &str,
+    fmt: OutputFormat,
 ) -> (HashMap<String, String>, RenderContext) {
     match content_type {
         "film" => build_sample_movie(title_color),
         "serie" => build_sample_series(title_color),
-        "jeu" => build_sample_game(title_color),
+        "jeu" => build_sample_game(title_color, fmt),
         "app" => build_sample_app(),
         _ => (HashMap::new(), RenderContext::default()),
     }
@@ -260,7 +223,7 @@ fn build_sample_series_info(series: &crate::models::Series, title_color: &str) -
     info
 }
 
-fn build_sample_game(_title_color: &str) -> (HashMap<String, String>, RenderContext) {
+fn build_sample_game(_title_color: &str, fmt: OutputFormat) -> (HashMap<String, String>, RenderContext) {
     use crate::models::{Game, TechInfo, SystemReqs, Rating, Genre};
 
     let tech_info = TechInfo {
@@ -315,8 +278,8 @@ fn build_sample_game(_title_color: &str) -> (HashMap<String, String>, RenderCont
         rec_reqs: Some(rec_reqs.clone()),
     };
 
-    let data = build_game_data(&game);
-    let info_bbcode = build_sample_game_info(&game);
+    let data = super::data::build_game_data_with_format(&game, fmt);
+    let info_bbcode = build_sample_game_info(&game, fmt);
     let ctx = RenderContext {
         ratings: game.ratings.clone(),
         cover_url: game.cover_url.clone(),
@@ -330,19 +293,20 @@ fn build_sample_game(_title_color: &str) -> (HashMap<String, String>, RenderCont
     (data, ctx)
 }
 
-fn build_sample_game_info(game: &crate::models::Game) -> String {
+fn build_sample_game_info(game: &crate::models::Game, fmt: OutputFormat) -> String {
+    use crate::formatters::dispatch;
     let mut info = String::new();
     if let Some(ref d) = game.release_date {
-        info.push_str(&bbcode::field("Date de sortie", d));
+        info.push_str(&dispatch::field(fmt, "Date de sortie", d));
         info.push('\n');
     }
-    info.push_str(&bbcode::field("Developpeur(s)", &game.developers_display()));
+    info.push_str(&dispatch::field(fmt, "Developpeur(s)", &game.developers_display()));
     info.push('\n');
-    info.push_str(&bbcode::field("Editeur(s)", &game.publishers_display()));
+    info.push_str(&dispatch::field(fmt, "Editeur(s)", &game.publishers_display()));
     info.push('\n');
-    info.push_str(&bbcode::field("Genres", &game.genres_display()));
+    info.push_str(&dispatch::field(fmt, "Genres", &game.genres_display()));
     info.push('\n');
-    info.push_str(&bbcode::field("Plateformes", &game.platforms_display()));
+    info.push_str(&dispatch::field(fmt, "Plateformes", &game.platforms_display()));
     info.push('\n');
     info
 }

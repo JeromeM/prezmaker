@@ -626,8 +626,8 @@ impl OrchestratorApi {
 
         let tpl = template_engine::get_template("jeu", template_name)
             .map_err(|e| PrezError::Other(e))?;
-        let data = template_engine::build_game_data(&game);
-
+        // BBCode render
+        let data_bb = template_engine::build_game_data(&game);
         let info_bb = Self::build_game_info(&game, OutputFormat::Bbcode);
         let ctx_bb = RenderContext {
             output_format: OutputFormat::Bbcode,
@@ -640,8 +640,10 @@ impl OrchestratorApi {
             info_bbcode: Some(info_bb),
             ..Default::default()
         };
-        let bbcode = template_engine::render(&tpl.body, &data, &ctx_bb, &self.title_color, &self.pseudo);
+        let bbcode = template_engine::render(&tpl.body, &data_bb, &ctx_bb, &self.title_color, &self.pseudo);
 
+        // HTML render (with HTML-formatted config)
+        let data_html = template_engine::build_game_data_with_format(&game, OutputFormat::Html);
         let info_html = Self::build_game_info(&game, OutputFormat::Html);
         let ctx_html = RenderContext {
             output_format: OutputFormat::Html,
@@ -654,7 +656,7 @@ impl OrchestratorApi {
             info_bbcode: Some(info_html),
             ..Default::default()
         };
-        let html = template_engine::render(&tpl.body, &data, &ctx_html, &self.title_color, &self.pseudo);
+        let html = template_engine::render(&tpl.body, &data_html, &ctx_html, &self.title_color, &self.pseudo);
 
         let nfo_text = nfo::generate_game_nfo(&game, &self.pseudo);
         Ok(GenerationResult { bbcode, html, nfo_text })

@@ -57,8 +57,6 @@ const DEFAULT_JEU_HTML: &str = r#"{{heading:🎮 {{titre_maj}} 🎮 | font-size:
 {{#if ratings_count}}
 {{hr | border:none;height:2px;background:linear-gradient(90deg,transparent,#c0392b,transparent);margin:16px 0}}
 
-{{section:⭐ Notes | font-size:20px;margin:16px 0}}
-
 {{ratings_table}}
 {{/if}}
 
