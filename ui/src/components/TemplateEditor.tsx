@@ -4,6 +4,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import type { ContentType, ContentTemplate, TemplateTag, SettingsPayload, OutputFormat } from "../types/api";
+import { wrapHtmlDocument } from "../utils/wrapHtml";
 
 interface Props {
   onClose: () => void;
@@ -330,8 +331,7 @@ export default function TemplateEditor({ onClose }: Props) {
         outputFormat: fmt,
       });
       if (fmt === "html") {
-        // HTML output: use directly as preview
-        setPreviewHtml(rendered);
+        setPreviewHtml(wrapHtmlDocument(rendered));
       } else {
         // BBCode output: convert to HTML for preview display
         const html = await invoke<string>("convert_bbcode", { bbcode: rendered });
