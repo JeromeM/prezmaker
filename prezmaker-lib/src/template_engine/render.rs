@@ -242,18 +242,6 @@ fn parse_style(arg: &str) -> (&str, Option<&str>) {
     (arg, None)
 }
 
-/// Parse style from a tag that has no colon arg (e.g. {{hr | border-color:red}})
-fn parse_style_no_arg(tag_content: &str) -> (Option<&str>, Option<&str>) {
-    if let Some(pipe_pos) = tag_content.find(" | ") {
-        let tag = tag_content[..pipe_pos].trim();
-        let style = tag_content[pipe_pos + 3..].trim();
-        if !style.is_empty() {
-            return (Some(tag), Some(style));
-        }
-        return (Some(tag), None);
-    }
-    (None, None)
-}
 
 fn render_single_layout_tag(
     tag_content: &str,
@@ -263,27 +251,18 @@ fn render_single_layout_tag(
 ) -> Option<String> {
     let fmt = ctx.output_format;
 
-    // Parse tag:arg format, then parse style from arg
-    let (tag_name, raw_arg) = if let Some(colon_pos) = tag_content.find(':') {
+    // Step 1: Extract style from the FULL tag_content FIRST (before splitting on :)
+    // This avoids confusing CSS colons (border:none) with tag:arg colons
+    let (content_without_style, style) = parse_style(tag_content);
+
+    // Step 2: Parse tag:arg from the content (without style)
+    let (tag_name, arg) = if let Some(colon_pos) = content_without_style.find(':') {
         (
-            tag_content[..colon_pos].trim(),
-            Some(tag_content[colon_pos + 1..].trim()),
+            content_without_style[..colon_pos].trim(),
+            Some(content_without_style[colon_pos + 1..].trim()),
         )
     } else {
-        (tag_content.trim(), None)
-    };
-
-    // Extract style from arg (for tags with args)
-    let (arg, style) = match raw_arg {
-        Some(a) => {
-            let (content, s) = parse_style(a);
-            (Some(content), s)
-        }
-        None => {
-            // For tags without arg, check if tag_content itself has a style
-            let (_, s) = parse_style_no_arg(tag_content);
-            (None, s)
-        }
+        (content_without_style.trim(), None::<&str>)
     };
 
     match tag_name.to_lowercase().as_str() {
