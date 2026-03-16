@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use crate::formatters::bbcode;
 use crate::formatters::OutputFormat;
 
 use super::{format_date_fr, translate_status};
@@ -227,7 +226,7 @@ pub fn build_game_data_with_format(game: &crate::models::Game, fmt: OutputFormat
         }
     }
 
-    build_ratings_data(&mut data, &game.ratings);
+    build_ratings_data_with_format(&mut data, &game.ratings, fmt);
 
     data
 }
@@ -301,6 +300,11 @@ pub fn build_media_analysis_data(data: &mut HashMap<String, String>, ma: &crate:
 }
 
 pub(crate) fn build_ratings_data(data: &mut HashMap<String, String>, ratings: &[crate::models::Rating]) {
+    build_ratings_data_with_format(data, ratings, OutputFormat::Bbcode);
+}
+
+pub(crate) fn build_ratings_data_with_format(data: &mut HashMap<String, String>, ratings: &[crate::models::Rating], fmt: OutputFormat) {
+    use crate::formatters::dispatch;
     if !ratings.is_empty() {
         data.insert("has_ratings".into(), "true".into());
         data.insert("ratings_count".into(), ratings.len().to_string());
@@ -312,7 +316,7 @@ pub(crate) fn build_ratings_data(data: &mut HashMap<String, String>, ratings: &[
         data.insert(format!("rating_{}_max", idx), format!("{}", rating.max as u32));
         data.insert(
             format!("rating_{}_display", idx),
-            bbcode::colored_rating(rating.value, rating.max),
+            dispatch::colored_rating(fmt, rating.value, rating.max),
         );
     }
 }
