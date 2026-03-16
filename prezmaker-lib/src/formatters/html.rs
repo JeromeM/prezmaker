@@ -34,7 +34,7 @@ fn merge_style(base: &str, user: Option<&str>) -> Option<String> {
 pub fn center(content: &str, style: Option<&str>) -> String {
     let merged = merge_style("text-align:center", style);
     format!(
-        "<div{}>{}</div>",
+        "<p{}>{}</p>",
         style_attr(merged.as_deref()),
         content
     )
@@ -49,12 +49,7 @@ pub fn italic(content: &str, style: Option<&str>) -> String {
 }
 
 pub fn underline(content: &str, style: Option<&str>) -> String {
-    let merged = merge_style("text-decoration:underline", style);
-    format!(
-        "<span{}>{}</span>",
-        style_attr(merged.as_deref()),
-        content
-    )
+    format!("<u{}>{}</u>", style_attr(style), content)
 }
 
 pub fn small(content: &str, style: Option<&str>) -> String {
@@ -303,7 +298,7 @@ mod tests {
     fn test_underline() {
         assert_eq!(
             underline("test", None),
-            "<span style=\"text-decoration:underline\">test</span>"
+            "<u>test</u>"
         );
     }
 
@@ -440,7 +435,7 @@ mod tests {
     fn test_center() {
         assert_eq!(
             center("middle", None),
-            "<div style=\"text-align:center\">middle</div>"
+            "<p style=\"text-align:center\">middle</p>"
         );
     }
 
@@ -448,7 +443,7 @@ mod tests {
     fn test_center_with_style() {
         assert_eq!(
             center("middle", Some("padding:8px")),
-            "<div style=\"text-align:center;padding:8px\">middle</div>"
+            "<p style=\"text-align:center;padding:8px\">middle</p>"
         );
     }
 
@@ -497,7 +492,7 @@ mod tests {
         let result = heading_title("TEST", "c0392b");
         assert_eq!(
             result,
-            "<div style=\"text-align:center\"><h1><span style=\"color:#c0392b\">TEST</span></h1></div>"
+            "<p style=\"text-align:center\"><h1><span style=\"color:#c0392b\">TEST</span></h1></p>"
         );
     }
 
@@ -506,7 +501,7 @@ mod tests {
         let result = section_heading("Notes", "c0392b");
         assert_eq!(
             result,
-            "<div style=\"text-align:center\"><h2><span style=\"color:#c0392b\">Notes</span></h2></div>"
+            "<p style=\"text-align:center\"><h2><span style=\"color:#c0392b\">Notes</span></h2></p>"
         );
     }
 
