@@ -132,12 +132,19 @@ pub fn list_templates(content_type: &str) -> Result<Vec<ContentTemplate>, String
         });
     }
 
-    // Ensure default-html template exists (if available for this content type)
-    if !templates.iter().any(|t| t.name == "default-html") {
-        if let Some(html_body) = crate::default_templates_html::get_default_html(content_type) {
-            let html_path = dir.join("default-html.tpl");
+    // Ensure default-html template exists and is up-to-date
+    if let Some(html_body) = crate::default_templates_html::get_default_html(content_type) {
+        let html_path = dir.join("default-html.tpl");
+        let needs_update = if let Some(existing) = templates.iter().find(|t| t.name == "default-html") {
+            // Re-create if the template contains old broken patterns
+            existing.body.contains("{{p:{{field") || existing.body.contains("{{field:Date de sortie:")
+        } else {
+            true
+        };
+        if needs_update {
             std::fs::write(&html_path, &html_body)
                 .map_err(|e| format!("Cannot write default-html template: {}", e))?;
+            templates.retain(|t| t.name != "default-html");
             templates.push(ContentTemplate {
                 name: "default-html".to_string(),
                 content_type: content_type.to_string(),

@@ -21,7 +21,6 @@ import type {
   TorrentCreateProgress,
   OutputFormat,
 } from "../types/api";
-import { wrapHtmlDocument } from "../utils/wrapHtml";
 
 function buildMediaTech(parsed: TorrentInfo["parsed"], sizeFormatted: string): MediaTechInfo {
   return {
@@ -110,10 +109,9 @@ export function usePrezMaker() {
           appPayload: appPayload ?? null,
         });
         const fmt = chosenFormat ?? "bbcode";
-        // Use native HTML from template engine for preview, fall back to BBCode conversion
-        // Wrap native HTML in a document for preview, or convert BBCode
+        // For preview: wrap HTML or convert BBCode
         const html = (fmt === "html" && result.html)
-          ? wrapHtmlDocument(result.html)
+          ? result.html
           : await invoke<string>("convert_bbcode", { bbcode: result.bbcode });
         const presentationMeta: PresentationMeta = meta ?? {
           title: "Présentation",

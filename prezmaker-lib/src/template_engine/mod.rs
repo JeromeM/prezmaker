@@ -113,7 +113,7 @@ pub use blocks::{
     render_cover_info_block, render_mediainfo_block,
 };
 pub use data::{
-    build_movie_data, build_series_data, build_game_data, build_app_data,
+    build_movie_data, build_series_data, build_game_data, build_game_data_with_format, build_app_data,
     build_media_analysis_data,
 };
 pub use preview::{preview_template, preview_template_with_format};

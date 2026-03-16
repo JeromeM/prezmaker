@@ -57,18 +57,18 @@ pub fn small(content: &str, style: Option<&str>) -> String {
 }
 
 pub fn color(hex: &str, content: &str, style: Option<&str>) -> String {
-    let merged = merge_style(&format!("color:#{}", hex), style);
+    let merged = merge_style(&format!("color:#{};font-weight:inherit", hex), style);
     format!(
-        "<span{}>{}</span>",
+        "<b{}>{}</b>",
         style_attr(merged.as_deref()),
         content
     )
 }
 
 pub fn size(px: u32, content: &str, style: Option<&str>) -> String {
-    let merged = merge_style(&format!("font-size:{}px", px), style);
+    let merged = merge_style(&format!("font-size:{}px;font-weight:inherit", px), style);
     format!(
-        "<span{}>{}</span>",
+        "<b{}>{}</b>",
         style_attr(merged.as_deref()),
         content
     )
@@ -306,7 +306,7 @@ mod tests {
     fn test_color() {
         assert_eq!(
             color("ff0000", "red", None),
-            "<span style=\"color:#ff0000\">red</span>"
+            "<b style=\"color:#ff0000;font-weight:inherit\">red</b>"
         );
     }
 
@@ -314,7 +314,7 @@ mod tests {
     fn test_color_with_style() {
         assert_eq!(
             color("ff0000", "red", Some("font-weight:bold")),
-            "<span style=\"color:#ff0000;font-weight:bold\">red</span>"
+            "<b style=\"color:#ff0000;font-weight:inherit;font-weight:bold\">red</b>"
         );
     }
 
@@ -322,7 +322,7 @@ mod tests {
     fn test_size() {
         assert_eq!(
             size(24, "big", None),
-            "<span style=\"font-size:24px\">big</span>"
+            "<b style=\"font-size:24px;font-weight:inherit\">big</b>"
         );
     }
 
@@ -330,7 +330,7 @@ mod tests {
     fn test_small() {
         assert_eq!(
             small("tiny", None),
-            "<span style=\"font-size:12px\">tiny</span>"
+            "<b style=\"font-size:12px;font-weight:inherit\">tiny</b>"
         );
     }
 
@@ -492,7 +492,7 @@ mod tests {
         let result = heading_title("TEST", "c0392b");
         assert_eq!(
             result,
-            "<p style=\"text-align:center\"><h1><span style=\"color:#c0392b\">TEST</span></h1></p>"
+            "<p style=\"text-align:center\"><h1><b style=\"color:#c0392b;font-weight:inherit\">TEST</b></h1></p>"
         );
     }
 
@@ -501,7 +501,7 @@ mod tests {
         let result = section_heading("Notes", "c0392b");
         assert_eq!(
             result,
-            "<p style=\"text-align:center\"><h2><span style=\"color:#c0392b\">Notes</span></h2></p>"
+            "<p style=\"text-align:center\"><h2><b style=\"color:#c0392b;font-weight:inherit\">Notes</b></h2></p>"
         );
     }
 
