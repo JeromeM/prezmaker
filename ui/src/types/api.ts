@@ -100,6 +100,7 @@ export interface ContentTemplate {
   is_default: boolean;
   title_color?: string | null;
   order?: number | null;
+  output_format?: string | null;
 }
 
 export interface TemplateTag {
