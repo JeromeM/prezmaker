@@ -11,6 +11,7 @@ pub mod torrent;
 pub mod torrent_creator;
 pub mod template_engine;
 pub mod default_templates;
+pub mod default_templates_html;
 pub mod mediainfo;
 pub mod nfo;
 pub mod upload;
