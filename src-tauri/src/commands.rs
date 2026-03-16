@@ -272,11 +272,16 @@ pub fn preview_template(
     body: String,
     content_type: String,
     title_color: Option<String>,
+    output_format: Option<String>,
 ) -> String {
     let config = state.config.lock().unwrap();
     let color = title_color.as_deref().unwrap_or("c0392b");
     let pseudo = &config.preferences.pseudo;
-    template_engine::preview_template(&body, &content_type, color, pseudo)
+    let fmt = match output_format.as_deref() {
+        Some("html") => prezmaker_lib::formatters::OutputFormat::Html,
+        _ => prezmaker_lib::formatters::OutputFormat::Bbcode,
+    };
+    template_engine::preview_template_with_format(&body, &content_type, color, pseudo, fmt)
 }
 
 #[tauri::command]

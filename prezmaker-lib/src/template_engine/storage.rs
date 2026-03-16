@@ -132,6 +132,23 @@ pub fn list_templates(content_type: &str) -> Result<Vec<ContentTemplate>, String
         });
     }
 
+    // Ensure default-html template exists (if available for this content type)
+    if !templates.iter().any(|t| t.name == "default-html") {
+        if let Some(html_body) = crate::default_templates_html::get_default_html(content_type) {
+            let html_path = dir.join("default-html.tpl");
+            std::fs::write(&html_path, &html_body)
+                .map_err(|e| format!("Cannot write default-html template: {}", e))?;
+            templates.push(ContentTemplate {
+                name: "default-html".to_string(),
+                content_type: content_type.to_string(),
+                body: html_body,
+                is_default: false,
+                title_color: None,
+                order: Some(1),
+            });
+        }
+    }
+
     templates.sort_by(|a, b| {
         // Sort by order (None goes last), then alphabetical as tiebreaker
         a.order.unwrap_or(u32::MAX).cmp(&b.order.unwrap_or(u32::MAX))

@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
-import type { ContentType, ContentTemplate, TemplateTag, SettingsPayload } from "../types/api";
+import type { ContentType, ContentTemplate, TemplateTag, SettingsPayload, OutputFormat } from "../types/api";
 
 interface Props {
   onClose: () => void;
@@ -309,6 +309,7 @@ export default function TemplateEditor({ onClose }: Props) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pickedColor, setPickedColor] = useState("e74c3c");
   const [tagSearch, setTagSearch] = useState("");
+  const [outputFormat, setOutputFormat] = useState<OutputFormat>("bbcode");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
@@ -320,23 +321,30 @@ export default function TemplateEditor({ onClose }: Props) {
     });
   }, []);
 
-  const updatePreview = useCallback(async (templateBody: string, ct: string, color: string) => {
+  const updatePreview = useCallback(async (templateBody: string, ct: string, color: string, fmt: OutputFormat) => {
     try {
-      const bbcode = await invoke<string>("preview_template", {
+      const rendered = await invoke<string>("preview_template", {
         body: templateBody,
         contentType: ct,
         titleColor: color,
+        outputFormat: fmt,
       });
-      const html = await invoke<string>("convert_bbcode", { bbcode });
-      setPreviewHtml(html);
+      if (fmt === "html") {
+        // HTML output: use directly as preview
+        setPreviewHtml(rendered);
+      } else {
+        // BBCode output: convert to HTML for preview display
+        const html = await invoke<string>("convert_bbcode", { bbcode: rendered });
+        setPreviewHtml(html);
+      }
     } catch (e) {
       console.error("Preview error:", e);
     }
   }, []);
 
-  const debouncedPreview = useCallback((templateBody: string, ct: string, color: string) => {
+  const debouncedPreview = useCallback((templateBody: string, ct: string, color: string, fmt: OutputFormat) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => updatePreview(templateBody, ct, color), 400);
+    debounceRef.current = setTimeout(() => updatePreview(templateBody, ct, color, fmt), 400);
   }, [updatePreview]);
 
   useEffect(() => {
@@ -383,8 +391,8 @@ export default function TemplateEditor({ onClose }: Props) {
 
   // Update preview when body, contentType or titleColor changes
   useEffect(() => {
-    if (body) debouncedPreview(body, contentType, titleColor);
-  }, [body, contentType, titleColor, debouncedPreview]);
+    if (body) debouncedPreview(body, contentType, titleColor, outputFormat);
+  }, [body, contentType, titleColor, outputFormat, debouncedPreview]);
 
   // Sync scroll between textarea and highlight overlay
   const syncScroll = useCallback(() => {
@@ -633,6 +641,29 @@ export default function TemplateEditor({ onClose }: Props) {
               <option value="jeu">Jeu</option>
               <option value="app">Application</option>
             </select>
+            {/* Output format toggle */}
+            <div className="flex items-center gap-0.5 bg-input rounded-md p-0.5">
+              <button
+                onClick={() => setOutputFormat("bbcode")}
+                className={`text-xs px-2.5 py-1 rounded transition-colors font-medium ${
+                  outputFormat === "bbcode"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-fg-muted hover:text-fg-bright"
+                }`}
+              >
+                BBCode
+              </button>
+              <button
+                onClick={() => setOutputFormat("html")}
+                className={`text-xs px-2.5 py-1 rounded transition-colors font-medium ${
+                  outputFormat === "html"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-fg-muted hover:text-fg-bright"
+                }`}
+              >
+                HTML
+              </button>
+            </div>
           </div>
           <button onClick={onClose} className="text-fg-muted hover:text-fg-bright text-xl leading-none">&times;</button>
         </div>
@@ -789,6 +820,74 @@ export default function TemplateEditor({ onClose }: Props) {
               />
             </div>
             <div className="flex-1 overflow-y-auto">
+              {/* HTML style helpers */}
+              {outputFormat === "html" && !tagSearch.trim() && (
+                <div className="border-b border-edge pb-1">
+                  <div className="px-3 py-1.5 text-xs font-semibold text-fg-muted uppercase tracking-wider">
+                    Styles HTML
+                  </div>
+                  {[
+                    { label: "| style", insert: " | ", desc: "Ajouter un style CSS" },
+                    { label: "background", insert: " | background:#1a2744", desc: "Couleur de fond" },
+                    { label: "border-radius", insert: " | border-radius:8px", desc: "Coins arrondis" },
+                    { label: "padding", insert: " | padding:12px 16px", desc: "Espacement interne" },
+                    { label: "border-left", insert: " | border-left:4px solid #c0392b", desc: "Bordure gauche" },
+                    { label: "box-shadow", insert: " | box-shadow:0 4px 12px rgba(0,0,0,0.3)", desc: "Ombre" },
+                    { label: "gradient hr", insert: " | border:none;height:2px;background:linear-gradient(90deg,transparent,#c0392b,transparent)", desc: "Séparateur dégradé" },
+                  ].map((item) => (
+                    <button
+                      key={item.label}
+                      onClick={() => {
+                        const ta = textareaRef.current;
+                        if (!ta) return;
+                        const pos = ta.selectionStart;
+                        // Find the end of the current tag (before }})
+                        const before = body.substring(0, pos);
+                        const tagEnd = body.indexOf("}}", pos);
+                        if (tagEnd >= 0) {
+                          const newBody = body.substring(0, tagEnd) + item.insert + body.substring(tagEnd);
+                          setBody(newBody);
+                          setDirty(true);
+                          setTimeout(() => {
+                            ta.focus();
+                            ta.setSelectionRange(tagEnd + item.insert.length, tagEnd + item.insert.length);
+                          }, 0);
+                        } else {
+                          // No tag context, insert at cursor
+                          const newBody = before + item.insert + body.substring(pos);
+                          setBody(newBody);
+                          setDirty(true);
+                        }
+                      }}
+                      title={item.desc}
+                      className="w-full text-left px-3 py-1 hover:bg-edge transition-colors group"
+                    >
+                      <div className="text-xs font-mono text-orange-400 group-hover:text-orange-300">{item.label}</div>
+                      <div className="text-[11px] text-fg-dim">{item.desc}</div>
+                    </button>
+                  ))}
+                  {/* HTML-exclusive tags */}
+                  <div className="px-3 py-1.5 text-xs font-semibold text-fg-muted uppercase tracking-wider mt-1">
+                    Tags HTML
+                  </div>
+                  {[
+                    { tag: "details:Titre", desc: "Section dépliable" },
+                    { tag: "/details", desc: "Fin section dépliable" },
+                    { tag: "summary:Titre", desc: "Titre du dépliable" },
+                    { tag: "p:contenu", desc: "Paragraphe" },
+                    { tag: "pre:code", desc: "Bloc pré-formaté" },
+                  ].map((item) => (
+                    <button
+                      key={item.tag}
+                      onClick={() => insertTag(item.tag)}
+                      className="w-full text-left px-3 py-1 hover:bg-edge transition-colors group"
+                    >
+                      <div className="text-xs font-mono text-blue-400 group-hover:text-blue-300">{`{{${item.tag}}}`}</div>
+                      <div className="text-[11px] text-fg-dim">{item.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
               {filteredTagsByCategory.map(([category, categoryTags]) => (
                 <div key={category}>
                   <button
