@@ -11,6 +11,8 @@ struct TemplateMeta {
     title_color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     order: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    output_format: Option<String>,
 }
 
 fn templates_base_dir() -> Result<PathBuf, String> {
@@ -59,7 +61,7 @@ fn load_meta(content_type: &str, name: &str) -> TemplateMeta {
 }
 
 fn save_full_meta(content_type: &str, name: &str, meta: &TemplateMeta) -> Result<(), String> {
-    if meta.title_color.is_some() || meta.order.is_some() {
+    if meta.title_color.is_some() || meta.order.is_some() || meta.output_format.is_some() {
         let path = meta_path(content_type, name)?;
         let json = serde_json::to_string_pretty(meta)
             .map_err(|e| format!("JSON error: {}", e))?;
@@ -76,6 +78,12 @@ fn save_full_meta(content_type: &str, name: &str, meta: &TemplateMeta) -> Result
 pub fn save_template_meta(content_type: &str, name: &str, title_color: Option<String>) -> Result<(), String> {
     let mut meta = load_meta(content_type, name);
     meta.title_color = title_color;
+    save_full_meta(content_type, name, &meta)
+}
+
+pub fn save_template_format(content_type: &str, name: &str, output_format: Option<String>) -> Result<(), String> {
+    let mut meta = load_meta(content_type, name);
+    meta.output_format = output_format;
     save_full_meta(content_type, name, &meta)
 }
 
@@ -104,6 +112,10 @@ pub fn list_templates(content_type: &str) -> Result<Vec<ContentTemplate>, String
                 let body =
                     std::fs::read_to_string(&path).map_err(|e| format!("Read error: {}", e))?;
                 let meta = load_meta(content_type, &name);
+                // Auto-detect format: "default-html" → html, or from metadata
+                let fmt = meta.output_format.or_else(|| {
+                    if name.contains("-html") { Some("html".to_string()) } else { None }
+                });
                 templates.push(ContentTemplate {
                     name: name.clone(),
                     content_type: content_type.to_string(),
@@ -111,6 +123,7 @@ pub fn list_templates(content_type: &str) -> Result<Vec<ContentTemplate>, String
                     is_default: name == "default",
                     title_color: meta.title_color,
                     order: meta.order,
+                    output_format: fmt,
                 });
             }
         }
@@ -129,6 +142,7 @@ pub fn list_templates(content_type: &str) -> Result<Vec<ContentTemplate>, String
             is_default: true,
             title_color: None,
             order: Some(0),
+            output_format: None, // BBCode (default)
         });
     }
 
@@ -152,6 +166,7 @@ pub fn list_templates(content_type: &str) -> Result<Vec<ContentTemplate>, String
                 is_default: false,
                 title_color: None,
                 order: Some(1),
+                output_format: Some("html".to_string()),
             });
         }
     }
@@ -184,12 +199,16 @@ pub fn get_template(content_type: &str, name: &str) -> Result<ContentTemplate, S
             is_default: true,
             title_color: None,
             order: Some(0),
+            output_format: None,
         });
     }
 
     let body = std::fs::read_to_string(&path)
         .map_err(|e| format!("Cannot read template '{}': {}", name, e))?;
     let meta = load_meta(content_type, &safe);
+    let fmt = meta.output_format.or_else(|| {
+        if safe.contains("-html") { Some("html".to_string()) } else { None }
+    });
     Ok(ContentTemplate {
         name: safe.clone(),
         content_type: content_type.to_string(),
@@ -197,6 +216,7 @@ pub fn get_template(content_type: &str, name: &str) -> Result<ContentTemplate, S
         is_default: safe == "default",
         title_color: meta.title_color,
         order: meta.order,
+        output_format: fmt,
     })
 }
 

@@ -17,11 +17,26 @@ export default function TemplatePicker({
   onEditTemplates,
 }: Props) {
   const { t } = useTranslation();
-  const [templates, setTemplates] = useState<ContentTemplate[]>([]);
+  const [allTemplates, setAllTemplates] = useState<ContentTemplate[]>([]);
   const [selected, setSelected] = useState("default");
   const [loading, setLoading] = useState(true);
   const [favoriteName, setFavoriteName] = useState<string | null>(null);
   const [outputFormat, setOutputFormat] = useState<OutputFormat>("bbcode");
+
+  // Filter templates by selected format
+  const templates = allTemplates
+    .filter((t) => {
+      const tplFormat = t.output_format ?? "bbcode";
+      return tplFormat === outputFormat;
+    })
+    .sort((a, b) => {
+      if (favoriteName) {
+        if (a.name === favoriteName) return -1;
+        if (b.name === favoriteName) return 1;
+      }
+      if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
+      return (a.order ?? 0) - (b.order ?? 0);
+    });
 
   useEffect(() => {
     setLoading(true);
@@ -29,28 +44,24 @@ export default function TemplatePicker({
       invoke<ContentTemplate[]>("list_content_templates", { contentType }),
       invoke<string | null>("get_default_template", { contentType }),
     ]).then(([list, favName]) => {
-      const sorted = [...list].sort((a, b) => {
-        if (favName) {
-          if (a.name === favName) return -1;
-          if (b.name === favName) return 1;
-        }
-        if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
-        return (a.order ?? 0) - (b.order ?? 0);
-      });
-      setTemplates(sorted);
+      setAllTemplates(list);
       setFavoriteName(favName);
-      const initial = favName && sorted.some((tpl) => tpl.name === favName)
-        ? favName
-        : sorted[0]?.name ?? "default";
-      setSelected(initial);
       setLoading(false);
     });
   }, [contentType]);
 
+  // When format changes or loading finishes, select the first template
+  useEffect(() => {
+    if (!loading && templates.length > 0) {
+      const fav = favoriteName && templates.some((t) => t.name === favoriteName);
+      setSelected(fav ? favoriteName! : templates[0].name);
+    }
+  }, [templates, loading, outputFormat, favoriteName]);
+
   // If only one template, auto-select it
   useEffect(() => {
-    if (!loading && templates.length <= 1) {
-      onSelect(templates[0]?.name ?? "default", outputFormat);
+    if (!loading && templates.length === 1) {
+      onSelect(templates[0].name, outputFormat);
     }
   }, [templates, loading]);
 
