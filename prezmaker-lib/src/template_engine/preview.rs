@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::formatters::bbcode;
+use crate::formatters::OutputFormat;
 
 use super::{format_date_fr, translate_status, RenderContext};
 use super::data::{build_movie_data, build_series_data, build_game_data, build_app_data, build_media_analysis_data};
@@ -12,7 +13,18 @@ pub fn preview_template(
     title_color: &str,
     pseudo: &str,
 ) -> String {
-    let (data, ctx) = build_sample_data(content_type, title_color);
+    preview_template_with_format(template_body, content_type, title_color, pseudo, OutputFormat::Bbcode)
+}
+
+pub fn preview_template_with_format(
+    template_body: &str,
+    content_type: &str,
+    title_color: &str,
+    pseudo: &str,
+    output_format: OutputFormat,
+) -> String {
+    let (data, mut ctx) = build_sample_data(content_type, title_color);
+    ctx.output_format = output_format;
     render(template_body, &data, &ctx, title_color, pseudo)
 }
 
