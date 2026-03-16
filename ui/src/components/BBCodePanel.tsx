@@ -6,9 +6,10 @@ interface Props {
   onChange: (bbcode: string) => void;
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   headerActions?: React.ReactNode;
+  label?: string;
 }
 
-export default function BBCodePanel({ bbcode, onChange, textareaRef, headerActions }: Props) {
+export default function BBCodePanel({ bbcode, onChange, textareaRef, headerActions, label }: Props) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
@@ -33,7 +34,7 @@ export default function BBCodePanel({ bbcode, onChange, textareaRef, headerActio
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 bg-[#16213e] border-b border-[#2a2a4a]">
-        <span className="text-sm font-medium text-gray-300">{t("bbcodePanel.title")}</span>
+        <span className="text-sm font-medium text-gray-300">{label ?? t("bbcodePanel.title")}</span>
         <div className="flex items-center gap-2">
           {headerActions}
           <button

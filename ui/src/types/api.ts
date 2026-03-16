@@ -1,4 +1,5 @@
 export type ContentType = "film" | "serie" | "jeu" | "app";
+export type OutputFormat = "bbcode" | "html";
 
 export interface SearchResult {
   id: number;
@@ -290,7 +291,7 @@ export type AppState =
   | { step: "app_form" }
   | { step: "template_pick"; pending: PendingGeneration }
   | { step: "generating"; message?: string }
-  | { step: "done"; bbcode: string; html: string; meta: PresentationMeta; nfoText?: string | null; mediaAnalysis?: MediaAnalysis | null }
+  | { step: "done"; bbcode: string; html: string; meta: PresentationMeta; nfoText?: string | null; mediaAnalysis?: MediaAnalysis | null; outputFormat?: OutputFormat }
   | { step: "error"; message: string }
   | { step: "torrent_parsed"; torrentInfo: TorrentInfo }
   | { step: "torrent_selecting"; results: SearchResult[]; contentType: ContentType; torrentInfo: TorrentInfo };

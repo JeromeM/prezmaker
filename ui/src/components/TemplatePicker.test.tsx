@@ -83,7 +83,7 @@ describe("TemplatePicker", () => {
     renderWithProviders(<TemplatePicker {...defaultProps} />);
 
     await waitFor(() => {
-      expect(defaultProps.onSelect).toHaveBeenCalledWith("default");
+      expect(defaultProps.onSelect).toHaveBeenCalledWith("default", "bbcode");
     });
   });
 });

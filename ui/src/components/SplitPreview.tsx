@@ -8,7 +8,7 @@ import HtmlPreview from "./HtmlPreview";
 import NfoModal from "./NfoModal";
 import CollectionSaveDialog from "./CollectionSaveDialog";
 import UploadDialog from "./UploadDialog";
-import type { PresentationMeta, MediaAnalysis, SavedPresentation, SettingsPayload, TorrentInfo } from "../types/api";
+import type { PresentationMeta, MediaAnalysis, SavedPresentation, SettingsPayload, TorrentInfo, OutputFormat } from "../types/api";
 
 interface Props {
   bbcode: string;
@@ -20,11 +20,12 @@ interface Props {
   torrentFilePath?: string | null;
   torrentInfo?: TorrentInfo | null;
   onReset?: () => void;
+  outputFormat?: OutputFormat;
 }
 
 const PALETTE_KEY = "prezmaker_palette_collapsed";
 
-export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml, onConvert, meta, nfoText, mediaAnalysis: existingAnalysis, torrentFilePath, torrentInfo, onReset }: Props) {
+export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml, onConvert, meta, nfoText, mediaAnalysis: existingAnalysis, torrentFilePath, torrentInfo, onReset, outputFormat = "bbcode" }: Props) {
   const { t } = useTranslation();
   const [bbcode, setBBCode] = useState(initialBBCode);
   const [html, setHtml] = useState(initialHtml);
@@ -51,16 +52,24 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
     meta.savedRef ?? null
   );
 
+  // The "source" is whichever format is active
+  const source = outputFormat === "html" ? html : bbcode;
+
   const handleChange = useCallback(
-    (newBBCode: string) => {
-      setBBCode(newBBCode);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(async () => {
-        const newHtml = await onConvert(newBBCode);
-        setHtml(newHtml);
-      }, 300);
+    (newSource: string) => {
+      if (outputFormat === "html") {
+        setHtml(newSource);
+        // In HTML mode, the preview IS the source
+      } else {
+        setBBCode(newSource);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(async () => {
+          const newHtml = await onConvert(newSource);
+          setHtml(newHtml);
+        }, 300);
+      }
     },
-    [onConvert],
+    [onConvert, outputFormat],
   );
 
   useEffect(() => {
@@ -76,7 +85,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
         const selection = window.getSelection();
         if (!selection || selection.toString() === "") {
           e.preventDefault();
-          navigator.clipboard.writeText(bbcode);
+          navigator.clipboard.writeText(source);
         }
       }
     };
@@ -208,15 +217,16 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
         />
         <div className="flex-1 flex flex-col min-w-0">
           <BBCodePanel
-            bbcode={bbcode}
+            bbcode={source}
             onChange={handleChange}
             textareaRef={textareaRef}
+            label={outputFormat === "html" ? "HTML" : undefined}
             headerActions={
               <div className="flex items-center gap-1.5">
                 {/* Groupe : sauvegarde + NFO */}
                 <button
                   onClick={handleSaveToCollection}
-                  disabled={saved || !bbcode.trim()}
+                  disabled={saved || !source.trim()}
                   className={`text-xs px-2.5 py-1 rounded transition-colors ${
                     saved
                       ? "bg-green-700 text-white"
@@ -274,7 +284,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
         <UploadDialog
           torrentPath={torrentFilePath}
           nfoContent={nfoContent ?? nfoText ?? null}
-          bbcode={bbcode}
+          bbcode={outputFormat === "html" ? html : bbcode}
           meta={meta}
           torrentInfo={torrentInfo ?? null}
           onClose={() => setShowUpload(false)}
