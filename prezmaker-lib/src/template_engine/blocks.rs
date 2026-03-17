@@ -3,7 +3,7 @@ use crate::formatters::OutputFormat;
 
 pub fn render_ratings_block(
     ratings: &[crate::models::Rating],
-    title_color: &str,
+    _title_color: &str,
     fmt: OutputFormat,
 ) -> String {
     if ratings.is_empty() {
@@ -11,8 +11,6 @@ pub fn render_ratings_block(
     }
 
     let mut out = String::new();
-    out.push_str(&dispatch::section_heading(fmt, "Notes", title_color, None));
-    out.push('\n');
 
     let mut ratings_table = String::new();
     let mut header_row = String::new();
@@ -34,12 +32,10 @@ pub fn render_ratings_block(
 
 pub fn render_movie_tech_block(
     tech: Option<&crate::models::MediaTechInfo>,
-    title_color: &str,
+    _title_color: &str,
     fmt: OutputFormat,
 ) -> String {
     let mut out = String::new();
-    out.push_str(&dispatch::sub_heading(fmt, "Informations techniques", title_color, None));
-    out.push('\n');
 
     let quality_val = tech.and_then(|t| t.quality.as_deref()).unwrap_or(" ");
     let codec_val = tech.and_then(|t| t.video_codec.as_deref()).unwrap_or(" ");
@@ -78,12 +74,10 @@ pub fn render_movie_tech_block(
 
 pub fn render_game_tech_block(
     tech: Option<&crate::models::TechInfo>,
-    title_color: &str,
+    _title_color: &str,
     fmt: OutputFormat,
 ) -> String {
     let mut out = String::new();
-    out.push_str(&dispatch::sub_heading(fmt, "Informations techniques", title_color, None));
-    out.push('\n');
 
     let mut tech_headers: Vec<&str> = vec!["Plateforme", "Langue(s)", "Taille"];
     let has_install_size = tech.map_or(false, |t| !t.install_size.is_empty());
@@ -141,7 +135,7 @@ pub(crate) fn format_system_reqs(reqs: &crate::models::SystemReqs, fmt: OutputFo
 pub fn render_game_reqs_block(
     min_reqs: Option<&crate::models::SystemReqs>,
     rec_reqs: Option<&crate::models::SystemReqs>,
-    title_color: &str,
+    _title_color: &str,
     fmt: OutputFormat,
 ) -> String {
     let has_min = min_reqs.map_or(false, |r| !r.is_empty());
@@ -151,8 +145,6 @@ pub fn render_game_reqs_block(
     }
 
     let mut out = String::new();
-    out.push_str(&dispatch::sub_heading(fmt, "Configuration requise", title_color, None));
-    out.push('\n');
 
     let mut tech_table = String::new();
 
@@ -180,7 +172,7 @@ pub fn render_game_reqs_block(
 
 pub fn render_screenshots_block(
     screenshots: &[String],
-    title_color: &str,
+    _title_color: &str,
     fmt: OutputFormat,
 ) -> String {
     if screenshots.is_empty() {
