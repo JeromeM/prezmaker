@@ -15,6 +15,8 @@ const DEFAULT_FILM: &str = r#"{{heading:🎬 {{titre_maj}} 🎬}}
 
 {{hr}}
 
+{{section:Notes}}
+
 {{ratings_table}}
 
 {{hr}}
@@ -29,7 +31,9 @@ const DEFAULT_FILM: &str = r#"{{heading:🎬 {{titre_maj}} 🎬}}
 
 {{hr}}
 
-{{/if}}{{tech_table}}
+{{/if}}{{section:Informations techniques}}
+
+{{tech_table}}
 
 {{footer}}"#;
 
@@ -40,6 +44,8 @@ const DEFAULT_SERIE: &str = r#"{{heading:📺 {{titre_maj}} 📺}}
 
 {{hr}}
 
+{{section:Notes}}
+
 {{ratings_table}}
 
 {{hr}}
@@ -54,7 +60,9 @@ const DEFAULT_SERIE: &str = r#"{{heading:📺 {{titre_maj}} 📺}}
 
 {{hr}}
 
-{{/if}}{{tech_table}}
+{{/if}}{{section:Informations techniques}}
+
+{{tech_table}}
 
 {{footer}}"#;
 
@@ -71,15 +79,23 @@ const DEFAULT_JEU: &str = r#"{{heading:🎮 {{titre_maj}} 🎮}}
 
 {{hr}}
 
-{{/if}}{{screenshots_grid}}
+{{/if}}{{section:Screenshots}}
+
+{{screenshots_grid}}
 
 {{hr}}
+
+{{section:Notes}}
 
 {{ratings_table}}
 
 {{hr}}
 
+{{section:Informations techniques}}
+
 {{game_tech_table}}
+
+{{section:Configuration requise}}
 
 {{game_reqs_table}}
 
