@@ -114,7 +114,7 @@ pub fn format_game(game: &Game, title_color: &str, pseudo: &str) -> String {
     let mut tech_headers: Vec<&str> = vec!["Plateforme", "Langue(s)", "Taille"];
     let has_install_size = game.tech_info.as_ref().map_or(false, |t| !t.install_size.is_empty());
     if has_install_size {
-        tech_headers.push("Taille installee");
+        tech_headers.push("Taille installée");
     }
 
     let mut tech_table = String::new();

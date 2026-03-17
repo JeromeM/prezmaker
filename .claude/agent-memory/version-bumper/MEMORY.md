@@ -1,7 +1,7 @@
 # Version Bumper - Mémoire
 
 ## Version actuelle
-- **1.28.0** (depuis 2026-03-17 : feature release)
+- **1.28.1** (depuis 2026-03-17 : patch release)
 
 ## Fichiers de version à maintenir synchronisés
 1. `/apps/perso/PrezMaker/prezmaker-lib/Cargo.toml` (source de vérité)
@@ -24,6 +24,7 @@ Note: prezmaker-cli n'existe plus
 - 1.26.0 → 1.26.1 (2026-03-16) : bugfix HTML preview parsing
 - 1.26.1 → 1.26.2 (2026-03-16) : patch bump
 - 1.27.1 → 1.28.0 (2026-03-17) : feature release (manual torrent search + link torrent)
+- 1.28.0 → 1.28.1 (2026-03-17) : patch bump
 
 ## Règles appliquées
 - **Feature terminée** : MINOR++ (PATCH→0)

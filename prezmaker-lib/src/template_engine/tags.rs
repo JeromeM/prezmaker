@@ -176,7 +176,7 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tech_taille_installee", "Taille d'installation", tech_cat),
                 // Config requise
                 tag("config_mini", "Configuration minimale formatee", tech_cat),
-                tag("config_reco", "Configuration recommandee formatee", tech_cat),
+                tag("config_reco", "Configuration recommandée formatée", tech_cat),
                 // Liens
                 tag_ex("link", "Lien principal (IGDB ou Steam)", links_cat, "{{#if link}}{{field:Lien:{{link}}}}{{/if}}"),
                 tag("igdb_link", "Lien vers la page IGDB", links_cat),

@@ -56,7 +56,8 @@ export default function TemplatePicker({
       const fav = favoriteName && templates.some((t) => t.name === favoriteName);
       setSelected(fav ? favoriteName! : templates[0].name);
     }
-  }, [templates, loading, outputFormat, favoriteName]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, outputFormat, favoriteName, allTemplates]);
 
   if (loading) {
     return (

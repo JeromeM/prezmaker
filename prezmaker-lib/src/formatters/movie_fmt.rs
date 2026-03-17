@@ -113,7 +113,7 @@ pub fn format_movie_with_tech(movie: &Movie, title_color: &str, tech: Option<&Me
         let audio_val = tech.and_then(|t| t.audio.as_deref());
         let size_val = tech.and_then(|t| t.size.as_deref());
 
-        let mut headers: Vec<&str> = vec!["Qualite", "Codec Video", "Langue(s)", "Sous-titres"];
+        let mut headers: Vec<&str> = vec!["Qualité", "Codec Vidéo", "Langue(s)", "Sous-titres"];
         let mut values: Vec<&str> = vec![quality_val, codec_val, lang_val, sub_val];
 
         if let Some(a) = audio_val {
