@@ -312,6 +312,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
           meta={meta}
           torrentInfo={torrentInfo ?? null}
           onClose={() => setShowUpload(false)}
+          isHtml={outputFormat === "html"}
         />
       )}
       {showSaveDialog && (

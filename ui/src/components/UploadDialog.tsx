@@ -17,6 +17,7 @@ interface Props {
   meta: PresentationMeta;
   torrentInfo: TorrentInfo | null;
   onClose: () => void;
+  isHtml?: boolean;
 }
 
 export default function UploadDialog({
@@ -26,6 +27,7 @@ export default function UploadDialog({
   meta,
   torrentInfo,
   onClose,
+  isHtml,
 }: Props) {
   const { t } = useTranslation();
 
@@ -384,7 +386,7 @@ export default function UploadDialog({
                   </div>
                   <div className="flex items-center gap-2 text-fg">
                     <span className="text-green-400">&#10003;</span>
-                    <span className="text-fg-muted">{t("upload.bbcodeFile")}</span>
+                    <span className="text-fg-muted">{isHtml ? "Description HTML" : t("upload.bbcodeFile")}</span>
                     <span className="text-fg-dim">
                       {t("upload.chars", { count: bbcode.length })}
                     </span>
