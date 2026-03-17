@@ -19,6 +19,7 @@ import Onboarding, { isOnboardingDone } from "./components/Onboarding";
 import UpdateChecker from "./components/UpdateChecker";
 import CollectionBrowser from "./components/CollectionBrowser";
 import TorrentCreator from "./components/TorrentCreator";
+import TorrentNoResults from "./components/TorrentNoResults";
 
 function App() {
   const { t } = useTranslation();
@@ -34,6 +35,7 @@ function App() {
     selectTorrentResult,
     importTorrent,
     confirmTorrentContentType,
+    retryTorrentSearch,
     openTorrentCreator,
     createTorrent,
     generateMovie,
@@ -267,6 +269,16 @@ function App() {
           <TorrentContentTypePicker
             torrentInfo={state.torrentInfo}
             onConfirm={confirmTorrentContentType}
+            onCancel={reset}
+          />
+        )}
+
+        {state.step === "torrent_no_results" && (
+          <TorrentNoResults
+            torrentInfo={state.torrentInfo}
+            contentType={state.contentType}
+            initialQuery={state.query}
+            onRetry={retryTorrentSearch}
             onCancel={reset}
           />
         )}
