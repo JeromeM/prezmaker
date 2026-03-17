@@ -162,7 +162,12 @@ pub fn build_game_data_with_format(game: &crate::models::Game, fmt: OutputFormat
     }
     if let Some(ref s) = game.synopsis {
         if !s.is_empty() {
-            data.insert("synopsis".into(), s.clone());
+            let text = if fmt == OutputFormat::Html {
+                s.replace('\n', "<br>\n")
+            } else {
+                s.clone()
+            };
+            data.insert("synopsis".into(), text);
         }
     }
     if let Some(ref url) = game.cover_url {
@@ -188,7 +193,12 @@ pub fn build_game_data_with_format(game: &crate::models::Game, fmt: OutputFormat
         data.insert("screenshots".into(), "true".into());
     }
     if let Some(ref install) = game.installation {
-        data.insert("installation".into(), install.clone());
+        let text = if fmt == OutputFormat::Html {
+            install.replace('\n', "<br>\n")
+        } else {
+            install.clone()
+        };
+        data.insert("installation".into(), text);
     }
     if let Some(ref tech) = game.tech_info {
         data.insert("tech_plateforme".into(), tech.platform.clone());
