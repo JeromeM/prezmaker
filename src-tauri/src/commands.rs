@@ -295,9 +295,10 @@ pub fn get_content_template(content_type: String, name: String) -> Result<Conten
 }
 
 #[tauri::command]
-pub fn save_content_template(content_type: String, name: String, body: String, title_color: Option<String>) -> Result<(), String> {
+pub fn save_content_template(content_type: String, name: String, body: String, title_color: Option<String>, output_format: Option<String>) -> Result<(), String> {
     template_engine::save_template(&content_type, &name, &body)?;
-    template_engine::save_template_meta(&content_type, &name, title_color)
+    template_engine::save_template_meta(&content_type, &name, title_color)?;
+    template_engine::save_template_format(&content_type, &name, output_format)
 }
 
 #[tauri::command]
