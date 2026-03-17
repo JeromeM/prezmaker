@@ -49,6 +49,7 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
   const [saved, setSaved] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [linkedTorrentPath, setLinkedTorrentPath] = useState<string | null>(null);
   const [savedRef, setSavedRef] = useState<{ collectionId: string; entryId: string } | null>(
     meta.savedRef ?? null
   );
@@ -256,8 +257,29 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
                   {nfoLoading ? t("collections.analyzingMedia") : t("collections.nfo")}
                 </button>
 
+                {/* Lier un torrent si pas de torrent + c411 activé */}
+                {!torrentFilePath && c411Enabled && (
+                  <>
+                    <span className="w-px h-4 bg-edge mx-0.5" />
+                    <button
+                      onClick={async () => {
+                        const path = await open({
+                          filters: [{ name: "Torrent", extensions: ["torrent"] }],
+                          multiple: false,
+                        });
+                        if (path) {
+                          setLinkedTorrentPath(path as string);
+                        }
+                      }}
+                      className="text-xs px-2.5 py-1 rounded transition-colors bg-edge hover:bg-edge-hover text-fg flex items-center gap-1.5"
+                    >
+                      {t("splitPreview.linkTorrent")}
+                    </button>
+                  </>
+                )}
+
                 {/* Séparateur + Upload (style accentué) */}
-                {torrentFilePath && c411Enabled && (
+                {(torrentFilePath || linkedTorrentPath) && c411Enabled && (
                   <>
                     <span className="w-px h-4 bg-edge mx-0.5" />
                     <button
@@ -283,9 +305,9 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
       {nfoContent && (
         <NfoModal content={nfoContent} title={meta.title} onClose={() => setNfoContent(null)} />
       )}
-      {showUpload && torrentFilePath && (
+      {showUpload && (torrentFilePath || linkedTorrentPath) && (
         <UploadDialog
-          torrentPath={torrentFilePath}
+          torrentPath={(torrentFilePath || linkedTorrentPath)!}
           nfoContent={nfoContent ?? nfoText ?? null}
           bbcode={outputFormat === "html" ? html : bbcode}
           meta={meta}
