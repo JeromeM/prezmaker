@@ -48,7 +48,7 @@ pub fn render_movie_tech_block(
     let audio_val = tech.and_then(|t| t.audio.as_deref());
     let size_val = tech.and_then(|t| t.size.as_deref());
 
-    let mut headers: Vec<&str> = vec!["Qualite", "Codec Video", "Langue(s)", "Sous-titres"];
+    let mut headers: Vec<&str> = vec!["Qualité", "Codec Vidéo", "Langue(s)", "Sous-titres"];
     let mut values: Vec<&str> = vec![quality_val, codec_val, lang_val, sub_val];
 
     if let Some(a) = audio_val {
@@ -88,7 +88,7 @@ pub fn render_game_tech_block(
     let mut tech_headers: Vec<&str> = vec!["Plateforme", "Langue(s)", "Taille"];
     let has_install_size = tech.map_or(false, |t| !t.install_size.is_empty());
     if has_install_size {
-        tech_headers.push("Taille installee");
+        tech_headers.push("Taille installée");
     }
 
     let mut tech_table = String::new();
@@ -161,7 +161,7 @@ pub fn render_game_reqs_block(
         header_row.push_str(&dispatch::th(fmt, "Configuration minimale", None));
     }
     if has_rec {
-        header_row.push_str(&dispatch::th(fmt, "Configuration recommandee", None));
+        header_row.push_str(&dispatch::th(fmt, "Configuration recommandée", None));
     }
     tech_table.push_str(&dispatch::tr(fmt, &header_row, None));
 
@@ -188,8 +188,6 @@ pub fn render_screenshots_block(
     }
 
     let mut out = String::new();
-    out.push_str(&dispatch::section_heading(fmt, "Screenshots", title_color, None));
-    out.push('\n');
 
     let taken: Vec<_> = screenshots.iter().take(4).collect();
     let mut inner = String::new();
@@ -303,7 +301,7 @@ pub fn render_mediainfo_block(
 
     // Video info table
     if let Some(v) = ma.video.first() {
-        let mut headers = vec!["Codec Video", "Resolution"];
+        let mut headers = vec!["Codec Vidéo", "Resolution"];
         let mut values: Vec<String> = vec![
             v.codec.clone(),
             format!("{}x{}", v.width, v.height),
@@ -313,11 +311,11 @@ pub fn render_mediainfo_block(
             values.push(fps.clone());
         }
         if let Some(ref d) = ma.duration {
-            headers.push("Duree");
+            headers.push("Durée");
             values.push(d.clone());
         }
         if let Some(ref b) = ma.bitrate {
-            headers.push("Debit");
+            headers.push("Débit");
             values.push(b.clone());
         }
         headers.push("Taille");
