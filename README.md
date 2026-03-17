@@ -9,7 +9,7 @@
 <h1 align="center">PrezMaker</h1>
 
 <p align="center">
-  <strong>Générateur de présentations BBCode pour les trackers</strong>
+  <strong>Générateur de présentations BBCode et HTML pour les trackers</strong>
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
 
 ---
 
-Recherchez un film, une série, un jeu ou une application, et obtenez une présentation complète formatée en BBCode, prête à être collée sur un tracker.
+Recherchez un film, une série, un jeu ou une application, et obtenez une présentation complète formatée en BBCode ou HTML, prête à être collée sur un tracker.
 
 <p align="center">
   <img src="screenshots/main.png" alt="PrezMaker" width="800" />
@@ -33,19 +33,37 @@ Recherchez un film, une série, un jeu ou une application, et obtenez une prése
 - **Recherche automatique** — interroge TMDB (films/séries), IGDB et Steam (jeux) pour récupérer les métadonnées
 - **Enrichissement Allociné** — récupère les notes Allociné en complément de TMDB
 - **Import torrent** — glissez un `.torrent` directement sur l'application ou cliquez sur l'écran d'accueil. Le titre est parsé automatiquement, le type de contenu détecté, et les infos techniques pré-remplies
+- **Création de torrent** — créez un `.torrent` directement depuis l'application avec barre de progression et mémorisation du tracker
+- **Recherche manuelle** — si la recherche automatique échoue, modifiez le terme et le type de contenu pour relancer
 - **Configuration requise** — tableau min/recommandée pour les jeux, récupéré automatiquement depuis Steam
 
 ### Templates et éditeur
 
-- **Éditeur de templates** — créez et personnalisez vos templates BBCode avec coloration syntaxique, aperçu en temps réel et infobulles d'erreurs
+- **Double format BBCode / HTML** — choisissez le format de sortie avant la génération. Les templates sont séparés par format
+- **Éditeur de templates** — créez et personnalisez vos templates avec coloration syntaxique, aperçu en temps réel et infobulles d'erreurs
+- **Styles inline HTML** — syntaxe `| style` dans les balises templates, ignorée en BBCode, appliquée en HTML (ex: `{{section:Titre | font-size:20px}}`)
 - **Balises conditionnelles** — `{{#if synopsis}}...{{/if}}`, avec support des comparaisons (`>`, `<`, `==`, `!=`)
 - **Balises de mise en forme** — `{{heading:...}}`, `{{section:...}}`, `{{url:URL:label}}`, `{{br}}`, `{{center}}`, `{{bold}}`, etc.
+- **Tags HTML exclusifs** — `{{details:...}}`, `{{summary:...}}`, `{{p:...}}`, `{{pre:...}}` (fallback BBCode automatique)
 - **Blocs composites** — `{{ratings_table}}`, `{{game_reqs_table}}`, `{{game_tech_table}}`, `{{screenshots_grid}}`
 - **Template favori** — définissez un template par défaut par type de contenu, pré-sélectionné automatiquement
 - **Couleur par template** — chaque template peut avoir sa propre couleur de titre
 - **Export / Import** — partagez ou sauvegardez vos templates au format JSON
-- **Recherche de balises** — filtrez les balises disponibles dans la sidebar
+- **Palette adaptative** — balises BBCode ou HTML selon le format choisi
 - **Tab / Shift+Tab** — indentation et désindentation dans l'éditeur
+
+### Upload sur les trackers
+
+- **Module C411** — upload direct sur le tracker C411 via son API REST
+- **Auto-mapping** — catégorie, sous-catégorie et options pré-remplies depuis le torrent parsé
+- **Options dynamiques** — chargées depuis l'API selon la sous-catégorie choisie
+- **Lier un torrent** — associez un `.torrent` à une présentation faite manuellement pour l'uploader
+
+### Collections
+
+- **Sauvegarder** — enregistrez vos présentations dans des collections pour les retrouver plus tard
+- **Torrent et NFO persistés** — le chemin du torrent et le texte NFO sont sauvegardés avec la présentation
+- **Rechargement complet** — retrouvez le bouton Upload et le NFO en rechargeant depuis une collection
 
 ### IA et génération
 
@@ -54,29 +72,45 @@ Recherchez un film, une série, un jeu ou une application, et obtenez une prése
 
 ### Interface
 
-- **Thème clair / sombre** — basculez entre les deux via le bouton soleil/lune dans la barre du haut
-- **Mise à jour automatique** — vérification et installation des nouvelles versions au lancement, ou manuellement depuis la fenêtre À propos
+- **Internationalisation** — interface disponible en français et en anglais
+- **Thème clair / sombre** — basculez entre les deux via les paramètres
+- **Mise à jour automatique** — vérification et installation des nouvelles versions au lancement
 - **Persistance de la fenêtre** — la taille et la position de la fenêtre sont mémorisées entre les lancements
-- **Liens cliquables** — les liens dans les previews et dans l'app s'ouvrent dans le navigateur système
 
 ## Screenshots
 
 <table>
   <tr>
+    <td align="center"><strong>Accueil</strong></td>
     <td align="center"><strong>Résultats de recherche</strong></td>
-    <td align="center"><strong>Présentation générée</strong></td>
   </tr>
   <tr>
+    <td><img src="screenshots/main.png" alt="Accueil" /></td>
     <td><img src="screenshots/search.png" alt="Recherche" /></td>
-    <td><img src="screenshots/preview.png" alt="Preview" /></td>
   </tr>
   <tr>
-    <td align="center"><strong>Éditeur de templates</strong></td>
+    <td align="center"><strong>Présentation générée</strong></td>
     <td align="center"><strong>Formulaire jeu</strong></td>
   </tr>
   <tr>
-    <td><img src="screenshots/templates.png" alt="Templates" /></td>
+    <td><img src="screenshots/preview.png" alt="Preview" /></td>
     <td><img src="screenshots/game.png" alt="Jeu" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Éditeur de templates</strong></td>
+    <td align="center"><strong>Création de torrent</strong></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/templates.png" alt="Templates" /></td>
+    <td><img src="screenshots/new_torrent.png" alt="Nouveau torrent" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Upload sur C411</strong></td>
+    <td align="center"><strong>Collections</strong></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/upload.png" alt="Upload" /></td>
+    <td><img src="screenshots/collections.png" alt="Collections" /></td>
   </tr>
   <tr>
     <td align="center"><strong>Paramètres</strong></td>
@@ -112,8 +146,9 @@ Vous pouvez aussi accéder aux paramètres à tout moment via l'icône engrenage
 | **TMDB API Key** | Pour rechercher films et séries | Oui |
 | **IGDB Client ID / Secret** | Pour rechercher des jeux | Oui (jeux) |
 | **LLM Provider + API Key** | Pour les descriptions IA et la génération NFO | Non |
+| **C411 API Key** | Pour l'upload direct sur C411 | Non |
 | **Pseudo** | Signature dans le footer des présentations | Non |
-| **Couleur du titre** | Code couleur hex par défaut pour les titres BBCode | Non |
+| **Couleur du titre** | Code couleur hex par défaut pour les titres | Non |
 
 ## Utilisation
 
@@ -121,8 +156,9 @@ Vous pouvez aussi accéder aux paramètres à tout moment via l'icône engrenage
 2. Tapez votre recherche ou importez un fichier `.torrent` (drag & drop ou clic)
 3. Sélectionnez le bon résultat
 4. Complétez les informations supplémentaires si nécessaire
-5. La présentation BBCode est générée avec aperçu HTML en temps réel
-6. Copiez le BBCode ou éditez-le directement
+5. Choisissez un template et le format de sortie (BBCode ou HTML)
+6. La présentation est générée avec aperçu en temps réel
+7. Copiez, éditez, sauvegardez dans une collection ou uploadez directement
 
 ## Stack technique
 
@@ -130,8 +166,9 @@ Vous pouvez aussi accéder aux paramètres à tout moment via l'icône engrenage
 |---|---|
 | GUI | [Tauri v2](https://v2.tauri.app/) |
 | Frontend | React 19 + TypeScript + Tailwind CSS v4 + Vite |
-| Backend | Rust (workspace : `prezmaker-lib`, `prezmaker-cli`, `src-tauri`) |
-| APIs | TMDB, IGDB, Steam, Allociné (scraping), Groq/Mistral/Gemini (LLM) |
+| Backend | Rust (workspace : `prezmaker-lib`, `src-tauri`) |
+| APIs | TMDB, IGDB, Steam, Allociné (scraping), Groq/Mistral/Gemini (LLM), C411 |
+| Tests | Vitest + React Testing Library (frontend), Rust tests (backend) |
 
 ## Build depuis les sources
 
@@ -156,17 +193,10 @@ cargo tauri dev
 
 # Build production
 cargo tauri build
-```
 
-Un `Makefile` est disponible avec des cibles par plateforme :
-
-```bash
-make deps-linux       # Installer les dépendances système Linux
-make build-linux      # Build Linux
-make build-windows    # Build Windows
-make build-macos-arm  # Build macOS Apple Silicon
-make build-macos-intel # Build macOS Intel
-make dev              # Lancer en mode dev
+# Lancer les tests
+cargo test -p prezmaker-lib
+cd ui && npm test
 ```
 
 ## Licence
