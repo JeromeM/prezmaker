@@ -646,7 +646,7 @@ export default function TemplateEditor({ onClose }: Props) {
             {/* Output format toggle */}
             <div className="flex items-center gap-0.5 bg-input rounded-md p-0.5">
               <button
-                onClick={() => { setOutputFormat("bbcode"); setDirty(true); }}
+                onClick={() => { if (outputFormat !== "bbcode") { setOutputFormat("bbcode"); setDirty(true); } }}
                 className={`text-xs px-2.5 py-1 rounded transition-colors font-medium ${
                   outputFormat === "bbcode"
                     ? "bg-blue-600 text-white shadow-sm"
@@ -656,7 +656,7 @@ export default function TemplateEditor({ onClose }: Props) {
                 BBCode
               </button>
               <button
-                onClick={() => { setOutputFormat("html"); setDirty(true); }}
+                onClick={() => { if (outputFormat !== "html") { setOutputFormat("html"); setDirty(true); } }}
                 className={`text-xs px-2.5 py-1 rounded transition-colors font-medium ${
                   outputFormat === "html"
                     ? "bg-blue-600 text-white shadow-sm"
