@@ -371,6 +371,7 @@ export default function TemplateEditor({ onClose }: Props) {
         setSelected(current.name);
         setBody(autoIndent(current.body));
         setCustomColor(current.title_color ?? null);
+        setOutputFormat((current.output_format as OutputFormat) ?? "bbcode");
       }
       setDirty(false);
     } catch (e) {
@@ -450,6 +451,7 @@ export default function TemplateEditor({ onClose }: Props) {
       setSelected(tpl.name);
       setBody(autoIndent(tpl.body));
       setCustomColor(tpl.title_color ?? null);
+      setOutputFormat((tpl.output_format as OutputFormat) ?? "bbcode");
       setDirty(false);
     } catch (e) {
       console.error(e);
@@ -459,7 +461,7 @@ export default function TemplateEditor({ onClose }: Props) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await invoke("save_content_template", { contentType, name: selected, body, titleColor: customColor });
+      await invoke("save_content_template", { contentType, name: selected, body, titleColor: customColor, outputFormat: outputFormat === "bbcode" ? null : outputFormat });
       setDirty(false);
       await loadTemplates(contentType);
     } catch (e) {
@@ -644,7 +646,7 @@ export default function TemplateEditor({ onClose }: Props) {
             {/* Output format toggle */}
             <div className="flex items-center gap-0.5 bg-input rounded-md p-0.5">
               <button
-                onClick={() => setOutputFormat("bbcode")}
+                onClick={() => { setOutputFormat("bbcode"); setDirty(true); }}
                 className={`text-xs px-2.5 py-1 rounded transition-colors font-medium ${
                   outputFormat === "bbcode"
                     ? "bg-blue-600 text-white shadow-sm"
@@ -654,7 +656,7 @@ export default function TemplateEditor({ onClose }: Props) {
                 BBCode
               </button>
               <button
-                onClick={() => setOutputFormat("html")}
+                onClick={() => { setOutputFormat("html"); setDirty(true); }}
                 className={`text-xs px-2.5 py-1 rounded transition-colors font-medium ${
                   outputFormat === "html"
                     ? "bg-blue-600 text-white shadow-sm"
