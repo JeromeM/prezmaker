@@ -151,7 +151,7 @@ pub fn list_templates(content_type: &str) -> Result<Vec<ContentTemplate>, String
         let html_path = dir.join("default-html.tpl");
         let needs_update = if let Some(existing) = templates.iter().find(|t| t.name == "default-html") {
             // Re-create if the template contains old broken patterns
-            existing.body.contains("{{p:{{field") || existing.body.contains("{{field:Date de sortie:") || existing.body.contains("Voir la fiche") || existing.body.contains("{{ratings_table}}")
+            existing.body.contains("{{p:{{field") || existing.body.contains("{{field:Date de sortie:") || existing.body.contains("Voir la fiche") || existing.body.contains("{{ratings_table}}") || existing.body.contains("linear-gradient")
         } else {
             true
         };
