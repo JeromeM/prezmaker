@@ -5,14 +5,8 @@ pub fn get_default_html(content_type: &str) -> Option<String> {
     }
 }
 
-const SEPARATOR_URL: &str = "https://raw.githubusercontent.com/JeromeM/prezmaker/main/assets/separator-red.png";
-
-fn sep() -> String {
-    format!(r#"<p style="text-align:center"><img src="{}" style="max-width:100%;width:600px"></p>"#, SEPARATOR_URL)
-}
-
 fn default_jeu_html() -> String {
-    let s = sep();
+    let s = "<hr style=\"margin:16px 0\">";
     format!(r#"{{{{heading:🎮 {{{{titre_maj}}}} 🎮 | font-size:28px;letter-spacing:2px;margin:20px 0}}}}
 {s}
 
