@@ -337,8 +337,15 @@
     "noApiKey": "Clé API C411 non configurée. Allez dans Paramètres > Modules.",
     "loadingCategories": "Chargement des catégories..."
   },
+  "torrentNoResults": {
+    "title": "Aucun résultat trouvé",
+    "description": "La recherche automatique n'a rien donné. Vous pouvez modifier la recherche ou le type de contenu et réessayer.",
+    "contentType": "Type de contenu",
+    "searchQuery": "Recherche"
+  },
   "splitPreview": {
-    "save": "Sauvegarder"
+    "save": "Sauvegarder",
+    "linkTorrent": "Lier un .torrent"
   },
   "templateManager": {
     "title": "Templates",

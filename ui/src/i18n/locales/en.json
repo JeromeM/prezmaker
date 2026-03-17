@@ -337,8 +337,15 @@
     "noApiKey": "C411 API key not configured. Go to Settings > Modules.",
     "loadingCategories": "Loading categories..."
   },
+  "torrentNoResults": {
+    "title": "No results found",
+    "description": "Automatic search returned no results. You can modify the search query or content type and retry.",
+    "contentType": "Content type",
+    "searchQuery": "Search"
+  },
   "splitPreview": {
-    "save": "Save"
+    "save": "Save",
+    "linkTorrent": "Link a .torrent"
   },
   "templateManager": {
     "title": "Templates",

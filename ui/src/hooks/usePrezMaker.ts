@@ -260,7 +260,7 @@ export function usePrezMaker() {
         });
 
         if (results.length === 0) {
-          setState({ step: "error", message: `Aucun résultat pour "${query}"` });
+          setState({ step: "torrent_no_results", torrentInfo: info, contentType, query });
           return;
         }
 
@@ -282,6 +282,35 @@ export function usePrezMaker() {
       await searchForTorrent(torrentInfo, contentType);
     },
     [searchForTorrent]
+  );
+
+  // --- Retry torrent search with custom query ---
+  const retryTorrentSearch = useCallback(
+    async (query: string, contentType: ContentType, torrentInfo: TorrentInfo) => {
+      setState({ step: "searching" });
+      try {
+        const results = await invoke<SearchResult[]>("search", {
+          query,
+          contentType,
+          titleColor: titleColor || null,
+        });
+
+        if (results.length === 0) {
+          setState({ step: "torrent_no_results", torrentInfo, contentType, query });
+          return;
+        }
+
+        if (results.length === 1) {
+          await selectTorrentResult(results[0].id, contentType, torrentInfo, "default", results[0].source, results[0].label);
+          return;
+        }
+
+        setState({ step: "torrent_selecting", results, contentType, torrentInfo });
+      } catch (e) {
+        setState({ step: "error", message: String(e) });
+      }
+    },
+    [titleColor, selectTorrentResult]
   );
 
   // --- Game generation (goes to template pick) ---
@@ -412,6 +441,7 @@ export function usePrezMaker() {
     selectTorrentResult,
     importTorrent,
     confirmTorrentContentType,
+    retryTorrentSearch,
     openTorrentCreator,
     createTorrent,
     generateMovie,

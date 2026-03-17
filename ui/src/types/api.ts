@@ -294,5 +294,6 @@ export type AppState =
   | { step: "generating"; message?: string }
   | { step: "done"; bbcode: string; html: string; meta: PresentationMeta; nfoText?: string | null; mediaAnalysis?: MediaAnalysis | null; outputFormat?: OutputFormat }
   | { step: "error"; message: string }
+  | { step: "torrent_no_results"; torrentInfo: TorrentInfo; contentType: ContentType; query: string }
   | { step: "torrent_parsed"; torrentInfo: TorrentInfo }
   | { step: "torrent_selecting"; results: SearchResult[]; contentType: ContentType; torrentInfo: TorrentInfo };
