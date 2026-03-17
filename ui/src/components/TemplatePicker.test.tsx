@@ -69,7 +69,7 @@ describe("TemplatePicker", () => {
     expect(defaultButton?.textContent).toContain("(par défaut)");
   });
 
-  it("auto-selects when only one template", async () => {
+  it("shows single template pre-selected without auto-generating", async () => {
     mockInvoke.mockImplementation(async (cmd: string) => {
       if (cmd === "list_content_templates") {
         return [
@@ -83,7 +83,10 @@ describe("TemplatePicker", () => {
     renderWithProviders(<TemplatePicker {...defaultProps} />);
 
     await waitFor(() => {
-      expect(defaultProps.onSelect).toHaveBeenCalledWith("default", "bbcode");
+      // Template should be displayed, not auto-generated
+      expect(screen.getByText("default")).toBeInTheDocument();
     });
+    // onSelect should NOT have been called automatically
+    expect(defaultProps.onSelect).not.toHaveBeenCalled();
   });
 });
