@@ -977,8 +977,8 @@ export default function TemplateEditor({ onClose }: Props) {
               {/* Highlight underlay */}
               <div
                 ref={highlightRef}
-                className="absolute inset-0 overflow-hidden pointer-events-none p-4 font-mono text-sm whitespace-pre-wrap break-words"
-                style={{ wordBreak: "break-all" }}
+                className="absolute inset-0 overflow-auto pointer-events-none p-4 font-mono text-sm whitespace-pre-wrap"
+                style={{ overflowWrap: "break-word" }}
                 aria-hidden="true"
               >
                 {highlightedSpans.map((span, i) => (
@@ -1034,8 +1034,8 @@ export default function TemplateEditor({ onClose }: Props) {
                     }
                   }
                 }}
-                className="absolute inset-0 w-full h-full bg-transparent text-transparent caret-gray-200 font-mono text-sm p-4 resize-none outline-none border-none"
-                style={{ caretColor: "#e0e0e0", WebkitTextFillColor: "transparent" }}
+                className="absolute inset-0 w-full h-full bg-transparent text-transparent caret-gray-200 font-mono text-sm p-4 resize-none outline-none border-none whitespace-pre-wrap"
+                style={{ caretColor: "#e0e0e0", WebkitTextFillColor: "transparent", overflowWrap: "break-word" }}
                 spellCheck={false}
               />
             </div>
