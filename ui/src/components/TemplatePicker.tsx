@@ -50,7 +50,7 @@ export default function TemplatePicker({
     });
   }, [contentType]);
 
-  // When format changes or loading finishes, select the first template
+  // When format changes or loading finishes, pre-select the first template
   useEffect(() => {
     if (!loading && templates.length > 0) {
       const fav = favoriteName && templates.some((t) => t.name === favoriteName);
@@ -58,14 +58,7 @@ export default function TemplatePicker({
     }
   }, [templates, loading, outputFormat, favoriteName]);
 
-  // If only one template, auto-select it
-  useEffect(() => {
-    if (!loading && templates.length === 1) {
-      onSelect(templates[0].name, outputFormat);
-    }
-  }, [templates, loading]);
-
-  if (loading || templates.length <= 1) {
+  if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="flex items-center gap-3 text-fg-muted">
