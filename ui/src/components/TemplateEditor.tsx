@@ -67,15 +67,12 @@ function tagHasArgs(tag: string): boolean {
 function isIndentOpen(tag: string): boolean {
   const name = getTagName(tag);
   if (name === '#if') return true;
-  // Block pairs open only without args (e.g. {{quote}} but NOT {{quote:content}})
-  if (name in BLOCK_PAIRS && !tagHasArgs(tag)) return true;
   return false;
 }
 
 function isIndentClose(tag: string): boolean {
   const name = getTagName(tag);
   if (name === '/if') return true;
-  if (CLOSING_TAGS.has(name)) return true;
   return false;
 }
 
@@ -1064,7 +1061,7 @@ export default function TemplateEditor({ onClose }: Props) {
         .hl-layout { color: #5dade2; }
         .hl-data { color: #58d68d; }
         .hl-cond { color: #bb8fce; font-weight: 600; }
-        .hl-closing { color: #5dade2; opacity: 0.7; }
+        .hl-closing { color: #5dade2; }
         .hl-unmatched { text-decoration: wavy underline #e74c3c; text-underline-offset: 3px; }
       `}</style>
     </div>

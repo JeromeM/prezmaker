@@ -302,7 +302,12 @@ export default function SplitPreview({ bbcode: initialBBCode, html: initialHtml,
         <HtmlPreview html={outputFormat === "html" ? wrapHtmlDocument(html) : html} />
       </div>
       {nfoContent && (
-        <NfoModal content={nfoContent} title={meta.title} onClose={() => setNfoContent(null)} />
+        <NfoModal
+          content={nfoContent}
+          title={meta.title}
+          onClose={() => setNfoContent(null)}
+          onUpdate={(updated) => setNfoContent(updated)}
+        />
       )}
       {showUpload && (torrentFilePath || linkedTorrentPath) && (
         <UploadDialog
