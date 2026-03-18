@@ -15,7 +15,7 @@ pub fn render_ratings_block(
     let mut ratings_table = String::new();
     let mut header_row = String::new();
     for rating in ratings {
-        header_row.push_str(&dispatch::th(fmt, &rating.source, None));
+        header_row.push_str(&dispatch::th(fmt, &dispatch::center(fmt, &rating.source, None), None));
     }
     ratings_table.push_str(&dispatch::tr(fmt, &header_row, None));
     let mut values_row = String::new();
@@ -59,7 +59,7 @@ pub fn render_movie_tech_block(
     let mut tech_table = String::new();
     let mut header_row = String::new();
     for h in &headers {
-        header_row.push_str(&dispatch::th(fmt, h, None));
+        header_row.push_str(&dispatch::th(fmt, &dispatch::center(fmt, h, None), None));
     }
     tech_table.push_str(&dispatch::tr(fmt, &header_row, None));
     let mut val_row = String::new();
@@ -88,7 +88,7 @@ pub fn render_game_tech_block(
     let mut tech_table = String::new();
     let mut header_row = String::new();
     for h in &tech_headers {
-        header_row.push_str(&dispatch::th(fmt, h, None));
+        header_row.push_str(&dispatch::th(fmt, &dispatch::center(fmt, h, None), None));
     }
     tech_table.push_str(&dispatch::tr(fmt, &header_row, None));
     let mut values_row = String::new();
