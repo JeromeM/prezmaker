@@ -399,6 +399,56 @@ impl Database {
     }
 
     // ========================
+    // Dashboard
+    // ========================
+
+    pub fn list_recent_presentations(&self, limit: u32) -> Result<Vec<SavedPresentation>, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn
+            .prepare("SELECT id, collection_id, title, content_type, bbcode, poster_url, torrent_path, nfo_text, saved_at, updated_at FROM saved_presentations ORDER BY updated_at DESC LIMIT ?1")
+            .map_err(|e| format!("SQL error: {}", e))?;
+        let rows = stmt
+            .query_map(params![limit], |row| {
+                Ok(SavedPresentation {
+                    id: row.get(0)?,
+                    collection_id: row.get(1)?,
+                    title: row.get(2)?,
+                    content_type: row.get(3)?,
+                    bbcode: row.get(4)?,
+                    poster_url: row.get(5)?,
+                    torrent_path: row.get(6)?,
+                    nfo_text: row.get(7)?,
+                    saved_at: row.get(8)?,
+                    updated_at: row.get(9)?,
+                })
+            })
+            .map_err(|e| format!("Query error: {}", e))?;
+        let mut entries = Vec::new();
+        for row in rows {
+            entries.push(row.map_err(|e| format!("Row error: {}", e))?);
+        }
+        Ok(entries)
+    }
+
+    pub fn count_presentations(&self) -> Result<u32, String> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row("SELECT COUNT(*) FROM saved_presentations", [], |row| row.get(0))
+            .map_err(|e| format!("Query error: {}", e))
+    }
+
+    pub fn count_templates(&self) -> Result<u32, String> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row("SELECT COUNT(*) FROM content_templates", [], |row| row.get(0))
+            .map_err(|e| format!("Query error: {}", e))
+    }
+
+    pub fn count_collections(&self) -> Result<u32, String> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row("SELECT COUNT(*) FROM collections", [], |row| row.get(0))
+            .map_err(|e| format!("Query error: {}", e))
+    }
+
+    // ========================
     // Templates
     // ========================
 

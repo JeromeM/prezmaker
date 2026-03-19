@@ -304,7 +304,25 @@
     "toggleBBCode": "Aperçu BBCode"
   },
   "resultSelector": {
-    "title": "Sélectionnez un résultat"
+    "title": "Sélectionnez un résultat",
+    "count": "{{count}} résultats",
+    "select": "Sélectionner"
+  },
+  "stepper": {
+    "search": "Recherche",
+    "selection": "Sélection",
+    "details": "Détails",
+    "template": "Template",
+    "result": "Résultat"
+  },
+  "dashboard": {
+    "searchPlaceholder": "Rechercher un film, une série, un jeu...",
+    "presentations": "Présentations",
+    "templates": "Templates",
+    "collections": "Collections",
+    "recent": "Récents",
+    "noRecent": "Aucune présentation récente",
+    "noRecentHint": "Créez votre première présentation pour la voir ici"
   },
   "torrentPicker": {
     "title": "Type de contenu non détecté",

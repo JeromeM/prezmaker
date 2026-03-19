@@ -214,6 +214,12 @@ export interface SavedPresentation {
   updated_at: string;
 }
 
+export interface DashboardStats {
+  presentation_count: number;
+  template_count: number;
+  collection_count: number;
+}
+
 export interface PendingGeneration {
   contentType: ContentType;
   tmdbId?: number;
