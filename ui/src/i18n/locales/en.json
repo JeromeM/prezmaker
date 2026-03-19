@@ -35,8 +35,9 @@
     "none": "(None)"
   },
   "topBar": {
+    "home": "Home",
     "searchPlaceholder": "Search...",
-    "templateEditor": "Template Editor",
+    "templateEditor": "Templates",
     "collections": "Collections",
     "settings": "Settings",
     "about": "About"

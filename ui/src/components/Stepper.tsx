@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { getStepperPosition, STEPPER_LABELS } from "../utils/stepperMapping";
 import type { AppState } from "../types/api";
@@ -8,9 +9,21 @@ interface Props {
 
 export default function Stepper({ state }: Props) {
   const { t } = useTranslation();
-  const position = getStepperPosition(state);
+  const rawPosition = getStepperPosition(state);
+  const lastPositionRef = useRef(0);
 
-  // Hide when position = -1 (torrent_creator, error) or 0 (idle/searching)
+  // -2 means "keep last position" (used by generating)
+  if (rawPosition >= 0) {
+    lastPositionRef.current = rawPosition;
+  }
+  // Reset when going back to idle
+  if (rawPosition === 0) {
+    lastPositionRef.current = 0;
+  }
+
+  const position = rawPosition === -2 ? lastPositionRef.current : rawPosition;
+
+  // Hide when position <= 0 or -1
   if (position <= 0) return null;
 
   return (

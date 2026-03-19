@@ -17,6 +17,7 @@ export function getStepperPosition(state: AppState): number {
     case "template_pick":
       return 3;
     case "generating":
+      return -2; // keep last position (generating is used both for loading details and final generation)
     case "done":
       return 4;
     default:
