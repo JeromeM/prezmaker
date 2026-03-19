@@ -84,15 +84,13 @@ function App() {
     <div className="flex flex-col h-screen bg-base">
       <UpdateChecker />
       <TopBar
-        onSearch={search}
-        loading={isLoading}
         onReset={reset}
         onOpenSettings={() => setShowSettings(true)}
         onImportTorrent={importTorrent}
         onOpenTemplateEditor={() => setShowTemplateEditor(true)}
         onOpenCollections={() => setShowCollections(true)}
         onOpenAbout={() => setShowAbout(true)}
-        hideSearch={state.step === "idle"}
+        showHome={state.step !== "idle"}
       />
       <Stepper state={state} />
 

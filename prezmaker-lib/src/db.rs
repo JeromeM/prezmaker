@@ -399,6 +399,35 @@ impl Database {
     }
 
     // ========================
+    // Default collection (auto-save)
+    // ========================
+
+    pub fn ensure_default_collection(&self) -> Result<String, String> {
+        let conn = self.conn.lock().unwrap();
+        let existing: Option<String> = conn
+            .query_row(
+                "SELECT id FROM collections WHERE id = '__default__'",
+                [],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|e| format!("Query error: {}", e))?;
+
+        if let Some(id) = existing {
+            return Ok(id);
+        }
+
+        let created_at = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO collections (id, name, created_at) VALUES ('__default__', 'Historique', ?1)",
+            params![created_at],
+        )
+        .map_err(|e| format!("Cannot create default collection: {}", e))?;
+
+        Ok("__default__".to_string())
+    }
+
+    // ========================
     // Dashboard
     // ========================
 
