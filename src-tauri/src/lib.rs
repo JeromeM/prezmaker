@@ -82,6 +82,7 @@ pub fn run() {
             commands::c411_upload,
             commands::list_recent_presentations,
             commands::get_dashboard_stats,
+            commands::auto_save_presentation,
             commands::create_collection,
             commands::list_collections,
             commands::rename_collection,

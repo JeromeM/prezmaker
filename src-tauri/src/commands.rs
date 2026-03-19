@@ -733,6 +733,30 @@ pub fn get_dashboard_stats(state: tauri::State<'_, AppState>) -> Result<Dashboar
     })
 }
 
+// --- Auto-save ---
+
+#[tauri::command]
+pub fn auto_save_presentation(
+    state: tauri::State<'_, AppState>,
+    title: String,
+    content_type: String,
+    bbcode: String,
+    poster_url: Option<String>,
+    nfo_text: Option<String>,
+) -> Result<db::SavedPresentation, String> {
+    let collection_id = state.db.ensure_default_collection()?;
+    state.db.save_presentation(
+        &collection_id,
+        None,
+        &title,
+        &content_type,
+        &bbcode,
+        poster_url.as_deref(),
+        None,
+        nfo_text.as_deref(),
+    )
+}
+
 // --- Collections ---
 
 #[tauri::command]

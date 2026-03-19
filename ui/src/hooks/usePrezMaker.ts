@@ -15,6 +15,7 @@ import type {
   AppPayload,
   PendingGeneration,
   PresentationMeta,
+  SavedPresentation,
   SettingsPayload,
   TorrentInfo,
   TorrentCreateOptions,
@@ -118,6 +119,17 @@ export function usePrezMaker() {
           contentType,
           posterUrl: null,
         };
+        // Auto-save to history
+        try {
+          const saved = await invoke<SavedPresentation>("auto_save_presentation", {
+            title: presentationMeta.title,
+            contentType: presentationMeta.contentType,
+            bbcode: result.bbcode,
+            posterUrl: presentationMeta.posterUrl ?? null,
+            nfoText: result.nfo_text ?? null,
+          });
+          presentationMeta.savedRef = { collectionId: saved.collection_id, entryId: saved.id };
+        } catch { /* silent — don't block generation if auto-save fails */ }
         setState({ step: "done", bbcode: result.bbcode, html, meta: presentationMeta, nfoText: result.nfo_text, mediaAnalysis: mediaAnalysis ?? null, outputFormat: fmt });
       } catch (e) {
         setState({ step: "error", message: String(e) });
