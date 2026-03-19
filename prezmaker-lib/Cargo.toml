@@ -1,6 +1,6 @@
 [package]
 name = "prezmaker-lib"
-version = "1.28.5"
+version = "1.29.0"
 edition = "2021"
 description = "Shared library for PrezMaker BBCode presentation generator"
 
