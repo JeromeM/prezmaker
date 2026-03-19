@@ -67,7 +67,7 @@ export default function NfoModal({ content, title, onClose, onUpdate }: Props) {
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="bg-[#16213e] border border-[#2a2a4a] rounded-lg shadow-2xl w-[700px] max-h-[80vh] flex flex-col"
+        className="bg-[#16213e] border border-[#2a2a4a] rounded-lg shadow-2xl w-[700px] min-h-[60vh] max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2a4a]">
