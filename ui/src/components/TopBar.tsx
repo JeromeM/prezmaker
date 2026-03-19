@@ -25,19 +25,23 @@ export default function TopBar({
   return (
     <header className="bg-surface border-b border-edge px-4 py-2">
       <div className="flex items-center gap-1">
-        {showHome && (
-          <button
-            type="button"
-            onClick={onReset}
-            className="flex items-center gap-1.5 text-fg-muted hover:text-fg-bright transition-colors px-2.5 py-1.5 rounded hover:bg-input text-sm"
-          >
+        {/* Brand — clickable to go home when in a flow */}
+        <button
+          type="button"
+          onClick={showHome ? onReset : undefined}
+          className={`flex items-center gap-2 px-2.5 py-1.5 rounded text-sm font-semibold transition-colors ${
+            showHome
+              ? "text-fg-muted hover:text-fg-bright hover:bg-input cursor-pointer"
+              : "text-fg-bright cursor-default"
+          }`}
+        >
+          {showHome && (
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              <polyline points="9 22 9 12 15 12 15 22" />
+              <polyline points="15 18 9 12 15 6" />
             </svg>
-            {t("topBar.home")}
-          </button>
-        )}
+          )}
+          PrezMaker
+        </button>
 
         <div className="flex items-center gap-1 ml-auto">
           <TorrentImport onImport={onImportTorrent} disabled={false} />

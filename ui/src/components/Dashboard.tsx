@@ -102,9 +102,6 @@ export default function Dashboard({ onSearch, onOpenTorrentCreator, onImportTorr
       dragging ? "bg-blue-600/10" : ""
     }`}>
       <div className="w-full max-w-3xl space-y-8">
-        {/* Title */}
-        <h1 className="text-3xl font-bold text-center text-fg-bright">PrezMaker</h1>
-
         {/* Search bar */}
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <select
