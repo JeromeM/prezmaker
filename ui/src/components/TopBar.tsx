@@ -12,6 +12,7 @@ interface Props {
   onOpenTemplateEditor: () => void;
   onOpenCollections: () => void;
   onOpenAbout: () => void;
+  hideSearch?: boolean;
 }
 
 export default function TopBar({
@@ -23,6 +24,7 @@ export default function TopBar({
   onOpenTemplateEditor,
   onOpenCollections,
   onOpenAbout,
+  hideSearch,
 }: Props) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -40,57 +42,61 @@ export default function TopBar({
   return (
     <header className="bg-surface border-b border-edge px-4 py-3">
       <form onSubmit={handleSubmit} className="flex items-center gap-3 flex-wrap">
-        <select
-          value={contentType}
-          onChange={(e) => setContentType(e.target.value as ContentType)}
-          className="bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm focus:border-blue-500 outline-none"
-        >
-          <option value="film">{t("common.film")}</option>
-          <option value="serie">{t("common.serie")}</option>
-          <option value="jeu">{t("common.jeu")}</option>
-          <option value="app">{t("common.app")}</option>
-        </select>
+        {!hideSearch && (
+          <>
+            <select
+              value={contentType}
+              onChange={(e) => setContentType(e.target.value as ContentType)}
+              className="bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm focus:border-blue-500 outline-none"
+            >
+              <option value="film">{t("common.film")}</option>
+              <option value="serie">{t("common.serie")}</option>
+              <option value="jeu">{t("common.jeu")}</option>
+              <option value="app">{t("common.app")}</option>
+            </select>
 
-        {contentType !== "app" && (
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("topBar.searchPlaceholder")}
-            className="bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm flex-1 min-w-[200px] focus:border-blue-500 outline-none placeholder-fg-dim"
-            disabled={loading}
-          />
+            {contentType !== "app" && (
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("topBar.searchPlaceholder")}
+                className="bg-input text-fg-bright border border-edge rounded px-3 py-2 text-sm flex-1 min-w-[200px] focus:border-blue-500 outline-none placeholder-fg-dim"
+                disabled={loading}
+              />
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || (contentType !== "app" && !query.trim())}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  {t("common.loading")}
+                </span>
+              ) : contentType === "app" ? (
+                t("common.create")
+              ) : (
+                t("common.search")
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={onReset}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm transition-colors"
+            >
+              Reset
+            </button>
+          </>
         )}
 
-        <button
-          type="submit"
-          disabled={loading || (contentType !== "app" && !query.trim())}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded text-sm font-medium transition-colors"
-        >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              {t("common.loading")}
-            </span>
-          ) : contentType === "app" ? (
-            t("common.create")
-          ) : (
-            t("common.search")
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={onReset}
-          className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm transition-colors"
-        >
-          Reset
-        </button>
-
-        <div className="flex items-center gap-2 ml-auto">
+        <div className={`flex items-center gap-2 ${hideSearch ? "" : "ml-auto"}`}>
           <TorrentImport onImport={onImportTorrent} disabled={loading} />
 
           <button

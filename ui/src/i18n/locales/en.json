@@ -304,7 +304,25 @@
     "toggleBBCode": "BBCode Preview"
   },
   "resultSelector": {
-    "title": "Select a result"
+    "title": "Select a result",
+    "count": "{{count}} results",
+    "select": "Select"
+  },
+  "stepper": {
+    "search": "Search",
+    "selection": "Selection",
+    "details": "Details",
+    "template": "Template",
+    "result": "Result"
+  },
+  "dashboard": {
+    "searchPlaceholder": "Search for a movie, series, game...",
+    "presentations": "Presentations",
+    "templates": "Templates",
+    "collections": "Collections",
+    "recent": "Recent",
+    "noRecent": "No recent presentations",
+    "noRecentHint": "Create your first presentation to see it here"
   },
   "torrentPicker": {
     "title": "Content type not detected",

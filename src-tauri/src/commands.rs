@@ -710,6 +710,29 @@ pub async fn c411_upload(
         .map_err(|e| e.to_string())
 }
 
+// --- Dashboard ---
+
+#[derive(Serialize)]
+pub struct DashboardStats {
+    pub presentation_count: u32,
+    pub template_count: u32,
+    pub collection_count: u32,
+}
+
+#[tauri::command]
+pub fn list_recent_presentations(state: tauri::State<'_, AppState>, limit: Option<u32>) -> Result<Vec<db::SavedPresentation>, String> {
+    state.db.list_recent_presentations(limit.unwrap_or(8))
+}
+
+#[tauri::command]
+pub fn get_dashboard_stats(state: tauri::State<'_, AppState>) -> Result<DashboardStats, String> {
+    Ok(DashboardStats {
+        presentation_count: state.db.count_presentations()?,
+        template_count: state.db.count_templates()?,
+        collection_count: state.db.count_collections()?,
+    })
+}
+
 // --- Collections ---
 
 #[tauri::command]
