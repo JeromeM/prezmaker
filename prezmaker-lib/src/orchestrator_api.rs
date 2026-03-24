@@ -438,7 +438,9 @@ impl OrchestratorApi {
         // YouTube trailer fallback: search if no trailer was found
         if game.trailer_url.is_none() {
             self.progress("Recherche de la bande-annonce...");
-            if let Some(url) = Self::search_youtube_trailer(&game.title).await {
+            let clean_title = Self::clean_title_for_search(&game.title);
+            let query = format!("{} trailer gameplay", clean_title);
+            if let Some(url) = Self::search_youtube_trailer(&query).await {
                 info!("Trailer YouTube trouvé via recherche: {}", url);
                 game.trailer_url = Some(url);
             }
@@ -521,7 +523,7 @@ impl OrchestratorApi {
         }
         if movie.trailer_url.is_none() {
             self.progress("Recherche de la bande-annonce...");
-            let query = format!("{} bande annonce", movie.title);
+            let query = format!("{} bande annonce officielle", movie.title);
             if let Some(url) = Self::search_youtube_trailer(&query).await {
                 movie.trailer_url = Some(url);
             }
@@ -589,7 +591,7 @@ impl OrchestratorApi {
         }
         if series.trailer_url.is_none() {
             self.progress("Recherche de la bande-annonce...");
-            let query = format!("{} bande annonce", series.title);
+            let query = format!("{} bande annonce officielle", series.title);
             if let Some(url) = Self::search_youtube_trailer(&query).await {
                 series.trailer_url = Some(url);
             }
@@ -936,38 +938,55 @@ impl OrchestratorApi {
         None
     }
 
-    /// Search YouTube for a trailer using the Piped API (free, no key required)
-    async fn search_youtube_trailer(title: &str) -> Option<String> {
-        let query = format!("{} trailer", title);
+    /// Clean game/movie title for YouTube search: remove edition suffixes, subtitles after colon
+    fn clean_title_for_search(title: &str) -> String {
+        let lower = title.to_lowercase();
+        // Remove common edition suffixes
+        let suffixes = [
+            "complete edition", "deluxe edition", "definitive edition",
+            "gold edition", "goty edition", "game of the year edition",
+            "ultimate edition", "premium edition", "enhanced edition",
+            "remastered", "remake",
+        ];
+        let mut clean = title.to_string();
+        for suffix in &suffixes {
+            if let Some(pos) = lower.find(suffix) {
+                clean = clean[..pos].to_string();
+            }
+        }
+        // Remove trailing colon, dash, whitespace
+        clean.trim_end_matches(|c: char| c == ':' || c == '-' || c == ' ').to_string()
+    }
+
+    /// Search YouTube for a trailer by scraping the search results page.
+    /// Extracts the first videoId from the embedded JSON data.
+    async fn search_youtube_trailer(query: &str) -> Option<String> {
         let url = format!(
-            "https://pipedapi.kavin.rocks/search?q={}&filter=videos",
-            urlencoding::encode(&query)
+            "https://www.youtube.com/results?search_query={}",
+            urlencoding::encode(query)
         );
         let client = reqwest::Client::new();
         let resp = client
             .get(&url)
-            .header("User-Agent", "PrezMaker")
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
             .send()
             .await
             .ok()?;
 
-        if !resp.status().is_success() {
+        let html = resp.text().await.ok()?;
+
+        // Extract first videoId from the page's embedded JSON
+        let marker = "\"videoId\":\"";
+        let pos = html.find(marker)?;
+        let start = pos + marker.len();
+        let end = html[start..].find('"').map(|i| start + i)?;
+        let video_id = &html[start..end];
+
+        if video_id.len() < 5 || video_id.len() > 15 {
             return None;
         }
 
-        #[derive(serde::Deserialize)]
-        struct PipedSearchResult {
-            items: Option<Vec<PipedItem>>,
-        }
-        #[derive(serde::Deserialize)]
-        struct PipedItem {
-            url: Option<String>,
-        }
-
-        let result: PipedSearchResult = resp.json().await.ok()?;
-        let video_path = result.items?.into_iter().next()?.url?;
-        // Piped returns paths like /watch?v=XXX
-        Some(format!("https://www.youtube.com{}", video_path))
+        Some(format!("https://www.youtube.com/watch?v={}", video_id))
     }
 
     /// Simple heuristic: text looks English if it has common English words
