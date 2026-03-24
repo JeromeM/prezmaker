@@ -48,6 +48,7 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
 
         // --- URL ---
         tag_ex("url:URL:label", "Lien hypertexte", links_cat, "{{url:https://...:Cliquez ici}}"),
+        tag_ex("youtube:URL", "Vidéo YouTube intégrée", links_cat, "{{youtube:https://www.youtube.com/watch?v=dQw4w9WgXcQ}}"),
 
         // --- Tableaux ---
         tag_ex("table}}...{{/table", "Bloc tableau", tables, "{{table}}...{{/table}}"),
@@ -100,6 +101,7 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tmdb_link", "Lien vers la page TMDB", links_cat),
                 tag("imdb_link", "Lien vers la page IMDb", links_cat),
                 tag("allocine_link", "Lien vers la page Allocine", links_cat),
+                tag("trailer_url", "URL de la bande-annonce YouTube", links_cat),
                 // Raccourcis
                 tag("poster_info", "Bloc poster + infos", shortcuts),
                 tag("ratings_table", "Tableau des notes formaté", shortcuts),
@@ -148,6 +150,7 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag("tmdb_link", "Lien vers la page TMDB", links_cat),
                 tag("imdb_link", "Lien vers la page IMDb", links_cat),
                 tag("allocine_link", "Lien vers la page Allocine", links_cat),
+                tag("trailer_url", "URL de la bande-annonce YouTube", links_cat),
                 // Raccourcis
                 tag("poster_info", "Bloc poster + infos", shortcuts),
                 tag("ratings_table", "Tableau des notes formaté", shortcuts),
@@ -181,6 +184,7 @@ pub fn get_available_tags(content_type: &str) -> Vec<TemplateTag> {
                 tag_ex("link", "Lien principal (IGDB ou Steam)", links_cat, "{{#if link}}{{field:Lien:{{link}}}}{{/if}}"),
                 tag("igdb_link", "Lien vers la page IGDB", links_cat),
                 tag("steam_link", "Lien vers la page Steam", links_cat),
+                tag("trailer_url", "URL de la vidéo YouTube", links_cat),
                 // Raccourcis
                 tag("cover_info", "Bloc jaquette + infos", shortcuts),
                 tag("ratings_table", "Tableau des notes formaté", shortcuts),

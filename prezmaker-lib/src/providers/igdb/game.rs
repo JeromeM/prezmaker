@@ -72,6 +72,7 @@ impl GameProvider for IgdbClient {
                     installation: None,
                     min_reqs: None,
                     rec_reqs: None,
+                    trailer_url: None,
                 }
             })
             .collect();
@@ -81,7 +82,7 @@ impl GameProvider for IgdbClient {
 
     async fn get_game_details(&self, id: u64) -> anyhow::Result<Game> {
         let body = format!(
-            r#"where id = {}; fields name,slug,summary,first_release_date,genres.name,platforms.name,involved_companies.company.name,involved_companies.developer,involved_companies.publisher,cover.image_id,screenshots.image_id,total_rating,aggregated_rating,external_games.category,external_games.uid;"#,
+            r#"where id = {}; fields name,slug,summary,first_release_date,genres.name,platforms.name,involved_companies.company.name,involved_companies.developer,involved_companies.publisher,cover.image_id,screenshots.image_id,total_rating,aggregated_rating,external_games.category,external_games.uid,videos.video_id;"#,
             id
         );
 
@@ -175,6 +176,10 @@ impl GameProvider for IgdbClient {
             installation: None,
             min_reqs: None,
             rec_reqs: None,
+            trailer_url: g.videos.as_ref()
+                .and_then(|v| v.first())
+                .and_then(|v| v.video_id.as_ref())
+                .map(|id| format!("https://www.youtube.com/watch?v={}", id)),
         })
     }
 }

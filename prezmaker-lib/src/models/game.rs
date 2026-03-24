@@ -56,6 +56,7 @@ pub struct Game {
     pub min_reqs: Option<SystemReqs>,
     #[serde(default)]
     pub rec_reqs: Option<SystemReqs>,
+    pub trailer_url: Option<String>,
 }
 
 impl Game {

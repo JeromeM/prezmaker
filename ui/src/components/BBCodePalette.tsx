@@ -73,6 +73,7 @@ export default function BBCodePalette({ collapsed, onToggle, onInsertTag, htmlMo
           { label: t("bbcodePalette.quote"), open: "<blockquote>", close: "</blockquote>", placeholder: "citation" },
           { label: "details", open: "<details><summary>", close: "</summary>\n\n</details>", placeholder: "titre" },
           { label: "code", open: "<pre>", close: "</pre>", placeholder: "code" },
+          { label: t("bbcodePalette.youtube"), open: '<div style="text-align:center"><iframe width="560" height="315" src="https://www.youtube.com/embed/', close: '" title="YouTube" frameborder="0" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen style="max-width:100%;aspect-ratio:16/9"></iframe></div>', placeholder: "VIDEO_ID" },
         ],
       },
     ] : [
@@ -124,6 +125,7 @@ export default function BBCodePalette({ collapsed, onToggle, onInsertTag, htmlMo
           { label: t("bbcodePalette.quote"), open: "[quote]", close: "[/quote]", placeholder: "citation" },
           { label: t("bbcodePalette.spoiler"), open: "[spoiler]", close: "[/spoiler]", placeholder: "contenu caché" },
           { label: t("bbcodePalette.alert"), open: "[alert]", close: "[/alert]", placeholder: "message" },
+          { label: t("bbcodePalette.youtube"), open: "[youtube]", close: "[/youtube]", placeholder: "https://www.youtube.com/watch?v=..." },
         ],
       },
     ],

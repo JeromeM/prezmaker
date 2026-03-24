@@ -35,6 +35,7 @@ pub struct TmdbMovieDetail {
     pub genres: Vec<TmdbGenre>,
     pub production_countries: Vec<TmdbCountry>,
     pub credits: Option<TmdbCredits>,
+    pub videos: Option<TmdbVideos>,
 }
 
 // TV search result
@@ -71,6 +72,7 @@ pub struct TmdbTvDetail {
     pub created_by: Vec<TmdbCreator>,
     pub credits: Option<TmdbCredits>,
     pub external_ids: Option<TmdbExternalIds>,
+    pub videos: Option<TmdbVideos>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -117,4 +119,18 @@ pub struct TmdbCrew {
 #[derive(Debug, Deserialize)]
 pub struct TmdbExternalIds {
     pub imdb_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TmdbVideos {
+    pub results: Vec<TmdbVideo>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TmdbVideo {
+    pub key: String,
+    pub site: String,
+    #[serde(rename = "type")]
+    pub video_type: String,
+    pub official: Option<bool>,
 }

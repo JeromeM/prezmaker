@@ -464,6 +464,16 @@ fn render_single_layout_tag(
             }
         }
 
+        // --- YouTube ---
+        "youtube" => {
+            let url = arg.unwrap_or("");
+            if url.is_empty() {
+                Some(String::new())
+            } else {
+                Some(dispatch::youtube(fmt, url, style))
+            }
+        }
+
         // --- Images ---
         "img" => {
             let url_full = arg.unwrap_or("");

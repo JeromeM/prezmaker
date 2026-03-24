@@ -291,7 +291,8 @@
     "link": "Link",
     "quote": "Quote",
     "spoiler": "Spoiler",
-    "alert": "Alert"
+    "alert": "Alert",
+    "youtube": "YouTube"
   },
   "nfo": {
     "confirmGenerate": "No NFO available. Would you like to generate it from a media file?",

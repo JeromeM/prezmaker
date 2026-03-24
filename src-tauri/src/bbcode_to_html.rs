@@ -57,6 +57,26 @@ pub fn convert_bbcode_to_html(bbcode: &str) -> String {
     html = replace_tag(&html, r"\[url=([^\]]*)\]([\s\S]*?)\[/url\]",
         "<a href=\"$1\" style=\"color:#3498db\" target=\"_blank\">$2</a>");
 
+    // [youtube]...[/youtube]
+    html = replace_tag_fn(&html, r"\[youtube\]([\s\S]*?)\[/youtube\]", |caps| {
+        let url = &caps[1];
+        let embed_url = if let Some(pos) = url.find("watch?v=") {
+            let id = &url[pos + 8..];
+            let id = id.split('&').next().unwrap_or(id);
+            format!("https://www.youtube.com/embed/{}", id)
+        } else if let Some(pos) = url.find("youtu.be/") {
+            let id = &url[pos + 9..];
+            let id = id.split('?').next().unwrap_or(id);
+            format!("https://www.youtube.com/embed/{}", id)
+        } else {
+            url.to_string()
+        };
+        format!(
+            "<div style=\"text-align:center;margin:8px 0\"><iframe width=\"560\" height=\"315\" src=\"{}\" title=\"YouTube\" frameborder=\"0\" allow=\"accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture\" allowfullscreen style=\"max-width:100%;aspect-ratio:16/9\"></iframe></div>",
+            embed_url
+        )
+    });
+
     // [img width=N]...[/img]
     html = replace_tag_fn(&html, r"\[img width=(\d+)\]([\s\S]*?)\[/img\]", |caps| {
         format!("<img src=\"{}\" style=\"width:{}px;max-width:100%\" loading=\"lazy\">", &caps[2], &caps[1])
@@ -95,7 +115,7 @@ pub fn convert_bbcode_to_html(bbcode: &str) -> String {
 
     // Remove <br> adjacent to block-level elements to prevent excessive spacing.
     // Use regex for comprehensive matching of all block elements.
-    let block_els = r"div|table|tr|td|th|blockquote|details|h[1-6]|hr";
+    let block_els = r"div|table|tr|td|th|blockquote|details|h[1-6]|hr|iframe";
     // <br> before any block tag (open or close): <br><div..., <br></div>, <br><table..., etc.
     let re_br_before = Regex::new(&format!(r"<br>(</?(?:{})[\s>/])", block_els)).unwrap();
     // <br> after a closing block tag: </div><br>, </table><br>, </td><br>, etc.

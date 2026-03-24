@@ -214,6 +214,7 @@ mod tests {
             tmdb_id: Some(77338),
             imdb_id: None,
             allocine_url: None,
+            trailer_url: None,
         }
     }
 

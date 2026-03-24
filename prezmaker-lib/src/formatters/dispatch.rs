@@ -78,6 +78,13 @@ pub fn url(fmt: OutputFormat, href: &str, label: &str, style: Option<&str>) -> S
     }
 }
 
+pub fn youtube(fmt: OutputFormat, url: &str, style: Option<&str>) -> String {
+    match fmt {
+        OutputFormat::Bbcode => bbcode::youtube(url),
+        OutputFormat::Html => html::youtube(url, style),
+    }
+}
+
 pub fn h1(fmt: OutputFormat, content: &str, style: Option<&str>) -> String {
     match fmt {
         OutputFormat::Bbcode => bbcode::h1(content),

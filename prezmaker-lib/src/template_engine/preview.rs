@@ -74,6 +74,7 @@ fn build_sample_movie(title_color: &str) -> (HashMap<String, String>, RenderCont
         tmdb_id: Some(157336),
         imdb_id: Some("tt0816692".into()),
         allocine_url: None,
+        trailer_url: Some("https://www.youtube.com/watch?v=zSWdZVtXT7E".into()),
     };
 
     let tech = MediaTechInfo {
@@ -159,6 +160,7 @@ fn build_sample_series(title_color: &str) -> (HashMap<String, String>, RenderCon
         tmdb_id: Some(1396),
         imdb_id: Some("tt0903747".into()),
         allocine_url: None,
+        trailer_url: Some("https://www.youtube.com/watch?v=HhesaQXLnRY".into()),
     };
 
     let tech = MediaTechInfo {
@@ -276,6 +278,7 @@ fn build_sample_game(_title_color: &str, fmt: OutputFormat) -> (HashMap<String, 
         installation: Some("1. Extraire l'archive\n2. Lancer le setup\n3. Jouer".into()),
         min_reqs: Some(min_reqs.clone()),
         rec_reqs: Some(rec_reqs.clone()),
+        trailer_url: Some("https://www.youtube.com/watch?v=8X2kIfS6fb8".into()),
     };
 
     let data = super::data::build_game_data_with_format(&game, fmt);
