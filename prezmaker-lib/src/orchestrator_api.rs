@@ -435,6 +435,15 @@ impl OrchestratorApi {
             }
         }
 
+        // YouTube trailer fallback: search if no trailer was found
+        if game.trailer_url.is_none() {
+            self.progress("Recherche de la bande-annonce...");
+            if let Some(url) = Self::search_youtube_trailer(&game.title).await {
+                info!("Trailer YouTube trouvé via recherche: {}", url);
+                game.trailer_url = Some(url);
+            }
+        }
+
         // Translate synopsis from English if language is French and LLM is configured
         if self.language.starts_with("fr") {
             if let Some(ref synopsis) = game.synopsis {
@@ -510,6 +519,13 @@ impl OrchestratorApi {
                 Err(e) => warn!("Allocine indisponible : {}", e),
             }
         }
+        if movie.trailer_url.is_none() {
+            self.progress("Recherche de la bande-annonce...");
+            let query = format!("{} bande annonce", movie.title);
+            if let Some(url) = Self::search_youtube_trailer(&query).await {
+                movie.trailer_url = Some(url);
+            }
+        }
 
         self.progress("Génération de la présentation...");
         let tpl = template_engine::get_template("film", template_name)
@@ -569,6 +585,13 @@ impl OrchestratorApi {
             match Self::enrich_series_allocine(&mut series).await {
                 Ok(_) => info!("Notes Allocine recuperees"),
                 Err(e) => warn!("Allocine indisponible : {}", e),
+            }
+        }
+        if series.trailer_url.is_none() {
+            self.progress("Recherche de la bande-annonce...");
+            let query = format!("{} bande annonce", series.title);
+            if let Some(url) = Self::search_youtube_trailer(&query).await {
+                series.trailer_url = Some(url);
             }
         }
 
@@ -911,6 +934,40 @@ impl OrchestratorApi {
 
         // 4. Fallback → None (synopsis EN sera utilisé)
         None
+    }
+
+    /// Search YouTube for a trailer using the Piped API (free, no key required)
+    async fn search_youtube_trailer(title: &str) -> Option<String> {
+        let query = format!("{} trailer", title);
+        let url = format!(
+            "https://pipedapi.kavin.rocks/search?q={}&filter=videos",
+            urlencoding::encode(&query)
+        );
+        let client = reqwest::Client::new();
+        let resp = client
+            .get(&url)
+            .header("User-Agent", "PrezMaker")
+            .send()
+            .await
+            .ok()?;
+
+        if !resp.status().is_success() {
+            return None;
+        }
+
+        #[derive(serde::Deserialize)]
+        struct PipedSearchResult {
+            items: Option<Vec<PipedItem>>,
+        }
+        #[derive(serde::Deserialize)]
+        struct PipedItem {
+            url: Option<String>,
+        }
+
+        let result: PipedSearchResult = resp.json().await.ok()?;
+        let video_path = result.items?.into_iter().next()?.url?;
+        // Piped returns paths like /watch?v=XXX
+        Some(format!("https://www.youtube.com{}", video_path))
     }
 
     /// Simple heuristic: text looks English if it has common English words

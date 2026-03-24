@@ -166,6 +166,8 @@
     "versionAvailable": "Version {{version}} is available.",
     "later": "Later",
     "update": "Update",
+    "whatsNew": "What's new",
+    "loadingNotes": "Loading release notes...",
     "downloading": "Downloading...",
     "installing": "Installing and restarting...",
     "error": "Error during update: "

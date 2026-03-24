@@ -710,6 +710,58 @@ pub async fn c411_upload(
         .map_err(|e| e.to_string())
 }
 
+// --- Release notes ---
+
+#[derive(Serialize)]
+pub struct ReleaseNotes {
+    pub title: String,
+    pub body: String,
+}
+
+#[tauri::command]
+pub async fn fetch_release_notes(version: String) -> Result<ReleaseNotes, String> {
+    let tag = if version.starts_with('v') {
+        version
+    } else {
+        format!("v{}", version)
+    };
+    let url = format!(
+        "https://api.github.com/repos/JeromeM/prezmaker/releases/tags/{}",
+        tag
+    );
+    let client = prezmaker_lib::http_client();
+    let resp = client
+        .get(&url)
+        .header("User-Agent", "PrezMaker")
+        .header("Accept", "application/vnd.github.v3+json")
+        .send()
+        .await
+        .map_err(|e| format!("Requête échouée: {}", e))?;
+
+    if !resp.status().is_success() {
+        return Ok(ReleaseNotes {
+            title: format!("PrezMaker {}", tag),
+            body: String::new(),
+        });
+    }
+
+    #[derive(Deserialize)]
+    struct GhRelease {
+        name: Option<String>,
+        body: Option<String>,
+    }
+
+    let release: GhRelease = resp
+        .json()
+        .await
+        .map_err(|e| format!("JSON invalide: {}", e))?;
+
+    Ok(ReleaseNotes {
+        title: release.name.unwrap_or_else(|| format!("PrezMaker {}", tag)),
+        body: release.body.unwrap_or_default(),
+    })
+}
+
 // --- Dashboard ---
 
 #[derive(Serialize)]

@@ -15,3 +15,8 @@ pub mod default_templates_html;
 pub mod mediainfo;
 pub mod nfo;
 pub mod upload;
+
+/// Shared HTTP client for simple requests
+pub fn http_client() -> reqwest::Client {
+    reqwest::Client::new()
+}
