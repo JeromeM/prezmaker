@@ -1,7 +1,7 @@
 # Version Bumper - Mémoire
 
 ## Version actuelle
-- **1.30.1** (depuis 2026-03-19 : fix stepper + TopBar)
+- **1.30.3** (depuis 2026-03-19 : fix modal NFO rétrécissement en mode édition)
 
 ## Fichiers de version à maintenir synchronisés
 1. `/apps/perso/PrezMaker/prezmaker-lib/Cargo.toml` (source de vérité)
@@ -32,6 +32,8 @@ Note: prezmaker-cli n'existe plus
 - 1.28.5 → 1.29.0 (2026-03-19) : feature release (refonte UI - Dashboard, Stepper, résultats visuels)
 - 1.29.0 → 1.30.0 (2026-03-19) : feature auto-sauvegarde présentations + fix UI grille résultats
 - 1.30.0 → 1.30.1 (2026-03-19) : patch fix stepper et TopBar
+- 1.30.1 → 1.30.2 (2026-03-19) : patch bump
+- 1.30.2 → 1.30.3 (2026-03-19) : patch fix modal NFO rétrécissement en mode édition
 
 ## Règles appliquées
 - **Feature terminée** : MINOR++ (PATCH→0)

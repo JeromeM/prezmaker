@@ -16,6 +16,7 @@ pub struct IgdbGame {
     pub aggregated_rating: Option<f64>,
     #[serde(default, deserialize_with = "deserialize_external_games")]
     pub external_games: Option<Vec<IgdbExternalGame>>,
+    pub videos: Option<Vec<IgdbVideo>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -47,6 +48,11 @@ where
         }
         None => Ok(None),
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct IgdbVideo {
+    pub video_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

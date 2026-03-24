@@ -106,6 +106,7 @@ impl GameProvider for SteamClient {
                     installation: None,
                     min_reqs: None,
                     rec_reqs: None,
+                    trailer_url: None,
                 }
             })
             .collect();
@@ -226,6 +227,7 @@ impl GameProvider for SteamClient {
             installation: None,
             min_reqs,
             rec_reqs,
+            trailer_url: None,
         })
     }
 }

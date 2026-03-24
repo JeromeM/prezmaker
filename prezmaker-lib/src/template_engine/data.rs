@@ -58,6 +58,9 @@ pub fn build_movie_data(
     if let Some(ref url) = movie.allocine_url {
         data.insert("allocine_link".into(), url.clone());
     }
+    if let Some(ref url) = movie.trailer_url {
+        data.insert("trailer_url".into(), url.clone());
+    }
 
     // Ratings as individual tags
     build_ratings_data(&mut data, &movie.ratings);
@@ -134,6 +137,9 @@ pub fn build_series_data(
     }
     if let Some(ref url) = series.allocine_url {
         data.insert("allocine_link".into(), url.clone());
+    }
+    if let Some(ref url) = series.trailer_url {
+        data.insert("trailer_url".into(), url.clone());
     }
 
     build_ratings_data(&mut data, &series.ratings);
@@ -234,6 +240,9 @@ pub fn build_game_data_with_format(game: &crate::models::Game, fmt: OutputFormat
         if !data.contains_key("link") {
             data.insert("link".into(), steam_link);
         }
+    }
+    if let Some(ref url) = game.trailer_url {
+        data.insert("trailer_url".into(), url.clone());
     }
 
     build_ratings_data_with_format(&mut data, &game.ratings, fmt);

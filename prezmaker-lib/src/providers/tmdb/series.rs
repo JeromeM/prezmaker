@@ -66,6 +66,7 @@ impl SeriesProvider for TmdbClient {
                     tmdb_id: Some(r.id),
                     imdb_id: None,
                     allocine_url: None,
+                    trailer_url: None,
                 }
             })
             .collect();
@@ -83,7 +84,7 @@ impl SeriesProvider for TmdbClient {
             .query(&[
                 ("api_key", self.api_key.as_str()),
                 ("language", self.language.as_str()),
-                ("append_to_response", "credits,external_ids"),
+                ("append_to_response", "credits,external_ids,videos"),
             ])
             .send()
             .await?
@@ -183,6 +184,24 @@ impl SeriesProvider for TmdbClient {
             tmdb_id: Some(detail.id),
             imdb_id,
             allocine_url: None,
+            trailer_url: extract_trailer_url(&detail.videos),
         })
     }
+}
+
+fn extract_trailer_url(videos: &Option<super::models::TmdbVideos>) -> Option<String> {
+    let videos = videos.as_ref()?;
+    // Prefer official trailer, then any trailer, then any teaser
+    let best = videos.results.iter()
+        .filter(|v| v.site == "YouTube")
+        .max_by_key(|v| {
+            let type_score = match v.video_type.as_str() {
+                "Trailer" => 3,
+                "Teaser" => 2,
+                _ => 1,
+            };
+            let official_score = if v.official.unwrap_or(false) { 10 } else { 0 };
+            type_score + official_score
+        })?;
+    Some(format!("https://www.youtube.com/watch?v={}", best.key))
 }

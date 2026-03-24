@@ -24,6 +24,7 @@ pub struct Series {
     pub tmdb_id: Option<u64>,
     pub imdb_id: Option<String>,
     pub allocine_url: Option<String>,
+    pub trailer_url: Option<String>,
 }
 
 impl Series {

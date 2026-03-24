@@ -233,6 +233,34 @@ pub fn footer(pseudo: &str) -> String {
     center(&small(&content, None), None)
 }
 
+pub fn youtube(url: &str, style: Option<&str>) -> String {
+    let embed_url = youtube_to_embed(url);
+    let base = "max-width:100%;aspect-ratio:16/9";
+    let merged = merge_style(base, style);
+    format!(
+        "<iframe width=\"560\" height=\"315\" src=\"{}\" title=\"YouTube\" frameborder=\"0\" allow=\"accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture\" allowfullscreen{}></iframe>",
+        embed_url,
+        style_attr(merged.as_deref())
+    )
+}
+
+fn youtube_to_embed(url: &str) -> String {
+    if let Some(pos) = url.find("watch?v=") {
+        let id = &url[pos + 8..];
+        let id = id.split('&').next().unwrap_or(id);
+        return format!("https://www.youtube.com/embed/{}", id);
+    }
+    if let Some(pos) = url.find("youtu.be/") {
+        let id = &url[pos + 9..];
+        let id = id.split('?').next().unwrap_or(id);
+        return format!("https://www.youtube.com/embed/{}", id);
+    }
+    if url.contains("/embed/") {
+        return url.to_string();
+    }
+    url.to_string()
+}
+
 // ── tests ───────────────────────────────────────────────────────────
 
 #[cfg(test)]

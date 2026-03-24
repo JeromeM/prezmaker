@@ -149,6 +149,10 @@ pub fn footer(pseudo: &str) -> String {
     center(&small(&content))
 }
 
+pub fn youtube(url: &str) -> String {
+    format!("[youtube]{}[/youtube]", url)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
