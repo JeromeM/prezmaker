@@ -80,6 +80,7 @@ pub fn run() {
             commands::c411_fetch_options,
             commands::c411_auto_map,
             commands::c411_upload,
+            commands::fetch_release_notes,
             commands::list_recent_presentations,
             commands::get_dashboard_stats,
             commands::auto_save_presentation,

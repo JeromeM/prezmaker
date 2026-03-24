@@ -166,6 +166,8 @@
     "versionAvailable": "La version {{version}} est disponible.",
     "later": "Plus tard",
     "update": "Mettre à jour",
+    "whatsNew": "Nouveautés",
+    "loadingNotes": "Chargement des nouveautés...",
     "downloading": "Téléchargement en cours...",
     "installing": "Installation et redémarrage...",
     "error": "Erreur lors de la mise à jour : "
