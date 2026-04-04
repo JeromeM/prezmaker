@@ -6,7 +6,8 @@ use prezmaker_lib::models::{Application, Game, MediaAnalysis, MediaTechInfo, Sys
 use prezmaker_lib::orchestrator_api::{GameDetailsResponse, GenerationResult, OrchestratorApi, SearchResult};
 use prezmaker_lib::torrent::{self, ReleaseParsed, TorrentInfo};
 use prezmaker_lib::upload::c411::{
-    self, C411Category, C411Client, C411OptionType, C411UploadResult,
+    self, C411Category, C411Client, C411OptionType, C411UploadResult, DescriptionFormat,
+    fetch_tmdb_metadata_for_c411, fetch_rawg_metadata_for_c411,
 };
 use prezmaker_lib::torrent_creator::{self, TorrentCreateOptions};
 use prezmaker_lib::template_engine::{self, ContentTemplate, TemplateTag};
@@ -390,6 +391,11 @@ pub fn convert_bbcode(bbcode: String) -> String {
 }
 
 #[tauri::command]
+pub fn convert_bbcode_c411(bbcode: String) -> String {
+    bbcode_to_html::convert_bbcode_to_c411_html(&bbcode)
+}
+
+#[tauri::command]
 pub fn run_mediainfo(path: String) -> Result<String, String> {
     prezmaker_lib::mediainfo::analyze(&path)
 }
@@ -420,6 +426,7 @@ pub struct SettingsPayload {
     #[serde(default)]
     pub c411_enabled: bool,
     pub c411_api_key: Option<String>,
+    pub rawg_api_key: Option<String>,
 }
 
 #[tauri::command]
@@ -441,6 +448,7 @@ pub fn get_settings(state: tauri::State<'_, AppState>) -> SettingsPayload {
         pseudo: config.preferences.pseudo.clone(),
         c411_enabled: config.modules.c411.enabled,
         c411_api_key: config.modules.c411.api_key.clone(),
+        rawg_api_key: config.modules.c411.rawg_api_key.clone(),
     }
 }
 
@@ -465,6 +473,7 @@ pub fn save_settings(
     config.preferences.default_templates = settings.default_templates;
     config.modules.c411.enabled = settings.c411_enabled;
     config.modules.c411.api_key = settings.c411_api_key;
+    config.modules.c411.rawg_api_key = settings.rawg_api_key;
     config.save().map_err(|e| e.to_string())
 }
 
@@ -684,6 +693,9 @@ pub async fn c411_upload(
     subcategory_id: u32,
     options_json: String,
     uploader_note: Option<String>,
+    description_format: Option<String>,
+    tmdb_data: Option<String>,
+    rawg_data: Option<String>,
 ) -> Result<C411UploadResult, String> {
     let api_key = {
         let config = state.config.lock().unwrap();
@@ -693,6 +705,11 @@ pub async fn c411_upload(
             .api_key
             .clone()
             .ok_or_else(|| "Clé API C411 non configurée".to_string())?
+    };
+    let fmt = match description_format.as_deref() {
+        Some("html") => Some(DescriptionFormat::Html),
+        Some("standard") | None => None, // standard est le défaut, pas besoin de l'envoyer
+        Some(other) => return Err(format!("Format de description inconnu : {}", other)),
     };
     let client = C411Client::new(api_key);
     client
@@ -705,7 +722,50 @@ pub async fn c411_upload(
             subcategory_id,
             &options_json,
             uploader_note.as_deref(),
+            fmt.as_ref(),
+            tmdb_data.as_deref(),
+            rawg_data.as_deref(),
         )
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn c411_fetch_tmdb_metadata(
+    state: tauri::State<'_, AppState>,
+    title: String,
+    content_type: String,
+) -> Result<serde_json::Value, String> {
+    let (api_key, language) = {
+        let config = state.config.lock().unwrap();
+        let key = config
+            .tmdb
+            .api_key
+            .clone()
+            .ok_or_else(|| "Clé API TMDB non configurée".to_string())?;
+        let lang = config.preferences.language.clone();
+        (key, lang)
+    };
+    fetch_tmdb_metadata_for_c411(&api_key, &title, &content_type, &language)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn c411_fetch_rawg_metadata(
+    state: tauri::State<'_, AppState>,
+    title: String,
+) -> Result<serde_json::Value, String> {
+    let api_key = {
+        let config = state.config.lock().unwrap();
+        config
+            .modules
+            .c411
+            .rawg_api_key
+            .clone()
+            .ok_or_else(|| "Clé API RAWG non configurée (Paramètres > Modules > C411)".to_string())?
+    };
+    fetch_rawg_metadata_for_c411(&api_key, &title)
         .await
         .map_err(|e| e.to_string())
 }

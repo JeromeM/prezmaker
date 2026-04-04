@@ -101,7 +101,8 @@
     "modulesDescription": "Configurez les modules pour uploader directement sur les trackers.",
     "enabled": "Activé",
     "c411Description": "Upload automatique sur le tracker C411 via son API.",
-    "c411ApiKey": "Clé API C411"
+    "c411ApiKey": "Clé API C411",
+    "rawgApiKey": "Clé API RAWG (pour métadonnées jeux)"
   },
   "onboarding": {
     "welcome": "Bienvenue sur PrezMaker",
@@ -358,7 +359,12 @@
     "error": "Erreur lors de l'upload",
     "noNfo": "Aucun NFO généré. Générez le NFO avant d'uploader.",
     "noApiKey": "Clé API C411 non configurée. Allez dans Paramètres > Modules.",
-    "loadingCategories": "Chargement des catégories..."
+    "loadingCategories": "Chargement des catégories...",
+    "descriptionFormat": "Format de description",
+    "htmlPermissionNote": "Nécessite la permission torrent:use_html_prez sur C411",
+    "metadata": "Métadonnées",
+    "includeTmdb": "Inclure les données TMDB",
+    "includeRawg": "Inclure les données RAWG"
   },
   "torrentNoResults": {
     "title": "Aucun résultat trouvé",

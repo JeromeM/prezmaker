@@ -25,6 +25,7 @@ export const mockSettings: SettingsPayload = {
   pseudo: "TestUser",
   c411_enabled: true,
   c411_api_key: "test-c411-key",
+  rawg_api_key: null,
 };
 
 export const mockTorrentInfo: TorrentInfo = {

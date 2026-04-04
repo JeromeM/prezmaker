@@ -29,6 +29,7 @@ pub struct C411ModuleConfig {
     #[serde(default)]
     pub enabled: bool,
     pub api_key: Option<String>,
+    pub rawg_api_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]

@@ -44,6 +44,7 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
     pseudo: "",
     c411_enabled: false,
     c411_api_key: null,
+    rawg_api_key: null,
   });
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
@@ -341,6 +342,7 @@ export default function SettingsModal({ onClose, theme, onSetTheme }: Props) {
                   </div>
                   <p className="text-xs text-fg-dim">{t("settings.c411Description")}</p>
                   {secretInput(t("settings.c411ApiKey"), "c411_api_key", "c411")}
+                  {secretInput(t("settings.rawgApiKey"), "rawg_api_key", "rawg")}
                 </div>
               </div>
             )}
