@@ -41,11 +41,54 @@ export default function UploadDialog({
   const [subcategoryId, setSubcategoryId] = useState<number>(6);
   const [selectedOptions, setSelectedOptions] = useState<Record<number, number | number[]>>({});
   const [uploaderNote, setUploaderNote] = useState("");
+  const [descriptionFormat, setDescriptionFormat] = useState<"standard" | "html">(isHtml ? "html" : "standard");
   const [autoMapped, setAutoMapped] = useState<Set<number>>(new Set());
+
+  // Metadata C411
+  const isTmdbContent = meta.contentType === "film" || meta.contentType === "serie";
+  const isRawgContent = meta.contentType === "jeu";
+  const [includeTmdb, setIncludeTmdb] = useState(isTmdbContent);
+  const [includeRawg, setIncludeRawg] = useState(isRawgContent);
+  const [tmdbData, setTmdbData] = useState<string | null>(null);
+  const [rawgData, setRawgData] = useState<string | null>(null);
+  const [metadataLoading, setMetadataLoading] = useState(false);
+  const [metadataError, setMetadataError] = useState<string | null>(null);
 
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<C411UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-fetch metadata when checkboxes are enabled
+  useEffect(() => {
+    if (!includeTmdb && !includeRawg) return;
+    let cancelled = false;
+
+    (async () => {
+      setMetadataLoading(true);
+      setMetadataError(null);
+      try {
+        if (includeTmdb && isTmdbContent && !tmdbData) {
+          const data = await invoke<Record<string, unknown>>("c411_fetch_tmdb_metadata", {
+            title: meta.title,
+            contentType: meta.contentType,
+          });
+          if (!cancelled) setTmdbData(JSON.stringify(data));
+        }
+        if (includeRawg && isRawgContent && !rawgData) {
+          const data = await invoke<Record<string, unknown>>("c411_fetch_rawg_metadata", {
+            title: meta.title,
+          });
+          if (!cancelled) setRawgData(JSON.stringify(data));
+        }
+      } catch (e) {
+        if (!cancelled) setMetadataError(String(e));
+      } finally {
+        if (!cancelled) setMetadataLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [includeTmdb, includeRawg]);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -156,16 +199,28 @@ export default function UploadDialog({
     setUploading(true);
     setError(null);
     try {
+      let description = bbcode;
+      // En mode html avec du BBCode source, convertir en HTML compatible C411
+      if (descriptionFormat === "html" && !isHtml) {
+        description = await invoke<string>("convert_bbcode_c411", { bbcode });
+      }
+      // En mode html avec du HTML source (isHtml), le contenu est déjà du HTML
+      // mais c'est le HTML local avec wrapper — on le passe tel quel,
+      // l'utilisateur est responsable de la compatibilité C411
+
       const optionsJson = JSON.stringify(selectedOptions);
       const res = await invoke<C411UploadResult>("c411_upload", {
         torrentPath,
         nfoContent: nfoContent ?? "",
         title,
-        description: bbcode,
+        description,
         categoryId,
         subcategoryId,
         optionsJson,
         uploaderNote: uploaderNote || null,
+        descriptionFormat: descriptionFormat !== "standard" ? descriptionFormat : null,
+        tmdbData: includeTmdb ? tmdbData : null,
+        rawgData: includeRawg ? rawgData : null,
       });
       setResult(res);
     } catch (e) {
@@ -173,7 +228,7 @@ export default function UploadDialog({
     } finally {
       setUploading(false);
     }
-  }, [torrentPath, nfoContent, title, bbcode, categoryId, subcategoryId, selectedOptions, uploaderNote]);
+  }, [torrentPath, nfoContent, title, bbcode, categoryId, subcategoryId, selectedOptions, uploaderNote, descriptionFormat, isHtml, includeTmdb, includeRawg, tmdbData, rawgData]);
 
   // Find current category/subcategory objects
   const currentCategory = categories.find((c) =>
@@ -344,6 +399,92 @@ export default function UploadDialog({
                         )}
                       </div>
                     ))
+                  )}
+                </div>
+              )}
+
+              {/* Description Format */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-fg-muted">{t("upload.descriptionFormat")}</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDescriptionFormat("standard")}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                      descriptionFormat === "standard"
+                        ? "bg-blue-600/20 border border-blue-500 text-blue-300"
+                        : "bg-input border border-edge text-fg-muted hover:text-fg-bright"
+                    }`}
+                  >
+                    BBCode
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDescriptionFormat("html")}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                      descriptionFormat === "html"
+                        ? "bg-blue-600/20 border border-blue-500 text-blue-300"
+                        : "bg-input border border-edge text-fg-muted hover:text-fg-bright"
+                    }`}
+                  >
+                    HTML
+                  </button>
+                </div>
+                {descriptionFormat === "html" && (
+                  <p className="text-[10px] text-fg-faint mt-0.5">
+                    {t("upload.htmlPermissionNote")}
+                  </p>
+                )}
+              </div>
+
+              {/* Metadata C411 */}
+              {(isTmdbContent || isRawgContent) && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs text-fg-muted">{t("upload.metadata")}</label>
+                  {isTmdbContent && (
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includeTmdb}
+                        onChange={(e) => {
+                          setIncludeTmdb(e.target.checked);
+                          if (!e.target.checked) setTmdbData(null);
+                        }}
+                        className="accent-blue-500 w-3.5 h-3.5"
+                      />
+                      <span className="text-fg-bright">{t("upload.includeTmdb")}</span>
+                      {metadataLoading && includeTmdb && !tmdbData && (
+                        <svg className="animate-spin h-3 w-3 text-fg-muted" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                      )}
+                      {tmdbData && <span className="text-green-400 text-[10px]">&#10003;</span>}
+                    </label>
+                  )}
+                  {isRawgContent && (
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includeRawg}
+                        onChange={(e) => {
+                          setIncludeRawg(e.target.checked);
+                          if (!e.target.checked) setRawgData(null);
+                        }}
+                        className="accent-blue-500 w-3.5 h-3.5"
+                      />
+                      <span className="text-fg-bright">{t("upload.includeRawg")}</span>
+                      {metadataLoading && includeRawg && !rawgData && (
+                        <svg className="animate-spin h-3 w-3 text-fg-muted" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                      )}
+                      {rawgData && <span className="text-green-400 text-[10px]">&#10003;</span>}
+                    </label>
+                  )}
+                  {metadataError && (
+                    <p className="text-[10px] text-red-400">{metadataError}</p>
                   )}
                 </div>
               )}

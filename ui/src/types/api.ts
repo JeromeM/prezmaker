@@ -89,6 +89,7 @@ export interface SettingsPayload {
   pseudo: string;
   c411_enabled: boolean;
   c411_api_key: string | null;
+  rawg_api_key: string | null;
 }
 
 // Content Templates

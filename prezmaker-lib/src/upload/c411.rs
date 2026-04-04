@@ -2,8 +2,25 @@ use crate::error::PrezError;
 use crate::torrent::ReleaseParsed;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::time::Duration;
 
 const BASE_URL: &str = "https://c411.org/api";
+
+/// Formats de description acceptés par l'API C411.
+/// - `Standard` : BBCode converti automatiquement en HTML côté serveur.
+/// - `Html` : HTML brut sanitisé (nécessite la permission `torrent:use_html_prez`).
+///   Éléments interdits : script, style, link, iframe, svg, canvas, form, input,
+///   button, select, textarea, math, dialog, template, object, embed, video, audio.
+///   Attributs interdits : class, id, data-*, on*.
+///   Images : src doit pointer vers un domaine de la liste blanche (TMDB, RAWG…).
+///   Liens : protocoles https://, http://, mailto: uniquement.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum DescriptionFormat {
+    #[default]
+    Standard,
+    Html,
+}
 
 /// Wrapper for API responses: `{ "data": [...] }`
 #[derive(Debug, Deserialize)]
@@ -63,7 +80,10 @@ pub struct C411Client {
 impl C411Client {
     pub fn new(api_key: String) -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .timeout(Duration::from_secs(30))
+                .build()
+                .expect("Failed to build C411 HTTP client"),
             api_key,
         }
     }
@@ -112,6 +132,9 @@ impl C411Client {
         subcategory_id: u32,
         options_json: &str,
         uploader_note: Option<&str>,
+        description_format: Option<&DescriptionFormat>,
+        tmdb_data: Option<&str>,
+        rawg_data: Option<&str>,
     ) -> Result<C411UploadResult, PrezError> {
         let torrent_bytes = std::fs::read(torrent_path)
             .map_err(|e| PrezError::Upload(format!("Cannot read torrent file: {}", e)))?;
@@ -122,7 +145,7 @@ impl C411Client {
             .unwrap_or("release.torrent")
             .to_string();
 
-        let form = reqwest::multipart::Form::new()
+        let mut form = reqwest::multipart::Form::new()
             .part(
                 "torrent",
                 reqwest::multipart::Part::bytes(torrent_bytes)
@@ -143,11 +166,25 @@ impl C411Client {
             .text("subcategoryId", subcategory_id.to_string())
             .text("options", options_json.to_string());
 
-        let form = if let Some(note) = uploader_note {
-            form.text("uploaderNote", note.to_string())
-        } else {
-            form
-        };
+        if let Some(note) = uploader_note {
+            form = form.text("uploaderNote", note.to_string());
+        }
+
+        if let Some(fmt) = description_format {
+            let value = match fmt {
+                DescriptionFormat::Standard => "standard",
+                DescriptionFormat::Html => "html",
+            };
+            form = form.text("descriptionFormat", value.to_string());
+        }
+
+        if let Some(tmdb) = tmdb_data {
+            form = form.text("tmdbData", tmdb.to_string());
+        }
+
+        if let Some(rawg) = rawg_data {
+            form = form.text("rawgData", rawg.to_string());
+        }
 
         let resp = self
             .client
@@ -265,10 +302,11 @@ pub fn auto_map_options(
 fn map_language(lang: &str) -> Option<u32> {
     let upper = lang.to_uppercase();
     match upper.as_str() {
-        "MULTI" => Some(4),
-        "FRENCH" | "VFF" => Some(2),
+        "MULTI" => Some(4),       // Multi (FR inclus)
+        "MULTI VF2" => Some(422), // Multi VF2 (FR+QC)
+        "FRENCH" | "VFF" => Some(2), // Français (VFF)
         "VOSTFR" => Some(8),
-        "VFQ" => Some(6),
+        "VFQ" => Some(6),         // Québécois (VFQ)
         "ENGLISH" | "ENG" => Some(1),
         _ => None,
     }
@@ -276,19 +314,125 @@ fn map_language(lang: &str) -> Option<u32> {
 
 fn map_quality(quality: &str) -> Option<u32> {
     let q = quality.to_uppercase();
-    if q.contains("2160") && q.contains("BLURAY") {
-        Some(10)
-    } else if q.contains("1080") && (q.contains("WEB-DL") || q.contains("WEBDL") || q.contains("WEB")) {
-        Some(25)
-    } else if q.contains("1080") && q.contains("BLURAY") {
-        Some(413)
+    // Ordre : du plus spécifique au plus général
+    if q.contains("REMUX") && q.contains("2160") {
+        Some(10)  // BluRay 4K (remux 4K)
+    } else if q.contains("REMUX") {
+        Some(12)  // BluRay Remux
     } else if q.contains("2160") && (q.contains("WEB-DL") || q.contains("WEBDL") || q.contains("WEB")) {
-        Some(10) // fallback 4K WEB
+        Some(26)  // WEB-DL 4K
+    } else if q.contains("2160") && q.contains("BLURAY") {
+        Some(10)  // BluRay 4K
+    } else if q.contains("1080") && (q.contains("WEB-DL") || q.contains("WEBDL") || q.contains("WEB")) {
+        Some(25)  // WEB-DL 1080
+    } else if q.contains("1080") && q.contains("BLURAY") {
+        Some(413) // BluRay 1080 (existant)
+    } else if q.contains("1080") && (q.contains("HDRIP") || q.contains("BDRIP") || q.contains("BRRIP")) {
+        Some(16)  // HDRip 1080
     } else if q.contains("720") {
-        Some(24) // 720p
+        Some(24)
+    } else if q.contains("480") || q.contains("DVDRIP") {
+        Some(23)  // SD / DVDRip
     } else {
         None
     }
+}
+
+// --- TMDB metadata for C411 ---
+
+/// Cherche un film/série sur TMDB par titre et retourne les métadonnées au format C411.
+pub async fn fetch_tmdb_metadata_for_c411(
+    api_key: &str,
+    title: &str,
+    content_type: &str,
+    language: &str,
+) -> Result<serde_json::Value, PrezError> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(15))
+        .build()
+        .map_err(|e| PrezError::Upload(e.to_string()))?;
+
+    let base = "https://api.themoviedb.org/3";
+
+    let (search_type, detail_type) = match content_type {
+        "serie" => ("tv", "tv"),
+        _ => ("movie", "movie"),
+    };
+
+    // 1. Recherche
+    let search: serde_json::Value = client
+        .get(format!("{}/search/{}", base, search_type))
+        .query(&[("api_key", api_key), ("query", title), ("language", language)])
+        .send()
+        .await?
+        .json()
+        .await
+        .map_err(|e| PrezError::Upload(format!("TMDB search failed: {}", e)))?;
+
+    let first = search["results"]
+        .as_array()
+        .and_then(|r| r.first())
+        .ok_or_else(|| PrezError::Upload(format!("Aucun résultat TMDB pour \"{}\"", title)))?;
+
+    let tmdb_id = first["id"]
+        .as_u64()
+        .ok_or_else(|| PrezError::Upload("TMDB id manquant".to_string()))?;
+
+    // 2. Détails avec credits
+    let detail: serde_json::Value = client
+        .get(format!("{}/{}/{}", base, detail_type, tmdb_id))
+        .query(&[("api_key", api_key), ("language", language), ("append_to_response", "credits")])
+        .send()
+        .await?
+        .json()
+        .await
+        .map_err(|e| PrezError::Upload(format!("TMDB detail failed: {}", e)))?;
+
+    Ok(detail)
+}
+
+// --- RAWG metadata for C411 ---
+
+/// Cherche un jeu sur RAWG par titre et retourne les métadonnées au format C411.
+pub async fn fetch_rawg_metadata_for_c411(
+    api_key: &str,
+    title: &str,
+) -> Result<serde_json::Value, PrezError> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(15))
+        .build()
+        .map_err(|e| PrezError::Upload(e.to_string()))?;
+
+    // 1. Recherche
+    let search: serde_json::Value = client
+        .get("https://api.rawg.io/api/games")
+        .query(&[("key", api_key), ("search", title), ("page_size", "1")])
+        .send()
+        .await?
+        .json()
+        .await
+        .map_err(|e| PrezError::Upload(format!("RAWG search failed: {}", e)))?;
+
+    let first = search["results"]
+        .as_array()
+        .and_then(|r| r.first())
+        .ok_or_else(|| PrezError::Upload(format!("Aucun résultat RAWG pour \"{}\"", title)))?;
+
+    let slug = first["slug"]
+        .as_str()
+        .ok_or_else(|| PrezError::Upload("RAWG slug manquant".to_string()))?;
+
+    // 2. Détails complets
+    let detail: serde_json::Value = client
+        .get(format!("https://api.rawg.io/api/games/{}", slug))
+        .query(&[("key", api_key)])
+        .send()
+        .await?
+        .json()
+        .await
+        .map_err(|e| PrezError::Upload(format!("RAWG detail failed: {}", e)))?;
+
+    Ok(detail)
 }
 
 #[cfg(test)]
@@ -307,12 +451,30 @@ mod tests {
     #[test]
     fn test_map_language() {
         assert_eq!(map_language("MULTI"), Some(4));
+        assert_eq!(map_language("MULTI VF2"), Some(422));
         assert_eq!(map_language("FRENCH"), Some(2));
         assert_eq!(map_language("VFF"), Some(2));
         assert_eq!(map_language("VOSTFR"), Some(8));
         assert_eq!(map_language("VFQ"), Some(6));
         assert_eq!(map_language("ENGLISH"), Some(1));
         assert_eq!(map_language("unknown"), None);
+    }
+
+    #[test]
+    fn test_map_quality_extended() {
+        // 4K
+        assert_eq!(map_quality("BluRay 2160p REMUX"), Some(10));
+        assert_eq!(map_quality("WEB-DL 2160p"), Some(26));
+        assert_eq!(map_quality("BluRay 2160p"), Some(10));
+        // 1080p
+        assert_eq!(map_quality("WEB-DL 1080p"), Some(25));
+        assert_eq!(map_quality("BluRay 1080p"), Some(413));
+        assert_eq!(map_quality("HDRip 1080p"), Some(16));
+        // Remux sans résolution
+        assert_eq!(map_quality("REMUX"), Some(12));
+        // SD
+        assert_eq!(map_quality("DVDRip"), Some(23));
+        assert_eq!(map_quality("480p"), Some(23));
     }
 
     #[test]

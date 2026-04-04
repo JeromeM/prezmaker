@@ -45,6 +45,7 @@ export default function Onboarding({ onComplete }: Props) {
     pseudo: "",
     c411_enabled: false,
     c411_api_key: null,
+    rawg_api_key: null,
   });
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
