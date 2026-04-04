@@ -136,6 +136,121 @@ pub fn convert_bbcode_to_html(bbcode: &str) -> String {
     wrap_in_document(&html)
 }
 
+/// Convertit du BBCode en HTML compatible avec les règles de sanitisation C411.
+///
+/// Utilise les variables CSS C411 (`var(--c411-*, fallback)`) pour s'adapter au
+/// thème clair/sombre du site automatiquement.
+///
+/// Règles C411 respectées :
+/// - Pas de wrapper document (`<html>`, `<head>`, `<style>`, `<script>`)
+/// - `[youtube]` → lien cliquable (pas d'`<iframe>`)
+/// - Pas d'attributs `class`, `id`, `data-*`, `on*`
+/// - Pas de `position: fixed` ni `animation` dans les styles
+/// - Images : seuls les domaines whitelist (TMDB, RAWG…) sont acceptés par C411
+///
+/// Variables CSS disponibles (injectées par C411) :
+/// `--c411-bg-card`, `--c411-bg-primary`, `--c411-bg-secondary`, `--c411-text-primary`,
+/// `--c411-text-secondary`, `--c411-text-muted`, `--c411-border`, `--c411-accent`,
+/// `--c411-success`, `--c411-warning`, `--c411-error`, `--c411-info`
+pub fn convert_bbcode_to_c411_html(bbcode: &str) -> String {
+    let mut html = escape_html(bbcode);
+
+    html = replace_tag(&html, r"\[center\]([\s\S]*?)\[/center\]", "<div style=\"text-align:center\">$1</div>");
+    html = replace_tag(&html, r"\[b\]([\s\S]*?)\[/b\]", "<strong>$1</strong>");
+    html = replace_tag(&html, r"\[i\]([\s\S]*?)\[/i\]", "<em>$1</em>");
+    html = replace_tag(&html, r"\[u\]([\s\S]*?)\[/u\]", "<span style=\"text-decoration:underline\">$1</span>");
+
+    html = replace_tag_fn(&html, r"\[color=(#?[0-9a-fA-F]{3,8})\]([\s\S]*?)\[/color\]", |caps| {
+        let mut color = caps[1].to_string();
+        if !color.starts_with('#') {
+            color = format!("#{}", color);
+        }
+        format!("<span style=\"color:{}\">{}</span>", color, &caps[2])
+    });
+
+    html = replace_tag_fn(&html, r"\[size=(\d+)\]([\s\S]*?)\[/size\]", |caps| {
+        let size: u32 = caps[1].parse().unwrap_or(14);
+        let px = bbcode_size_to_px(size);
+        format!("<span style=\"font-size:{}px\">{}</span>", px, &caps[2])
+    });
+
+    for level in 1..=6 {
+        let pattern = format!(r"\[h{}\]([\s\S]*?)\[/h{}\]", level, level);
+        let replacement = format!(
+            "<h{} style=\"color:var(--c411-text-primary,#f0fdf4);margin:0.5em 0\">$1</h{}>",
+            level, level
+        );
+        html = replace_tag(&html, &pattern, &replacement);
+    }
+
+    html = html.replace("[hr]", "<hr style=\"border:1px solid var(--c411-border,#134e3a);margin:1em 0\">");
+
+    html = replace_tag(&html, r"\[quote\]([\s\S]*?)\[/quote\]",
+        "<blockquote style=\"border-left:3px solid var(--c411-accent,#a855f7);padding:8px 16px;margin:8px 0;background:var(--c411-bg-secondary,#071a14);border-radius:8px\">$1</blockquote>");
+
+    html = replace_tag(&html, r"\[alert\]([\s\S]*?)\[/alert\]",
+        "<div style=\"border:1px solid var(--c411-error,#f87171);padding:8px 16px;margin:8px 0;background:rgba(248,113,113,0.1);color:var(--c411-error,#f87171);border-radius:8px\">$1</div>");
+
+    html = replace_tag(&html, r"\[spoiler=([^\]]*)\]([\s\S]*?)\[/spoiler\]",
+        "<details style=\"border:1px solid var(--c411-border,#134e3a);border-radius:12px;padding:12px;margin:8px 0\"><summary style=\"cursor:pointer;color:var(--c411-text-primary,#f0fdf4);font-weight:600\">$1</summary><div style=\"padding:8px 0;color:var(--c411-text-secondary,#bbf7d0)\">$2</div></details>");
+
+    html = replace_tag(&html, r"\[url=([^\]]*)\]([\s\S]*?)\[/url\]",
+        "<a href=\"$1\" style=\"color:var(--c411-accent,#a855f7)\" target=\"_blank\">$2</a>");
+
+    // [youtube] → lien cliquable (iframe interdit par C411)
+    html = replace_tag_fn(&html, r"\[youtube\]([\s\S]*?)\[/youtube\]", |caps| {
+        let url = &caps[1];
+        format!(
+            "<div style=\"text-align:center;margin:8px 0\"><a href=\"{}\" style=\"color:var(--c411-info,#60a5fa)\" target=\"_blank\">{}</a></div>",
+            url, url
+        )
+    });
+
+    // Images
+    html = replace_tag_fn(&html, r"\[img width=(\d+)\]([\s\S]*?)\[/img\]", |caps| {
+        format!("<img src=\"{}\" style=\"width:{}px;max-width:100%;border-radius:10px\">", &caps[2], &caps[1])
+    });
+    html = replace_tag_fn(&html, r"\[img=(\d+)x(\d+)\]([\s\S]*?)\[/img\]", |caps| {
+        format!("<img src=\"{}\" style=\"width:{}px;height:{}px;max-width:100%;border-radius:10px\">", &caps[3], &caps[1], &caps[2])
+    });
+    html = replace_tag(&html, r"\[img\]([\s\S]*?)\[/img\]",
+        "<img src=\"$1\" style=\"max-width:100%;border-radius:10px\">");
+
+    // Tables — styled with C411 variables
+    html = replace_tag(&html, r"\[table\]([\s\S]*?)\[/table\]",
+        "<table style=\"width:100%;border-collapse:collapse;margin:8px 0;font-size:13px\">$1</table>");
+    html = replace_tag(&html, r"\[tr\]([\s\S]*?)\[/tr\]", "<tr>$1</tr>");
+    html = replace_tag(&html, r"\[th\]([\s\S]*?)\[/th\]",
+        "<th style=\"text-align:left;padding:8px 12px;border-bottom:1px solid var(--c411-border,#134e3a);color:var(--c411-text-muted,#86efac);font-size:10px;font-weight:700;letter-spacing:0.8px\">$1</th>");
+    html = replace_tag(&html, r"\[td\]([\s\S]*?)\[/td\]",
+        "<td style=\"padding:8px 12px;border-bottom:1px solid var(--c411-border,#134e3a);color:var(--c411-text-secondary,#bbf7d0);vertical-align:top\">$1</td>");
+
+    html = replace_tag(&html, r"\[left\]([\s\S]*?)\[/left\]",
+        "<div style=\"text-align:left\">$1</div>");
+
+    while html.contains("\n\n\n") {
+        html = html.replace("\n\n\n", "\n\n");
+    }
+
+    html = html.replace('\n', "<br>");
+
+    let re_br_before = Regex::new(r"<br>(</?(?:div|table|tr|td|th|blockquote|details|h[1-6]|hr|pre)[\s>/])").unwrap();
+    let re_br_after_close = Regex::new(r"(</(?:div|table|tr|td|th|blockquote|details|h[1-6]|hr|pre)>)<br>").unwrap();
+    let re_br_after_open = Regex::new(r"(<(?:div|table|tr|td|th|blockquote|details|h[1-6]|hr|pre)\b[^>]*>)<br>").unwrap();
+
+    loop {
+        let prev = html.clone();
+        html = re_br_before.replace_all(&html, "$1").to_string();
+        html = re_br_after_close.replace_all(&html, "$1").to_string();
+        html = re_br_after_open.replace_all(&html, "$1").to_string();
+        if html == prev {
+            break;
+        }
+    }
+
+    html
+}
+
 fn escape_html(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
