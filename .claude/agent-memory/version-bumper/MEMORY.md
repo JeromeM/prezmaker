@@ -1,7 +1,7 @@
 # Version Bumper - Mémoire
 
 ## Version actuelle
-- **1.31.0** (depuis 2026-03-24 : balise [youtube] + recherche auto bande-annonce)
+- **1.35.0** (depuis 2026-04-12 : renommage de templates dans l'éditeur)
 
 ## Fichiers de version à maintenir synchronisés
 1. `/apps/perso/PrezMaker/prezmaker-lib/Cargo.toml` (source de vérité)
@@ -35,6 +35,11 @@ Note: prezmaker-cli n'existe plus
 - 1.30.1 → 1.30.2 (2026-03-19) : patch bump
 - 1.30.2 → 1.30.3 (2026-03-19) : patch fix modal NFO rétrécissement en mode édition
 - 1.30.3 → 1.31.0 (2026-03-24) : feature release (balise [youtube] + recherche auto bande-annonce)
+- 1.31.0 → 1.32.0 (2026-03-XX) : feature release
+- 1.32.0 → 1.32.1 (2026-03-XX) : patch bump
+- 1.32.1 → 1.33.0 (2026-03-30) : feature release (module C411 API upload étendue + HTML C411)
+- 1.33.0 → 1.34.0 (2026-04-12) : feature release (journal d'upload C411)
+- 1.34.0 → 1.35.0 (2026-04-12) : feature release (renommage de templates dans l'éditeur)
 
 ## Règles appliquées
 - **Feature terminée** : MINOR++ (PATCH→0)

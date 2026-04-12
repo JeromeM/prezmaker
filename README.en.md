@@ -95,9 +95,6 @@ Download the latest version from the [Releases](../../releases/latest) page:
 | Platform | File |
 |---|---|
 | Windows | `.exe` (NSIS) or `.msi` |
-| macOS (Apple Silicon) | `.dmg` |
-| macOS (Intel) | `.dmg` |
-| Linux | `.deb`, `.AppImage` or `.rpm` |
 
 The application updates automatically on launch when a new version is available.
 

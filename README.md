@@ -57,6 +57,9 @@ Recherchez un film, une série, un jeu ou une application, et obtenez une prése
 - **Module C411** — upload direct sur le tracker C411 via son API REST
 - **Auto-mapping** — catégorie, sous-catégorie et options pré-remplies depuis le torrent parsé
 - **Options dynamiques** — chargées depuis l'API selon la sous-catégorie choisie
+- **Format BBCode ou HTML** — choix du format de description à l'upload (HTML nécessite la permission C411)
+- **Métadonnées TMDB / RAWG** — inclusion automatique des données TMDB (films/séries) ou RAWG (jeux) dans l'upload
+- **Journal d'upload** — chaque upload est journalisé dans `%APPDATA%/prezmaker/upload_log.txt` pour diagnostic
 - **Lier un torrent** — associez un `.torrent` à une présentation faite manuellement pour l'uploader
 
 ### Collections
@@ -129,9 +132,6 @@ Téléchargez la dernière version depuis la page [Releases](../../releases/late
 | Plateforme | Fichier |
 |---|---|
 | Windows | `.exe` (NSIS) ou `.msi` |
-| macOS (Apple Silicon) | `.dmg` |
-| macOS (Intel) | `.dmg` |
-| Linux | `.deb`, `.AppImage` ou `.rpm` |
 
 L'application se met à jour automatiquement au lancement lorsqu'une nouvelle version est disponible.
 
@@ -147,6 +147,7 @@ Vous pouvez aussi accéder aux paramètres à tout moment via l'icône engrenage
 | **IGDB Client ID / Secret** | Pour rechercher des jeux | Oui (jeux) |
 | **LLM Provider + API Key** | Pour les descriptions IA et la génération NFO | Non |
 | **C411 API Key** | Pour l'upload direct sur C411 | Non |
+| **RAWG API Key** | Pour les métadonnées jeux dans l'upload C411 | Non |
 | **Pseudo** | Signature dans le footer des présentations | Non |
 | **Couleur du titre** | Code couleur hex par défaut pour les titres | Non |
 
