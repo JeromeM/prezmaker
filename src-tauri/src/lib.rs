@@ -56,6 +56,7 @@ pub fn run() {
             commands::get_content_template,
             commands::save_content_template,
             commands::delete_content_template,
+            commands::rename_content_template,
             commands::duplicate_content_template,
             commands::reorder_content_templates,
             commands::get_template_tags,

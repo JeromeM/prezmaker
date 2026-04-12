@@ -245,6 +245,45 @@ pub fn delete_template(content_type: &str, name: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub fn rename_template(
+    content_type: &str,
+    old_name: &str,
+    new_name: &str,
+) -> Result<(), String> {
+    let safe_old = sanitize_name(old_name);
+    let safe_new = sanitize_name(new_name);
+    if safe_old == "default" {
+        return Err("Cannot rename the default template".to_string());
+    }
+    if safe_new.is_empty() {
+        return Err("New template name is empty".to_string());
+    }
+    if safe_old == safe_new {
+        return Ok(());
+    }
+    let dir = content_type_dir(content_type)?;
+    let old_path = dir.join(format!("{}.tpl", safe_old));
+    let new_path = dir.join(format!("{}.tpl", safe_new));
+    if new_path.exists() {
+        return Err(format!("Template '{}' already exists", new_name));
+    }
+    std::fs::rename(&old_path, &new_path)
+        .map_err(|e| format!("Cannot rename template: {}", e))?;
+    // Rename metadata file if present
+    if let (Ok(old_meta), Ok(new_meta)) = (meta_path(content_type, &safe_old), meta_path(content_type, &safe_new)) {
+        if old_meta.exists() {
+            let _ = std::fs::rename(&old_meta, &new_meta);
+        }
+    }
+    // Rename format file if present
+    let old_fmt = dir.join(format!("{}.format", safe_old));
+    let new_fmt = dir.join(format!("{}.format", safe_new));
+    if old_fmt.exists() {
+        let _ = std::fs::rename(&old_fmt, &new_fmt);
+    }
+    Ok(())
+}
+
 pub fn duplicate_template(
     content_type: &str,
     name: &str,

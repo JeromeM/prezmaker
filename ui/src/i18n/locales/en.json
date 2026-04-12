@@ -191,6 +191,7 @@
     "searchTags": "Search tag...",
     "noTemplates": "No templates",
     "confirmDelete": "Delete template \"{{name}}\"?",
+    "renamePrompt": "New template name:",
     "titleColor": "Title color",
     "resetColor": "Reset"
   },

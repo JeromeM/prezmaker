@@ -492,6 +492,19 @@ export default function TemplateEditor({ onClose }: Props) {
     }
   };
 
+  const handleRename = async () => {
+    if (selected === "default") return;
+    const newName = prompt(t("templateEditor.renamePrompt"), selected);
+    if (!newName || newName.trim() === "" || newName.trim() === selected) return;
+    try {
+      await invoke("rename_content_template", { contentType, oldName: selected, newName: newName.trim() });
+      setSelected(newName.trim());
+      await loadTemplates(contentType);
+    } catch (e) {
+      alert("Erreur: " + e);
+    }
+  };
+
   const handleDelete = async () => {
     if (selected === "default") return;
     if (!confirm(t("templateEditor.confirmDelete", { name: selected }))) return;
@@ -722,6 +735,15 @@ export default function TemplateEditor({ onClose }: Props) {
           >
             {saving ? "..." : t("common.save")}
           </button>
+
+          {selected !== "default" && (
+            <button
+              onClick={handleRename}
+              className="bg-input hover:bg-input-hover border border-edge text-fg hover:text-fg-bright px-3 py-1 rounded text-sm"
+            >
+              {t("common.rename")}
+            </button>
+          )}
 
           {selected !== "default" && (
             <button

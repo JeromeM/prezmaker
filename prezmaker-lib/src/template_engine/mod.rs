@@ -122,7 +122,7 @@ pub use preview::{preview_template, preview_template_with_format};
 pub use render::render;
 pub use storage::{
     save_template_meta, save_template_format, reorder_templates, list_templates, get_template,
-    save_template, delete_template, duplicate_template,
+    save_template, delete_template, duplicate_template, rename_template,
 };
 pub use tags::get_available_tags;
 

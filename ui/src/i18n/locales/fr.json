@@ -191,6 +191,7 @@
     "searchTags": "Rechercher une balise...",
     "noTemplates": "Aucun template",
     "confirmDelete": "Supprimer le template \"{{name}}\" ?",
+    "renamePrompt": "Nouveau nom du template :",
     "titleColor": "Couleur titre",
     "resetColor": "Réinitialiser"
   },

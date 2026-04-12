@@ -308,6 +308,11 @@ pub fn delete_content_template(content_type: String, name: String) -> Result<(),
 }
 
 #[tauri::command]
+pub fn rename_content_template(content_type: String, old_name: String, new_name: String) -> Result<(), String> {
+    template_engine::rename_template(&content_type, &old_name, &new_name)
+}
+
+#[tauri::command]
 pub fn duplicate_content_template(content_type: String, name: String, new_name: String) -> Result<(), String> {
     template_engine::duplicate_template(&content_type, &name, &new_name)
 }
