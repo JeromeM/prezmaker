@@ -1,10 +1,123 @@
 use crate::error::PrezError;
 use crate::torrent::ReleaseParsed;
+use chrono::Local;
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
 
 const BASE_URL: &str = "https://c411.org/api";
+
+/// Écrit un journal d'upload dans le dossier config de PrezMaker.
+/// Fichier : `%APPDATA%/prezmaker/upload_log.txt` (Windows) ou `~/.config/prezmaker/upload_log.txt` (Linux).
+fn log_upload_request(
+    title: &str,
+    description: &str,
+    category_id: u32,
+    subcategory_id: u32,
+    options_json: &str,
+    uploader_note: Option<&str>,
+    description_format: Option<&DescriptionFormat>,
+    tmdb_data: Option<&str>,
+    rawg_data: Option<&str>,
+    torrent_filename: &str,
+    nfo_len: usize,
+) {
+    let log_dir = dirs::config_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("prezmaker");
+    let log_path = log_dir.join("upload_log.txt");
+
+    let mut file = match std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+    {
+        Ok(f) => f,
+        Err(_) => return,
+    };
+
+    let now = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let fmt_str = match description_format {
+        Some(DescriptionFormat::Html) => "html",
+        Some(DescriptionFormat::Standard) | None => "standard",
+    };
+
+    let _ = writeln!(file, "═══════════════════════════════════════════════════════════");
+    let _ = writeln!(file, "  UPLOAD C411 — {}", now);
+    let _ = writeln!(file, "═══════════════════════════════════════════════════════════");
+    let _ = writeln!(file);
+    let _ = writeln!(file, "POST {}/torrents", BASE_URL);
+    let _ = writeln!(file, "Content-Type: multipart/form-data");
+    let _ = writeln!(file, "Authorization: Bearer ***");
+    let _ = writeln!(file);
+    let _ = writeln!(file, "── Champs ─────────────────────────────────────────────────");
+    let _ = writeln!(file, "title             = {}", title);
+    let _ = writeln!(file, "categoryId        = {}", category_id);
+    let _ = writeln!(file, "subcategoryId     = {}", subcategory_id);
+    let _ = writeln!(file, "descriptionFormat = {}", fmt_str);
+    let _ = writeln!(file, "options           = {}", options_json);
+    if let Some(note) = uploader_note {
+        let _ = writeln!(file, "uploaderNote      = {}", note);
+    }
+    let _ = writeln!(file);
+    let _ = writeln!(file, "── Fichiers ───────────────────────────────────────────────");
+    let _ = writeln!(file, "torrent           = {} (fichier binaire)", torrent_filename);
+    let _ = writeln!(file, "nfo               = release.nfo ({} octets)", nfo_len);
+    let _ = writeln!(file);
+    let _ = writeln!(file, "── Description ({}) ────────────────────────────────────", fmt_str);
+    let _ = writeln!(file, "{}", description);
+    let _ = writeln!(file);
+
+    if let Some(tmdb) = tmdb_data {
+        let _ = writeln!(file, "── tmdbData ───────────────────────────────────────────────");
+        // Pretty-print le JSON pour lisibilité
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(tmdb) {
+            let _ = writeln!(file, "{}", serde_json::to_string_pretty(&parsed).unwrap_or_else(|_| tmdb.to_string()));
+        } else {
+            let _ = writeln!(file, "{}", tmdb);
+        }
+        let _ = writeln!(file);
+    }
+
+    if let Some(rawg) = rawg_data {
+        let _ = writeln!(file, "── rawgData ───────────────────────────────────────────────");
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(rawg) {
+            let _ = writeln!(file, "{}", serde_json::to_string_pretty(&parsed).unwrap_or_else(|_| rawg.to_string()));
+        } else {
+            let _ = writeln!(file, "{}", rawg);
+        }
+        let _ = writeln!(file);
+    }
+
+    let _ = writeln!(file);
+}
+
+fn log_upload_response(status: u16, body: &str) {
+    let log_dir = dirs::config_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("prezmaker");
+    let log_path = log_dir.join("upload_log.txt");
+
+    let mut file = match std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+    {
+        Ok(f) => f,
+        Err(_) => return,
+    };
+
+    let _ = writeln!(file, "── Réponse ────────────────────────────────────────────────");
+    let _ = writeln!(file, "HTTP {}", status);
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(body) {
+        let _ = writeln!(file, "{}", serde_json::to_string_pretty(&parsed).unwrap_or_else(|_| body.to_string()));
+    } else {
+        let _ = writeln!(file, "{}", body);
+    }
+    let _ = writeln!(file);
+    let _ = writeln!(file);
+}
 
 /// Formats de description acceptés par l'API C411.
 /// - `Standard` : BBCode converti automatiquement en HTML côté serveur.
@@ -145,6 +258,21 @@ impl C411Client {
             .unwrap_or("release.torrent")
             .to_string();
 
+        // Journal d'upload
+        log_upload_request(
+            title,
+            description,
+            category_id,
+            subcategory_id,
+            options_json,
+            uploader_note,
+            description_format,
+            tmdb_data,
+            rawg_data,
+            &torrent_filename,
+            nfo_content.len(),
+        );
+
         let mut form = reqwest::multipart::Form::new()
             .part(
                 "torrent",
@@ -194,8 +322,14 @@ impl C411Client {
             .send()
             .await?;
 
-        if resp.status().is_success() {
-            match resp.json::<C411UploadResult>().await {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+
+        // Log de la réponse
+        log_upload_response(status.as_u16(), &body);
+
+        if status.is_success() {
+            match serde_json::from_str::<C411UploadResult>(&body) {
                 Ok(result) => Ok(result),
                 Err(_) => Ok(C411UploadResult {
                     success: true,
@@ -203,8 +337,6 @@ impl C411Client {
                 }),
             }
         } else {
-            let status = resp.status();
-            let body = resp.text().await.unwrap_or_default();
             Err(PrezError::Upload(format!(
                 "Upload failed (HTTP {}): {}",
                 status, body
