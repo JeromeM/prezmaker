@@ -273,6 +273,35 @@ export interface C411UploadResult {
   message?: string;
 }
 
+// File d'attente d'upload C411
+
+export interface UploadQueueItem {
+  id: string;
+  title: string;
+  torrent_filename: string;
+  torrent_size: number;
+  category_id: number;
+  subcategory_id: number;
+  status: "queued" | "in_progress" | "completed" | "failed";
+  error_message: string | null;
+  last_response: string | null;
+  scheduled_at: string | null;
+  created_at: string;
+  completed_at: string | null;
+  display_order: number;
+  description_format: string | null;
+  uploader_note: string | null;
+  has_tmdb_data: boolean;
+  has_rawg_data: boolean;
+}
+
+export interface QueueCounts {
+  queued: number;
+  in_progress: number;
+  completed: number;
+  failed: number;
+}
+
 export interface TorrentCreateProgress {
   phase: string;
   percent: number;

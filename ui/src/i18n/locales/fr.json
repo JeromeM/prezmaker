@@ -21,6 +21,7 @@
     "import": "Importer",
     "move": "Déplacer",
     "load": "Charger",
+    "clear": "Effacer",
     "film": "Film",
     "serie": "Série",
     "jeu": "Jeu",
@@ -39,6 +40,7 @@
     "searchPlaceholder": "Rechercher...",
     "templateEditor": "Templates",
     "collections": "Collections",
+    "queue": "File",
     "settings": "Paramètres",
     "about": "À propos"
   },
@@ -365,7 +367,15 @@
     "htmlPermissionNote": "Nécessite la permission torrent:use_html_prez sur C411",
     "metadata": "Métadonnées",
     "includeTmdb": "Inclure les données TMDB",
-    "includeRawg": "Inclure les données RAWG"
+    "includeRawg": "Inclure les données RAWG",
+    "scheduleAt": "Programmer l'envoi",
+    "scheduleHint": "Laisser vide pour un envoi manuel via la file d'attente",
+    "addToQueue": "Ajouter à la file",
+    "addingToQueue": "Ajout en cours...",
+    "addToQueueHint": "Stocke l'upload dans la file d'attente pour l'envoyer plus tard",
+    "uploadDisabledScheduled": "Upload immédiat désactivé : un envoi est programmé. Utilisez \"Ajouter à la file\".",
+    "queueAdded": "Ajouté à la file d'attente",
+    "queueScheduled": "Envoi programmé pour"
   },
   "torrentNoResults": {
     "title": "Aucun résultat trouvé",
@@ -382,5 +392,28 @@
     "namePlaceholder": "Nom du template...",
     "noTemplates": "Aucun template",
     "copyLabel": "(copie)"
+  },
+  "queue": {
+    "title": "File d'attente d'upload",
+    "items": "items",
+    "empty": "Aucun upload en file d'attente",
+    "sendAll": "Tout envoyer",
+    "sendNow": "Envoyer",
+    "schedule": "Programmer",
+    "editSchedule": "Modifier la programmation",
+    "removeSchedule": "Retirer la programmation",
+    "scheduledFor": "Programmé pour",
+    "retry": "Relancer",
+    "clearCompleted": "Vider les terminés",
+    "viewResponse": "Voir la réponse de l'API",
+    "descriptionFormat": "Format",
+    "statusQueued": "En attente",
+    "statusInProgress": "En cours",
+    "statusCompleted": "Terminés",
+    "statusFailed": "Échoués",
+    "status_queued": "En attente",
+    "status_in_progress": "En cours",
+    "status_completed": "Terminé",
+    "status_failed": "Échoué"
   }
 }

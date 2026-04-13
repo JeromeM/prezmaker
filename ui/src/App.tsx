@@ -21,13 +21,17 @@ import UpdateChecker from "./components/UpdateChecker";
 import CollectionBrowser from "./components/CollectionBrowser";
 import TorrentCreator from "./components/TorrentCreator";
 import TorrentNoResults from "./components/TorrentNoResults";
+import UploadQueuePanel from "./components/UploadQueuePanel";
+import { useUploadQueue } from "./hooks/useUploadQueue";
 
 function App() {
   const { t } = useTranslation();
   const [showSettings, setShowSettings] = useState(false);
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
   const [showCollections, setShowCollections] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const { counts: queueCounts } = useUploadQueue();
   const [onboardingDone, setOnboardingDone] = useState(isOnboardingDone);
   const {
     state,
@@ -89,8 +93,10 @@ function App() {
         onImportTorrent={importTorrent}
         onOpenTemplateEditor={() => setShowTemplateEditor(true)}
         onOpenCollections={() => setShowCollections(true)}
+        onOpenQueue={() => setShowQueue(true)}
         onOpenAbout={() => setShowAbout(true)}
         showHome={state.step !== "idle"}
+        queueBadge={queueCounts.queued + queueCounts.in_progress}
       />
       <Stepper state={state} />
 
@@ -341,6 +347,9 @@ function App() {
       )}
       {showAbout && (
         <AboutModal onClose={() => setShowAbout(false)} />
+      )}
+      {showQueue && (
+        <UploadQueuePanel onClose={() => setShowQueue(false)} />
       )}
     </div>
   );
