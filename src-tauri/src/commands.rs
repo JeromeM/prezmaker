@@ -9,18 +9,69 @@ use prezmaker_lib::upload::c411::{
     self, C411Category, C411Client, C411OptionType, C411UploadResult, DescriptionFormat,
     fetch_tmdb_metadata_for_c411, fetch_rawg_metadata_for_c411,
 };
+use prezmaker_lib::db::{UploadQueueItem, QueueCounts};
 use prezmaker_lib::torrent_creator::{self, TorrentCreateOptions};
 use prezmaker_lib::template_engine::{self, ContentTemplate, TemplateTag};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::Emitter;
 
 pub struct AppState {
     pub config: Arc<Mutex<Config>>,
     pub cache: ApiCache,
     pub db: Database,
+    /// Verrou anti-double-traitement pour la file d'upload.
+    /// True quand un upload de la file est en cours (manuel ou planifié).
+    pub upload_in_progress: Arc<AtomicBool>,
+}
+
+/// Représentation d'un item de file pour le frontend (sans le BLOB, juste sa taille).
+#[derive(Debug, Clone, Serialize)]
+pub struct UploadQueueItemDto {
+    pub id: String,
+    pub title: String,
+    pub torrent_filename: String,
+    pub torrent_size: usize,
+    pub category_id: u32,
+    pub subcategory_id: u32,
+    pub status: String,
+    pub error_message: Option<String>,
+    pub last_response: Option<String>,
+    pub scheduled_at: Option<String>,
+    pub created_at: String,
+    pub completed_at: Option<String>,
+    pub display_order: i32,
+    pub description_format: Option<String>,
+    pub uploader_note: Option<String>,
+    pub has_tmdb_data: bool,
+    pub has_rawg_data: bool,
+}
+
+impl From<&UploadQueueItem> for UploadQueueItemDto {
+    fn from(item: &UploadQueueItem) -> Self {
+        Self {
+            id: item.id.clone(),
+            title: item.title.clone(),
+            torrent_filename: item.torrent_filename.clone(),
+            torrent_size: item.torrent_data.len(),
+            category_id: item.category_id,
+            subcategory_id: item.subcategory_id,
+            status: item.status.clone(),
+            error_message: item.error_message.clone(),
+            last_response: item.last_response.clone(),
+            scheduled_at: item.scheduled_at.clone(),
+            created_at: item.created_at.clone(),
+            completed_at: item.completed_at.clone(),
+            display_order: item.display_order,
+            description_format: item.description_format.clone(),
+            uploader_note: item.uploader_note.clone(),
+            has_tmdb_data: item.tmdb_data.is_some(),
+            has_rawg_data: item.rawg_data.is_some(),
+        }
+    }
 }
 
 fn make_api(config: &Config, title_color: Option<&str>, cache: &ApiCache) -> OrchestratorApi {
@@ -773,6 +824,219 @@ pub async fn c411_fetch_rawg_metadata(
     fetch_rawg_metadata_for_c411(&api_key, &title)
         .await
         .map_err(|e| e.to_string())
+}
+
+// --- File d'attente d'upload C411 ---
+
+#[allow(clippy::too_many_arguments)]
+#[tauri::command]
+pub fn queue_add(
+    state: tauri::State<'_, AppState>,
+    torrent_path: String,
+    nfo_content: String,
+    title: String,
+    description: String,
+    category_id: u32,
+    subcategory_id: u32,
+    options_json: String,
+    uploader_note: Option<String>,
+    description_format: Option<String>,
+    tmdb_data: Option<String>,
+    rawg_data: Option<String>,
+    scheduled_at: Option<String>,
+) -> Result<UploadQueueItemDto, String> {
+    let path = std::path::Path::new(&torrent_path);
+    let torrent_data = std::fs::read(path)
+        .map_err(|e| format!("Impossible de lire le fichier .torrent : {}", e))?;
+    let torrent_filename = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("release.torrent")
+        .to_string();
+    let item = state.db.add_to_queue(
+        &title,
+        torrent_data,
+        &torrent_filename,
+        &nfo_content,
+        &description,
+        category_id,
+        subcategory_id,
+        &options_json,
+        uploader_note.as_deref(),
+        description_format.as_deref(),
+        tmdb_data.as_deref(),
+        rawg_data.as_deref(),
+        scheduled_at.as_deref(),
+    )?;
+    Ok(UploadQueueItemDto::from(&item))
+}
+
+#[tauri::command]
+pub fn queue_list(state: tauri::State<'_, AppState>) -> Result<Vec<UploadQueueItemDto>, String> {
+    let items = state.db.list_queue()?;
+    Ok(items.iter().map(UploadQueueItemDto::from).collect())
+}
+
+#[tauri::command]
+pub fn queue_remove(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
+    state.db.remove_from_queue(&id)
+}
+
+#[tauri::command]
+pub fn queue_retry(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
+    state.db.retry_queue_item(&id)
+}
+
+#[tauri::command]
+pub fn queue_clear_completed(state: tauri::State<'_, AppState>) -> Result<usize, String> {
+    state.db.clear_completed_queue()
+}
+
+#[tauri::command]
+pub fn queue_count(state: tauri::State<'_, AppState>) -> Result<QueueCounts, String> {
+    state.db.count_queue_by_status()
+}
+
+#[tauri::command]
+pub fn queue_set_schedule(
+    state: tauri::State<'_, AppState>,
+    id: String,
+    scheduled_at: Option<String>,
+) -> Result<(), String> {
+    state.db.set_queue_scheduled_at(&id, scheduled_at.as_deref())
+}
+
+#[tauri::command]
+pub fn queue_reorder(state: tauri::State<'_, AppState>, ids: Vec<String>) -> Result<(), String> {
+    state.db.reorder_queue(&ids)
+}
+
+/// Traite tous les items `queued` (ignorant `scheduled_at` — envoi immédiat).
+/// Émet des events `queue-item-progress` (status → in_progress) et `queue-item-done`
+/// (status final). Verrouillé par `upload_in_progress` pour éviter les doubles clics.
+#[tauri::command]
+pub async fn queue_process_all(
+    state: tauri::State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> Result<u32, String> {
+    if state
+        .upload_in_progress
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return Err("Un traitement de la file est déjà en cours".to_string());
+    }
+    // Garde RAII pour libérer le verrou même en cas de panic
+    struct Guard<'a>(&'a AtomicBool);
+    impl<'a> Drop for Guard<'a> {
+        fn drop(&mut self) {
+            self.0.store(false, Ordering::SeqCst);
+        }
+    }
+    let _guard = Guard(&state.upload_in_progress);
+
+    let items = state.db.list_queued_items()?;
+    let mut processed = 0u32;
+    for item in items {
+        process_queue_item(&item, &state.db, &state.config, &app).await;
+        processed += 1;
+    }
+    Ok(processed)
+}
+
+#[tauri::command]
+pub async fn queue_process_one(
+    state: tauri::State<'_, AppState>,
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<(), String> {
+    if state
+        .upload_in_progress
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return Err("Un traitement de la file est déjà en cours".to_string());
+    }
+    struct Guard<'a>(&'a AtomicBool);
+    impl<'a> Drop for Guard<'a> {
+        fn drop(&mut self) {
+            self.0.store(false, Ordering::SeqCst);
+        }
+    }
+    let _guard = Guard(&state.upload_in_progress);
+
+    let item = state
+        .db
+        .get_queue_item(&id)?
+        .ok_or_else(|| format!("Item introuvable : {}", id))?;
+    process_queue_item(&item, &state.db, &state.config, &app).await;
+    Ok(())
+}
+
+/// Traite un item : met le status à in_progress, fait l'upload, met à jour le status final.
+/// Émet les events Tauri pour le frontend.
+pub async fn process_queue_item(
+    item: &UploadQueueItem,
+    db: &Database,
+    config: &Arc<Mutex<Config>>,
+    app: &tauri::AppHandle,
+) {
+    let _ = db.update_queue_status(&item.id, "in_progress", None, None);
+    let _ = app.emit("queue-item-progress", &item.id);
+
+    let api_key = {
+        let cfg = config.lock().unwrap();
+        cfg.modules.c411.api_key.clone()
+    };
+
+    let api_key = match api_key {
+        Some(k) if !k.is_empty() => k,
+        _ => {
+            let _ = db.update_queue_status(
+                &item.id,
+                "failed",
+                Some("Clé API C411 non configurée"),
+                None,
+            );
+            let _ = app.emit("queue-item-done", &item.id);
+            return;
+        }
+    };
+
+    let fmt = match item.description_format.as_deref() {
+        Some("html") => Some(DescriptionFormat::Html),
+        _ => None,
+    };
+
+    let client = C411Client::new(api_key);
+    let result = client
+        .upload_from_bytes(
+            &item.torrent_data,
+            &item.torrent_filename,
+            &item.nfo_content,
+            &item.title,
+            &item.description,
+            item.category_id,
+            item.subcategory_id,
+            &item.options_json,
+            item.uploader_note.as_deref(),
+            fmt.as_ref(),
+            item.tmdb_data.as_deref(),
+            item.rawg_data.as_deref(),
+        )
+        .await;
+
+    match result {
+        Ok((upload_result, body)) => {
+            let status = if upload_result.success { "completed" } else { "failed" };
+            let err = if upload_result.success { None } else { upload_result.message.as_deref() };
+            let _ = db.update_queue_status(&item.id, status, err, Some(&body));
+        }
+        Err(e) => {
+            let _ = db.update_queue_status(&item.id, "failed", Some(&e.to_string()), None);
+        }
+    }
+    let _ = app.emit("queue-item-done", &item.id);
 }
 
 // --- Release notes ---

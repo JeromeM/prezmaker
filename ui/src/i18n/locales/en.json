@@ -21,6 +21,7 @@
     "import": "Import",
     "move": "Move",
     "load": "Load",
+    "clear": "Clear",
     "film": "Movie",
     "serie": "Series",
     "jeu": "Game",
@@ -39,6 +40,7 @@
     "searchPlaceholder": "Search...",
     "templateEditor": "Templates",
     "collections": "Collections",
+    "queue": "Queue",
     "settings": "Settings",
     "about": "About"
   },
@@ -365,7 +367,15 @@
     "htmlPermissionNote": "Requires torrent:use_html_prez permission on C411",
     "metadata": "Metadata",
     "includeTmdb": "Include TMDB data",
-    "includeRawg": "Include RAWG data"
+    "includeRawg": "Include RAWG data",
+    "scheduleAt": "Schedule send",
+    "scheduleHint": "Leave empty to send manually from the queue",
+    "addToQueue": "Add to queue",
+    "addingToQueue": "Adding...",
+    "addToQueueHint": "Store the upload in the queue to send it later",
+    "uploadDisabledScheduled": "Immediate upload disabled: a schedule is set. Use \"Add to queue\".",
+    "queueAdded": "Added to queue",
+    "queueScheduled": "Scheduled for"
   },
   "torrentNoResults": {
     "title": "No results found",
@@ -382,5 +392,28 @@
     "namePlaceholder": "Template name...",
     "noTemplates": "No templates",
     "copyLabel": "(copy)"
+  },
+  "queue": {
+    "title": "Upload queue",
+    "items": "items",
+    "empty": "No upload in queue",
+    "sendAll": "Send all",
+    "sendNow": "Send",
+    "schedule": "Schedule",
+    "editSchedule": "Edit schedule",
+    "removeSchedule": "Remove schedule",
+    "scheduledFor": "Scheduled for",
+    "retry": "Retry",
+    "clearCompleted": "Clear completed",
+    "viewResponse": "View API response",
+    "descriptionFormat": "Format",
+    "statusQueued": "Queued",
+    "statusInProgress": "In progress",
+    "statusCompleted": "Completed",
+    "statusFailed": "Failed",
+    "status_queued": "Queued",
+    "status_in_progress": "In progress",
+    "status_completed": "Completed",
+    "status_failed": "Failed"
   }
 }

@@ -7,8 +7,10 @@ interface Props {
   onImportTorrent: (filePath: string) => void;
   onOpenTemplateEditor: () => void;
   onOpenCollections: () => void;
+  onOpenQueue: () => void;
   onOpenAbout: () => void;
   showHome?: boolean;
+  queueBadge?: number;
 }
 
 export default function TopBar({
@@ -17,8 +19,10 @@ export default function TopBar({
   onImportTorrent,
   onOpenTemplateEditor,
   onOpenCollections,
+  onOpenQueue,
   onOpenAbout,
   showHome,
+  queueBadge = 0,
 }: Props) {
   const { t } = useTranslation();
 
@@ -69,6 +73,25 @@ export default function TopBar({
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
             </svg>
             {t("topBar.collections")}
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenQueue}
+            className="relative flex items-center gap-1.5 text-fg-muted hover:text-fg-bright transition-colors px-2.5 py-1.5 rounded hover:bg-input text-sm"
+            title={t("topBar.queue")}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M16 16l-4-4-4 4" />
+              <path d="M12 12v9" />
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+            </svg>
+            {t("topBar.queue")}
+            {queueBadge > 0 && (
+              <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                {queueBadge > 99 ? "99+" : queueBadge}
+              </span>
+            )}
           </button>
 
           <button

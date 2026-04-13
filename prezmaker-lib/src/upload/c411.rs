@@ -258,6 +258,43 @@ impl C411Client {
             .unwrap_or("release.torrent")
             .to_string();
 
+        let (result, _body) = self
+            .upload_from_bytes(
+                &torrent_bytes,
+                &torrent_filename,
+                nfo_content,
+                title,
+                description,
+                category_id,
+                subcategory_id,
+                options_json,
+                uploader_note,
+                description_format,
+                tmdb_data,
+                rawg_data,
+            )
+            .await?;
+        Ok(result)
+    }
+
+    /// Variante de `upload()` qui prend les bytes du .torrent au lieu d'un chemin.
+    /// Renvoie aussi le body brut de la réponse pour persistance dans la file d'attente.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn upload_from_bytes(
+        &self,
+        torrent_data: &[u8],
+        torrent_filename: &str,
+        nfo_content: &str,
+        title: &str,
+        description: &str,
+        category_id: u32,
+        subcategory_id: u32,
+        options_json: &str,
+        uploader_note: Option<&str>,
+        description_format: Option<&DescriptionFormat>,
+        tmdb_data: Option<&str>,
+        rawg_data: Option<&str>,
+    ) -> Result<(C411UploadResult, String), PrezError> {
         // Journal d'upload
         log_upload_request(
             title,
@@ -269,15 +306,15 @@ impl C411Client {
             description_format,
             tmdb_data,
             rawg_data,
-            &torrent_filename,
+            torrent_filename,
             nfo_content.len(),
         );
 
         let mut form = reqwest::multipart::Form::new()
             .part(
                 "torrent",
-                reqwest::multipart::Part::bytes(torrent_bytes)
-                    .file_name(torrent_filename)
+                reqwest::multipart::Part::bytes(torrent_data.to_vec())
+                    .file_name(torrent_filename.to_string())
                     .mime_str("application/x-bittorrent")
                     .map_err(|e| PrezError::Upload(e.to_string()))?,
             )
@@ -329,13 +366,14 @@ impl C411Client {
         log_upload_response(status.as_u16(), &body);
 
         if status.is_success() {
-            match serde_json::from_str::<C411UploadResult>(&body) {
-                Ok(result) => Ok(result),
-                Err(_) => Ok(C411UploadResult {
+            let result = match serde_json::from_str::<C411UploadResult>(&body) {
+                Ok(r) => r,
+                Err(_) => C411UploadResult {
                     success: true,
                     message: Some("Upload réussi".to_string()),
-                }),
-            }
+                },
+            };
+            Ok((result, body))
         } else {
             Err(PrezError::Upload(format!(
                 "Upload failed (HTTP {}): {}",

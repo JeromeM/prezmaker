@@ -25,6 +25,41 @@ pub struct SavedPresentation {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UploadQueueItem {
+    pub id: String,
+    pub title: String,
+    /// Bytes du fichier .torrent, encodés en base64 quand sérialisés vers le frontend
+    /// (transparent côté Rust). Côté SQLite c'est un BLOB.
+    #[serde(skip)]
+    pub torrent_data: Vec<u8>,
+    pub torrent_filename: String,
+    pub nfo_content: String,
+    pub description: String,
+    pub category_id: u32,
+    pub subcategory_id: u32,
+    pub options_json: String,
+    pub uploader_note: Option<String>,
+    pub description_format: Option<String>,
+    pub tmdb_data: Option<String>,
+    pub rawg_data: Option<String>,
+    pub status: String,
+    pub error_message: Option<String>,
+    pub last_response: Option<String>,
+    pub scheduled_at: Option<String>,
+    pub created_at: String,
+    pub completed_at: Option<String>,
+    pub display_order: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct QueueCounts {
+    pub queued: u32,
+    pub in_progress: u32,
+    pub completed: u32,
+    pub failed: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DbTemplate {
     pub name: String,
     pub content_type: String,
@@ -91,12 +126,39 @@ impl Database {
                 PRIMARY KEY (content_type, name)
             );
 
+            CREATE TABLE IF NOT EXISTS upload_queue (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                torrent_data BLOB NOT NULL,
+                torrent_filename TEXT NOT NULL,
+                nfo_content TEXT NOT NULL,
+                description TEXT NOT NULL,
+                category_id INTEGER NOT NULL,
+                subcategory_id INTEGER NOT NULL,
+                options_json TEXT NOT NULL,
+                uploader_note TEXT,
+                description_format TEXT,
+                tmdb_data TEXT,
+                rawg_data TEXT,
+                status TEXT NOT NULL DEFAULT 'queued',
+                error_message TEXT,
+                last_response TEXT,
+                scheduled_at TEXT,
+                created_at TEXT NOT NULL,
+                completed_at TEXT,
+                display_order INTEGER NOT NULL DEFAULT 0
+            );
+
             CREATE INDEX IF NOT EXISTS idx_presentations_collection
                 ON saved_presentations(collection_id);
             CREATE INDEX IF NOT EXISTS idx_presentations_content_type
                 ON saved_presentations(content_type);
             CREATE INDEX IF NOT EXISTS idx_templates_type
                 ON content_templates(content_type);
+            CREATE INDEX IF NOT EXISTS idx_upload_queue_status
+                ON upload_queue(status);
+            CREATE INDEX IF NOT EXISTS idx_upload_queue_scheduled
+                ON upload_queue(scheduled_at);
             ",
         )
         .map_err(|e| format!("Cannot initialize database schema: {}", e))?;
@@ -576,6 +638,254 @@ impl Database {
             .map_err(|e| format!("Cannot reorder template: {}", e))?;
         }
         Ok(())
+    }
+
+    // ========================
+    // Upload Queue
+    // ========================
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_to_queue(
+        &self,
+        title: &str,
+        torrent_data: Vec<u8>,
+        torrent_filename: &str,
+        nfo_content: &str,
+        description: &str,
+        category_id: u32,
+        subcategory_id: u32,
+        options_json: &str,
+        uploader_note: Option<&str>,
+        description_format: Option<&str>,
+        tmdb_data: Option<&str>,
+        rawg_data: Option<&str>,
+        scheduled_at: Option<&str>,
+    ) -> Result<UploadQueueItem, String> {
+        let conn = self.conn.lock().unwrap();
+        let id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        // Place le nouvel item à la fin de la file
+        let next_order: i32 = conn
+            .query_row(
+                "SELECT COALESCE(MAX(display_order) + 1, 0) FROM upload_queue",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+        conn.execute(
+            "INSERT INTO upload_queue (id, title, torrent_data, torrent_filename, nfo_content, description, category_id, subcategory_id, options_json, uploader_note, description_format, tmdb_data, rawg_data, status, scheduled_at, created_at, display_order)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, 'queued', ?14, ?15, ?16)",
+            params![id, title, torrent_data, torrent_filename, nfo_content, description, category_id, subcategory_id, options_json, uploader_note, description_format, tmdb_data, rawg_data, scheduled_at, now, next_order],
+        )
+        .map_err(|e| format!("Cannot add to queue: {}", e))?;
+        drop(conn);
+        self.get_queue_item(&id)?.ok_or_else(|| "Item just inserted not found".to_string())
+    }
+
+    pub fn list_queue(&self) -> Result<Vec<UploadQueueItem>, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, title, torrent_data, torrent_filename, nfo_content, description, category_id, subcategory_id, options_json, uploader_note, description_format, tmdb_data, rawg_data, status, error_message, last_response, scheduled_at, created_at, completed_at, display_order
+                 FROM upload_queue
+                 ORDER BY display_order ASC, created_at ASC",
+            )
+            .map_err(|e| format!("Cannot prepare list_queue: {}", e))?;
+        let rows = stmt
+            .query_map([], Self::map_queue_row)
+            .map_err(|e| format!("Cannot query queue: {}", e))?;
+        let mut items = Vec::new();
+        for row in rows {
+            items.push(row.map_err(|e| format!("Cannot read queue row: {}", e))?);
+        }
+        Ok(items)
+    }
+
+    pub fn get_queue_item(&self, id: &str) -> Result<Option<UploadQueueItem>, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, title, torrent_data, torrent_filename, nfo_content, description, category_id, subcategory_id, options_json, uploader_note, description_format, tmdb_data, rawg_data, status, error_message, last_response, scheduled_at, created_at, completed_at, display_order
+                 FROM upload_queue WHERE id = ?1",
+            )
+            .map_err(|e| format!("Cannot prepare get_queue_item: {}", e))?;
+        let item = stmt
+            .query_row(params![id], Self::map_queue_row)
+            .optional()
+            .map_err(|e| format!("Cannot fetch queue item: {}", e))?;
+        Ok(item)
+    }
+
+    pub fn remove_from_queue(&self, id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM upload_queue WHERE id = ?1", params![id])
+            .map_err(|e| format!("Cannot remove from queue: {}", e))?;
+        Ok(())
+    }
+
+    pub fn retry_queue_item(&self, id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE upload_queue SET status = 'queued', error_message = NULL WHERE id = ?1 AND status = 'failed'",
+            params![id],
+        )
+        .map_err(|e| format!("Cannot retry queue item: {}", e))?;
+        Ok(())
+    }
+
+    pub fn update_queue_status(
+        &self,
+        id: &str,
+        status: &str,
+        error_message: Option<&str>,
+        last_response: Option<&str>,
+    ) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        let completed_at = if status == "completed" || status == "failed" {
+            Some(chrono::Utc::now().to_rfc3339())
+        } else {
+            None
+        };
+        conn.execute(
+            "UPDATE upload_queue
+             SET status = ?1, error_message = ?2, last_response = ?3, completed_at = COALESCE(?4, completed_at)
+             WHERE id = ?5",
+            params![status, error_message, last_response, completed_at, id],
+        )
+        .map_err(|e| format!("Cannot update queue status: {}", e))?;
+        Ok(())
+    }
+
+    pub fn clear_completed_queue(&self) -> Result<usize, String> {
+        let conn = self.conn.lock().unwrap();
+        let n = conn
+            .execute("DELETE FROM upload_queue WHERE status = 'completed'", [])
+            .map_err(|e| format!("Cannot clear completed: {}", e))?;
+        Ok(n)
+    }
+
+    pub fn get_pending_scheduled(&self, now_iso: &str) -> Result<Vec<UploadQueueItem>, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, title, torrent_data, torrent_filename, nfo_content, description, category_id, subcategory_id, options_json, uploader_note, description_format, tmdb_data, rawg_data, status, error_message, last_response, scheduled_at, created_at, completed_at, display_order
+                 FROM upload_queue
+                 WHERE status = 'queued' AND scheduled_at IS NOT NULL AND scheduled_at <= ?1
+                 ORDER BY scheduled_at ASC",
+            )
+            .map_err(|e| format!("Cannot prepare get_pending_scheduled: {}", e))?;
+        let rows = stmt
+            .query_map(params![now_iso], Self::map_queue_row)
+            .map_err(|e| format!("Cannot query scheduled: {}", e))?;
+        let mut items = Vec::new();
+        for row in rows {
+            items.push(row.map_err(|e| format!("Cannot read scheduled row: {}", e))?);
+        }
+        Ok(items)
+    }
+
+    pub fn list_queued_items(&self) -> Result<Vec<UploadQueueItem>, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, title, torrent_data, torrent_filename, nfo_content, description, category_id, subcategory_id, options_json, uploader_note, description_format, tmdb_data, rawg_data, status, error_message, last_response, scheduled_at, created_at, completed_at, display_order
+                 FROM upload_queue
+                 WHERE status = 'queued'
+                 ORDER BY display_order ASC, created_at ASC",
+            )
+            .map_err(|e| format!("Cannot prepare list_queued: {}", e))?;
+        let rows = stmt
+            .query_map([], Self::map_queue_row)
+            .map_err(|e| format!("Cannot query queued: {}", e))?;
+        let mut items = Vec::new();
+        for row in rows {
+            items.push(row.map_err(|e| format!("Cannot read queued row: {}", e))?);
+        }
+        Ok(items)
+    }
+
+    pub fn count_queue_by_status(&self) -> Result<QueueCounts, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn
+            .prepare("SELECT status, COUNT(*) FROM upload_queue GROUP BY status")
+            .map_err(|e| format!("Cannot prepare count: {}", e))?;
+        let mut counts = QueueCounts::default();
+        let rows = stmt
+            .query_map([], |row| {
+                let status: String = row.get(0)?;
+                let count: u32 = row.get(1)?;
+                Ok((status, count))
+            })
+            .map_err(|e| format!("Cannot query counts: {}", e))?;
+        for row in rows {
+            let (status, count) = row.map_err(|e| format!("Cannot read count row: {}", e))?;
+            match status.as_str() {
+                "queued" => counts.queued = count,
+                "in_progress" => counts.in_progress = count,
+                "completed" => counts.completed = count,
+                "failed" => counts.failed = count,
+                _ => {}
+            }
+        }
+        Ok(counts)
+    }
+
+    pub fn reset_stale_in_progress(&self) -> Result<usize, String> {
+        let conn = self.conn.lock().unwrap();
+        let n = conn
+            .execute(
+                "UPDATE upload_queue SET status = 'queued' WHERE status = 'in_progress'",
+                [],
+            )
+            .map_err(|e| format!("Cannot reset stale in_progress: {}", e))?;
+        Ok(n)
+    }
+
+    pub fn set_queue_scheduled_at(&self, id: &str, scheduled_at: Option<&str>) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE upload_queue SET scheduled_at = ?1 WHERE id = ?2 AND status IN ('queued', 'failed')",
+            params![scheduled_at, id],
+        )
+        .map_err(|e| format!("Cannot set scheduled_at: {}", e))?;
+        Ok(())
+    }
+
+    pub fn reorder_queue(&self, ids: &[String]) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        for (i, id) in ids.iter().enumerate() {
+            conn.execute(
+                "UPDATE upload_queue SET display_order = ?1 WHERE id = ?2",
+                params![i as i32, id],
+            )
+            .map_err(|e| format!("Cannot reorder queue: {}", e))?;
+        }
+        Ok(())
+    }
+
+    fn map_queue_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<UploadQueueItem> {
+        Ok(UploadQueueItem {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            torrent_data: row.get(2)?,
+            torrent_filename: row.get(3)?,
+            nfo_content: row.get(4)?,
+            description: row.get(5)?,
+            category_id: row.get(6)?,
+            subcategory_id: row.get(7)?,
+            options_json: row.get(8)?,
+            uploader_note: row.get(9)?,
+            description_format: row.get(10)?,
+            tmdb_data: row.get(11)?,
+            rawg_data: row.get(12)?,
+            status: row.get(13)?,
+            error_message: row.get(14)?,
+            last_response: row.get(15)?,
+            scheduled_at: row.get(16)?,
+            created_at: row.get(17)?,
+            completed_at: row.get(18)?,
+            display_order: row.get(19)?,
+        })
     }
 
     // ========================

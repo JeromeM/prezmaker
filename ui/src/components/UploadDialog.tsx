@@ -58,6 +58,11 @@ export default function UploadDialog({
   const [result, setResult] = useState<C411UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Ajout à la file d'attente
+  const [addingToQueue, setAddingToQueue] = useState(false);
+  const [queueAdded, setQueueAdded] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState<string>(""); // datetime-local string
+
   // Auto-fetch metadata when checkboxes are enabled
   useEffect(() => {
     if (!includeTmdb && !includeRawg) return;
@@ -230,6 +235,39 @@ export default function UploadDialog({
     }
   }, [torrentPath, nfoContent, title, bbcode, categoryId, subcategoryId, selectedOptions, uploaderNote, descriptionFormat, isHtml, includeTmdb, includeRawg, tmdbData, rawgData]);
 
+  const handleAddToQueue = useCallback(async () => {
+    setAddingToQueue(true);
+    setError(null);
+    try {
+      let description = bbcode;
+      if (descriptionFormat === "html" && !isHtml) {
+        description = await invoke<string>("convert_bbcode_c411", { bbcode });
+      }
+      const optionsJson = JSON.stringify(selectedOptions);
+      // Convertir datetime-local "2026-04-13T22:30" en ISO 8601 UTC
+      const scheduledIso = scheduledAt ? new Date(scheduledAt).toISOString() : null;
+      await invoke("queue_add", {
+        torrentPath,
+        nfoContent: nfoContent ?? "",
+        title,
+        description,
+        categoryId,
+        subcategoryId,
+        optionsJson,
+        uploaderNote: uploaderNote || null,
+        descriptionFormat: descriptionFormat !== "standard" ? descriptionFormat : null,
+        tmdbData: includeTmdb ? tmdbData : null,
+        rawgData: includeRawg ? rawgData : null,
+        scheduledAt: scheduledIso,
+      });
+      setQueueAdded(true);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setAddingToQueue(false);
+    }
+  }, [torrentPath, nfoContent, title, bbcode, categoryId, subcategoryId, selectedOptions, uploaderNote, descriptionFormat, isHtml, includeTmdb, includeRawg, tmdbData, rawgData, scheduledAt]);
+
   // Find current category/subcategory objects
   const currentCategory = categories.find((c) =>
     c.subcategories.some((s) => s.id === subcategoryId),
@@ -263,6 +301,17 @@ export default function UploadDialog({
               </p>
               {result.message && (
                 <p className="text-fg-muted text-sm mt-2">{result.message}</p>
+              )}
+            </div>
+          ) : queueAdded ? (
+            <div className="rounded-lg p-4 text-center bg-green-900/30 border border-green-700">
+              <p className="text-green-400 text-lg font-medium">
+                {scheduledAt ? t("upload.queueScheduled") : t("upload.queueAdded")}
+              </p>
+              {scheduledAt && (
+                <p className="text-fg-muted text-sm mt-2">
+                  {new Date(scheduledAt).toLocaleString()}
+                </p>
               )}
             </div>
           ) : loadingCategories ? (
@@ -501,6 +550,29 @@ export default function UploadDialog({
                 />
               </div>
 
+              {/* Programmation (optionnelle) */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-fg-muted">{t("upload.scheduleAt")}</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="datetime-local"
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                    className="bg-input text-fg-bright border border-edge rounded px-2 py-1 text-sm outline-none focus:border-blue-500"
+                  />
+                  {scheduledAt && (
+                    <button
+                      type="button"
+                      onClick={() => setScheduledAt("")}
+                      className="text-[10px] text-fg-dim hover:text-fg"
+                    >
+                      {t("common.clear")}
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-fg-faint">{t("upload.scheduleHint")}</p>
+              </div>
+
               {/* Files summary */}
               <div className="space-y-1">
                 <h3 className="text-xs text-fg-muted font-medium border-b border-edge pb-1">
@@ -550,22 +622,39 @@ export default function UploadDialog({
             onClick={onClose}
             className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors"
           >
-            {result ? t("common.close") : t("common.cancel")}
+            {result || queueAdded ? t("common.close") : t("common.cancel")}
           </button>
-          {!result && (
-            <button
-              onClick={handleUpload}
-              disabled={uploading || !title.trim()}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2"
-            >
-              {uploading && (
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              )}
-              {uploading ? t("upload.uploading") : t("upload.upload")}
-            </button>
+          {!result && !queueAdded && (
+            <>
+              <button
+                onClick={handleAddToQueue}
+                disabled={addingToQueue || uploading || !title.trim()}
+                title={t("upload.addToQueueHint")}
+                className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                {addingToQueue && (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                )}
+                {addingToQueue ? t("upload.addingToQueue") : t("upload.addToQueue")}
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={uploading || addingToQueue || !title.trim() || !!scheduledAt}
+                title={scheduledAt ? t("upload.uploadDisabledScheduled") : ""}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                {uploading && (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                )}
+                {uploading ? t("upload.uploading") : t("upload.upload")}
+              </button>
+            </>
           )}
         </div>
       </div>
