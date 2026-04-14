@@ -28,57 +28,37 @@ Recherchez un film, une série, un jeu ou une application, et obtenez une prése
 
 ## Fonctionnalités
 
-### Recherche et import
+### Recherche et métadonnées
 
-- **Recherche automatique** — interroge TMDB (films/séries), IGDB et Steam (jeux) pour récupérer les métadonnées
-- **Enrichissement Allociné** — récupère les notes Allociné en complément de TMDB
-- **Import torrent** — glissez un `.torrent` directement sur l'application ou cliquez sur l'écran d'accueil. Le titre est parsé automatiquement, le type de contenu détecté, et les infos techniques pré-remplies
-- **Création de torrent** — créez un `.torrent` directement depuis l'application avec barre de progression et mémorisation du tracker
-- **Recherche manuelle** — si la recherche automatique échoue, modifiez le terme et le type de contenu pour relancer
-- **Configuration requise** — tableau min/recommandée pour les jeux, récupéré automatiquement depuis Steam
+- **Recherche automatique** — TMDB (films/séries), IGDB et Steam (jeux), avec notes Allociné
+- **Import torrent** — glissez un `.torrent` sur l'application, tout est détecté automatiquement (titre, type, infos techniques)
+- **Création de torrent** — créez un `.torrent` directement depuis l'application
 
-### Templates et éditeur
+### Templates
 
-- **Double format BBCode / HTML** — choisissez le format de sortie avant la génération. Les templates sont séparés par format
-- **Éditeur de templates** — créez et personnalisez vos templates avec coloration syntaxique, aperçu en temps réel et infobulles d'erreurs
-- **Styles inline HTML** — syntaxe `| style` dans les balises templates, ignorée en BBCode, appliquée en HTML (ex: `{{section:Titre | font-size:20px}}`)
-- **Balises conditionnelles** — `{{#if synopsis}}...{{/if}}`, avec support des comparaisons (`>`, `<`, `==`, `!=`)
-- **Balises de mise en forme** — `{{heading:...}}`, `{{section:...}}`, `{{url:URL:label}}`, `{{br}}`, `{{center}}`, `{{bold}}`, etc.
-- **Tags HTML exclusifs** — `{{details:...}}`, `{{summary:...}}`, `{{p:...}}`, `{{pre:...}}` (fallback BBCode automatique)
-- **Blocs composites** — `{{ratings_table}}`, `{{game_reqs_table}}`, `{{game_tech_table}}`, `{{screenshots_grid}}`
-- **Template favori** — définissez un template par défaut par type de contenu, pré-sélectionné automatiquement
-- **Couleur par template** — chaque template peut avoir sa propre couleur de titre
-- **Export / Import** — partagez ou sauvegardez vos templates au format JSON
-- **Palette adaptative** — balises BBCode ou HTML selon le format choisi
-- **Tab / Shift+Tab** — indentation et désindentation dans l'éditeur
+- **Double format BBCode / HTML** — choisissez le format de sortie, chaque template est lié à un format
+- **Éditeur intégré** — coloration syntaxique, aperçu en temps réel, balises conditionnelles, blocs composites (notes, config requise, screenshots...)
+- **Template favori** — un template par défaut par type de contenu, couleur de titre personnalisable
+- **Export / Import** — partagez vos templates au format JSON
 
-### Upload sur les trackers
+### Upload C411
 
-- **Module C411** — upload direct sur le tracker C411 via son API REST
-- **Auto-mapping** — catégorie, sous-catégorie et options pré-remplies depuis le torrent parsé
-- **Options dynamiques** — chargées depuis l'API selon la sous-catégorie choisie
-- **Format BBCode ou HTML** — choix du format de description à l'upload (HTML nécessite la permission C411)
-- **Métadonnées TMDB / RAWG** — inclusion automatique des données TMDB (films/séries) ou RAWG (jeux) dans l'upload
-- **Journal d'upload** — chaque upload est journalisé dans `%APPDATA%/prezmaker/upload_log.txt` pour diagnostic
-- **Lier un torrent** — associez un `.torrent` à une présentation faite manuellement pour l'uploader
+- **Upload direct** — envoyez sur C411 en un clic, catégorie et options pré-remplies automatiquement
+- **File d'attente** — préparez plusieurs uploads et envoyez-les tous en une fois, ou programmez l'envoi à une heure précise
+- **Métadonnées incluses** — données TMDB ou RAWG envoyées automatiquement avec l'upload
+- **Retry** — relancez les uploads échoués, consultez les erreurs et la réponse de l'API
+- **Journal** — chaque upload est journalisé dans `%APPDATA%/prezmaker/upload_log.txt`
 
-### Collections
+### Collections et IA
 
-- **Sauvegarder** — enregistrez vos présentations dans des collections pour les retrouver plus tard
-- **Torrent et NFO persistés** — le chemin du torrent et le texte NFO sont sauvegardés avec la présentation
-- **Rechargement complet** — retrouvez le bouton Upload et le NFO en rechargeant depuis une collection
-
-### IA et génération
-
-- **Description IA** — génération automatique de descriptions en français via LLM (Groq, Mistral, Gemini)
-- **Génération NFO** — générez un NFO à partir du BBCode produit via LLM
+- **Collections** — sauvegardez vos présentations avec torrent et NFO pour les retrouver plus tard
+- **Description IA** — génération de descriptions et de NFO via LLM (Groq, Mistral, Gemini)
 
 ### Interface
 
-- **Internationalisation** — interface disponible en français et en anglais
-- **Thème clair / sombre** — basculez entre les deux via les paramètres
-- **Mise à jour automatique** — vérification et installation des nouvelles versions au lancement
-- **Persistance de la fenêtre** — la taille et la position de la fenêtre sont mémorisées entre les lancements
+- **Français / Anglais** — interface bilingue
+- **Thème clair / sombre**
+- **Mise à jour automatique** au lancement
 
 ## Screenshots
 

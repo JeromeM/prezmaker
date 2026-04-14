@@ -236,7 +236,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="bg-surface border border-edge rounded-lg w-full max-w-4xl mx-4 shadow-2xl flex flex-col"
+        className="bg-surface border border-edge rounded-lg w-full max-w-4xl mx-4 shadow-2xl flex flex-col overflow-hidden"
         style={{ height: "min(700px, 88vh)" }}
       >
         {/* Header */}
@@ -356,7 +356,7 @@ export default function CollectionBrowser({ onClose, onLoad }: Props) {
           </div>
 
           {/* Entries */}
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 min-w-0">
             {/* Toolbar: filters + sort */}
             {selectedCol && (
               <div className="flex items-center gap-2 px-4 py-2 border-b border-edge shrink-0 flex-wrap">
